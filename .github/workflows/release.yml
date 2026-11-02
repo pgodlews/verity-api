@@ -92,7 +92,10 @@ jobs:
           cd gui
           "$(go env GOPATH)/bin/wails" build -platform darwin/universal -clean
           mkdir -p ../dist/desktop
-          ditto -c -k --keepParent build/bin/verity-desktop.app "../dist/desktop/verity-desktop_${GITHUB_REF_NAME}_darwin_universal.zip"
+          # Wails names the bundle after the project (wails.json "name"); ship it as Verity.app.
+          app=$(ls -d build/bin/*.app)
+          [ "$app" = build/bin/Verity.app ] || mv "$app" build/bin/Verity.app
+          ditto -c -k --keepParent build/bin/Verity.app "../dist/desktop/verity-desktop_${GITHUB_REF_NAME}_darwin_universal.zip"
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-macos
