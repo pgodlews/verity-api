@@ -1,0 +1,88 @@
+schemaVersion: "1.0"
+name: Local Demo
+description: >
+  A fully offline demo exercised by CI. Start the bundled mock server first:
+    go run ./examples/local-demo/mockserver --addr 127.0.0.1:8099
+  Then run:
+    API_TOKEN=super-secret-token-abc123456 \
+      verity run examples/local-demo/project.yaml --junit out.xml --json report.json
+
+environments:
+  - name: local
+    default: true
+    variables:
+      BASE_URL: "http://127.0.0.1:8099"
+
+auth:
+  - name: bearer
+    type: bearer
+    config:
+      token: "${env:API_TOKEN}"
+
+suites:
+  - name: REST
+    cases:
+      - name: get json
+        steps:
+          - name: fetch
+            protocol: rest
+            request:
+              method: GET
+              url: "${BASE_URL}/json"
+            assertions:
+              - type: status
+                value: 200
+              - type: jsonpath
+                expr: "$.name"
+                value: widget
+              - type: jsonpath
+                expr: "$.id"
+                op: eq
+                value: 42
+              - type: header
+                expr: X-Demo
+                value: verity
+            transfers:
+              - name: widgetName
+                from: jsonpath
+                expr: "$.name"
+
+  - name: Secured
+    auth:
+      use: [bearer]
+    cases:
+      - name: authorized request succeeds
+        steps:
+          - name: secure
+            protocol: rest
+            request:
+              method: GET
+              url: "${BASE_URL}/secure"
+            assertions:
+              - type: status
+                value: 200
+              - type: jsonpath
+                expr: "$.ok"
+                op: eq
+                value: true
+
+  - name: SOAP
+    cases:
+      - name: add operation
+        steps:
+          - name: add
+            protocol: soap
+            request:
+              url: "${BASE_URL}/soap"
+              operation: Add
+              namespace: "http://example.com/calculator"
+              soapAction: "http://example.com/calculator/Add"
+              parameters:
+                a: "3"
+                b: "4"
+            assertions:
+              - type: status
+                value: 200
+              - type: xpath
+                expr: "//Result"
+                value: "7"

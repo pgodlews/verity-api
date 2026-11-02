@@ -1,0 +1,26 @@
+# Binaries
+/apitest
+/verity
+/dist/
+*.exe
+
+# Build output
+gui/build/
+gui/gui
+gui/frontend/dist/assets/
+gui/frontend/node_modules/
+gui/frontend/wailsjs/
+gui/frontend/package.json.md5
+node_modules/
+
+# Test/report artifacts
+*.out
+reports/
+coverage.out
+
+# Plugin build outputs (the source stays; built binaries don't)
+plugins/*/example-assertion
+plugins/example-assertion/example-assertion
+
+# OS
+.DS_Store

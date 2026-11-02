@@ -1,0 +1,9 @@
+{
+  "plugins": [
+    {
+      "name": "grpc",
+      "path": "../../../plugins/grpc/grpc",
+      "enabled": true
+    }
+  ]
+}

@@ -1,0 +1,436 @@
+/* Verity design tokens and shared primitives.
+ *
+ * Dark is the default; light applies when <html data-theme="light">, or when
+ * no theme is chosen and the OS prefers light. Components use these tokens
+ * only — never raw colours — so both themes stay in step. Source design:
+ * the "Verity UI redesign" canvas (Workspace, Runner, Import, Environments).
+ */
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap");
+
+:root {
+  --font-ui: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --bg0: #0d0f13; /* title bar, activity rail, status bar */
+  --bg1: #12151b; /* sidebar, cards, code blocks */
+  --bg2: #171a21; /* main panes */
+  --bg3: #1f232c; /* inputs, chips, raised controls */
+  --hover: #232834;
+  --line: #262b35;
+  --line2: #323946;
+  --text: #e8eaef;
+  --text2: #b0b8c6;
+  --text3: #8d96a7; /* smallest text that still passes 4.5:1 on bg1/bg2 */
+  --accent: #8ea0ff;
+  --on-accent: #0d0f13;
+  --accent-bg: rgba(142, 160, 255, 0.14);
+  --pass: #4ade80;
+  --pass-bg: rgba(74, 222, 128, 0.12);
+  --fail: #ff8673;
+  --fail-bg: rgba(255, 134, 115, 0.13);
+  --warn: #f7c04a; /* errors (transport/config) and secrets */
+  --warn-bg: rgba(247, 192, 74, 0.13);
+  --get: #4ade80;
+  --post: #f7c04a;
+  --put: #60a5fa;
+  --patch: #c084fc;
+  --del: #ff8673;
+  --gql: #f472b6;
+  --soap: #5eead4;
+  --syn-key: #a5b4ff;
+  --syn-str: #8dd9ae;
+  --syn-num: #f5b971;
+  --syn-bool: #f28fb1;
+  --radius: 8px;
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --bg0: #eceef2;
+  --bg1: #f5f6f8;
+  --bg2: #ffffff;
+  --bg3: #f0f2f5;
+  --hover: #e9ecf1;
+  --line: #e2e5ea;
+  --line2: #cdd2da;
+  --text: #14171d;
+  --text2: #454d5c;
+  --text3: #5d6575;
+  --accent: #4352d1;
+  --on-accent: #ffffff;
+  --accent-bg: rgba(67, 82, 209, 0.1);
+  --pass: #15803d;
+  --pass-bg: rgba(21, 128, 61, 0.09);
+  --fail: #c2410c;
+  --fail-bg: rgba(194, 65, 12, 0.09);
+  --warn: #9a5b00;
+  --warn-bg: rgba(180, 110, 0, 0.11);
+  --get: #15803d;
+  --post: #9a5b00;
+  --put: #1d4ed8;
+  --patch: #7e22ce;
+  --del: #c2410c;
+  --gql: #be185d;
+  --soap: #0f766e;
+  --syn-key: #3443b8;
+  --syn-str: #1e7449;
+  --syn-num: #a14f00;
+  --syn-bool: #b4235e;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --bg0: #eceef2;
+    --bg1: #f5f6f8;
+    --bg2: #ffffff;
+    --bg3: #f0f2f5;
+    --hover: #e9ecf1;
+    --line: #e2e5ea;
+    --line2: #cdd2da;
+    --text: #14171d;
+    --text2: #454d5c;
+    --text3: #5d6575;
+    --accent: #4352d1;
+    --on-accent: #ffffff;
+    --accent-bg: rgba(67, 82, 209, 0.1);
+    --pass: #15803d;
+    --pass-bg: rgba(21, 128, 61, 0.09);
+    --fail: #c2410c;
+    --fail-bg: rgba(194, 65, 12, 0.09);
+    --warn: #9a5b00;
+    --warn-bg: rgba(180, 110, 0, 0.11);
+    --get: #15803d;
+    --post: #9a5b00;
+    --put: #1d4ed8;
+    --patch: #7e22ce;
+    --del: #c2410c;
+    --gql: #be185d;
+    --soap: #0f766e;
+    --syn-key: #3443b8;
+    --syn-str: #1e7449;
+    --syn-num: #a14f00;
+    --syn-bool: #b4235e;
+    color-scheme: light;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  color: var(--text);
+  background: var(--bg2);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--accent);
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+/* Section label: small caps-style heading above lists and panels. */
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 7px;
+  border: 1px solid var(--line2);
+  background: transparent;
+  color: var(--text2);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--text);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.btn-primary {
+  border-color: transparent;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--on-accent);
+  filter: brightness(1.08);
+}
+.btn-sm {
+  height: 26px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text3);
+  cursor: pointer;
+}
+.icon-btn:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+/* Text inputs */
+.input {
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 7px;
+  border: 1px solid var(--line2);
+  background: var(--bg3);
+  color: var(--text);
+  font-size: 13px;
+  min-width: 0;
+}
+.input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+/* Tabs: a row of .tab buttons; the active one has aria-selected="true". */
+.tabs {
+  display: flex;
+  gap: 18px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
+/* Chrome leaves out a flex container's end padding when it scrolls; the gap
+   before this spacer stands in for it. */
+.tabs::after { content: ""; flex: 0 0 1px; }
+.tabs[data-more-right] { mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
+.tabs[data-more-left] { mask-image: linear-gradient(to left, #000 calc(100% - 40px), transparent); }
+.tabs[data-more-left][data-more-right] { mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent); }
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  color: var(--text3);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tab:hover {
+  color: var(--text);
+}
+.tab[aria-selected="true"] {
+  color: var(--text);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+.count {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: var(--bg3);
+  color: var(--text2);
+}
+.count-warn { background: var(--warn-bg); color: var(--warn); }
+
+/* Filter chips (role="radio", aria-checked). */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 15px;
+  border: 1px solid var(--line2);
+  background: transparent;
+  color: var(--text2);
+  font-size: 13px;
+  cursor: pointer;
+}
+.chip[aria-checked="true"] {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+/* ${var} reference shown as a chip; .secret for ${env:...} references. */
+.var-chip {
+  font-family: var(--font-mono);
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+.var-chip.secret {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+
+/* HTTP method labels: <span class="method method-get">GET</span> */
+.method {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.method-get { color: var(--get); }
+.method-post { color: var(--post); }
+.method-put { color: var(--put); }
+.method-patch { color: var(--patch); }
+.method-delete { color: var(--del); }
+.method-gql { color: var(--gql); }
+.method-soap { color: var(--soap); }
+.method-other { color: var(--text2); }
+
+/* Status pills and dots: .status-passed | -failed | -error | -skipped | -aborted */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.pill.status-passed { background: var(--pass-bg); color: var(--pass); }
+.pill.status-failed { background: var(--fail-bg); color: var(--fail); }
+.pill.status-error { background: var(--warn-bg); color: var(--warn); }
+.pill.status-skipped { background: var(--bg3); color: var(--text3); }
+.pill.status-aborted { background: var(--accent-bg); color: var(--accent); }
+
+/* Dots differ in shape as well as colour: round = passed, square = failed,
+ * diamond = error, ring = skipped / not run. */
+.dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  flex: none;
+}
+.dot.status-passed { border-radius: 50%; background: var(--pass); }
+.dot.status-failed { border-radius: 1px; background: var(--fail); }
+.dot.status-error { transform: rotate(45deg); background: var(--warn); }
+.dot.status-skipped,
+.dot.status-none { border-radius: 50%; border: 1.5px solid var(--text3); }
+.dot.status-aborted { border-radius: 50%; border: 1.5px dashed var(--accent); }
+
+/* Code blocks with line numbers: .code > .code-line > .ln + content */
+.code {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 22px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg1);
+  padding: 10px 0;
+  overflow: auto;
+}
+.code-line {
+  display: flex;
+  align-items: center;
+  white-space: pre;
+  padding-right: 8px;
+}
+.code-line .ln {
+  flex: none;
+  width: 44px;
+  padding-right: 14px;
+  text-align: right;
+  color: var(--text3);
+  user-select: none;
+}
+.tok-key { color: var(--syn-key); }
+.tok-str { color: var(--syn-str); }
+.tok-num { color: var(--syn-num); }
+.tok-bool { color: var(--syn-bool); }
+.tok-punct { color: var(--text2); }
+
+/* Cards and key/value tables */
+.card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg1);
+}
+.kv {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.kv th,
+.kv td {
+  text-align: left;
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.kv th {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text3);
+}
+
+.empty {
+  padding: 40px 16px;
+  text-align: center;
+  color: var(--text3);
+  font-size: 13px;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line2);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}

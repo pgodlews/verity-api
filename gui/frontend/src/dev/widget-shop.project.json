@@ -1,0 +1,314 @@
+{
+  "schemaVersion": "1.0",
+  "name": "Widget Shop",
+  "description": "Widget Shop sample (imported from Postman)",
+  "environments": [
+    {
+      "name": "Local",
+      "variables": {
+        "baseUrl": "http://127.0.0.1:8099",
+        "user": "ada",
+        "query": "bolt",
+        "password": "${env:PASSWORD}",
+        "apiKey": "${env:APIKEY}"
+      }
+    },
+    {
+      "name": "Staging",
+      "variables": {
+        "apiKey": "${env:APIKEY}",
+        "baseUrl": "https://staging.widgets.example",
+        "password": "${env:PASSWORD}",
+        "query": "bolt",
+        "user": "ada"
+      },
+      "default": true
+    }
+  ],
+  "auth": [
+    {
+      "name": "basic",
+      "type": "basic",
+      "config": {
+        "password": "${env:BASIC_PASSWORD}",
+        "username": "admin"
+      }
+    },
+    {
+      "name": "oauth2-client-credentials",
+      "type": "oauth2_client_credentials",
+      "config": {
+        "clientId": "partner",
+        "clientSecret": "${partnerSecret}",
+        "scope": "widgets:read",
+        "tokenUrl": "${baseUrl}/oauth/token"
+      }
+    },
+    {
+      "name": "sso",
+      "type": "oauth2",
+      "config": {
+        "grant": "authorization_code",
+        "authUrl": "${baseUrl}/oauth/authorize",
+        "tokenUrl": "${baseUrl}/oauth/token",
+        "clientId": "widget-shop-desktop",
+        "scopes": [
+          "widgets:read"
+        ],
+        "refreshToken": "${env:SSO_REFRESH_TOKEN}"
+      }
+    }
+  ],
+  "suites": [
+    {
+      "name": "Widget Shop",
+      "cases": [
+        {
+          "name": "Widget Shop",
+          "steps": [
+            {
+              "name": "Health",
+              "protocol": "rest",
+              "request": {
+                "method": "GET",
+                "url": "${baseUrl}/health"
+              },
+              "assertions": [
+                {
+                  "type": "header",
+                  "description": "responds with a content type",
+                  "expr": "Content-Type",
+                  "op": "exists"
+                },
+                {
+                  "type": "status",
+                  "value": 200
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "cases": [
+        {
+          "name": "Auth",
+          "steps": [
+            {
+              "name": "Login",
+              "protocol": "rest",
+              "request": {
+                "body": "{\"username\": \"${user}\", \"password\": \"${password}\"}",
+                "headers": {
+                  "Content-Type": "application/json"
+                },
+                "method": "POST",
+                "url": "${baseUrl}/login"
+              },
+              "assertions": [
+                {
+                  "type": "header",
+                  "description": "responds with a content type",
+                  "expr": "Content-Type",
+                  "op": "exists"
+                },
+                {
+                  "type": "status",
+                  "description": "Status code is 200",
+                  "value": 200
+                }
+              ],
+              "transfers": [
+                {
+                  "name": "token",
+                  "from": "jsonpath",
+                  "expr": "$.access_token",
+                  "scope": "run"
+                }
+              ]
+            },
+            {
+              "name": "Me",
+              "protocol": "rest",
+              "request": {
+                "headers": {
+                  "Authorization": "Bearer ${token}"
+                },
+                "method": "GET",
+                "url": "${baseUrl}/me"
+              },
+              "assertions": [
+                {
+                  "type": "header",
+                  "description": "responds with a content type",
+                  "expr": "Content-Type",
+                  "op": "exists"
+                },
+                {
+                  "type": "jsonpath",
+                  "description": "is ada",
+                  "expr": "$.user.name",
+                  "op": "eq",
+                  "value": "ada"
+                },
+                {
+                  "type": "jsonpath",
+                  "description": "is ada",
+                  "expr": "$.user.roles[0]",
+                  "op": "exists"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Widgets",
+      "cases": [
+        {
+          "name": "Widgets",
+          "steps": [
+            {
+              "name": "Get widget",
+              "protocol": "rest",
+              "request": {
+                "headers": {
+                  "Authorization": "Bearer ${token}",
+                  "X-Trace": "{{$guid}}"
+                },
+                "method": "GET",
+                "url": "${baseUrl}/widgets/${id}?expand=parts"
+              },
+              "assertions": [
+                {
+                  "type": "header",
+                  "description": "responds with a content type",
+                  "expr": "Content-Type",
+                  "op": "exists"
+                },
+                {
+                  "type": "response_time",
+                  "op": "lt",
+                  "value": 1000
+                },
+                {
+                  "type": "contains",
+                  "value": "widget"
+                },
+                {
+                  "type": "jsonpath",
+                  "description": "$.id equals 43",
+                  "expr": "$.id",
+                  "op": "eq",
+                  "value": 43
+                }
+              ],
+              "vars": {
+                "id": "42"
+              }
+            },
+            {
+              "name": "Search",
+              "protocol": "graphql",
+              "request": {
+                "headers": {
+                  "Authorization": "Bearer ${token}"
+                },
+                "query": "query Search($q: String!) { widgets(q: $q) { id } }",
+                "url": "${baseUrl}/graphql",
+                "variables": {
+                  "q": "${query}"
+                }
+              },
+              "assertions": [
+                {
+                  "type": "header",
+                  "description": "responds with a content type",
+                  "expr": "Content-Type",
+                  "op": "exists"
+                }
+              ],
+              "auth": {
+                "use": [
+                  "sso"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Widgets / Admin",
+          "auth": {
+            "use": [
+              "basic"
+            ]
+          },
+          "steps": [
+            {
+              "name": "Delete widget",
+              "protocol": "rest",
+              "request": {
+                "method": "DELETE",
+                "url": "${baseUrl}/widgets/42"
+              },
+              "assertions": [
+                {
+                  "type": "header",
+                  "description": "responds with a content type",
+                  "expr": "Content-Type",
+                  "op": "exists"
+                }
+              ]
+            },
+            {
+              "name": "Upload image",
+              "protocol": "rest",
+              "request": {
+                "method": "POST",
+                "url": "${baseUrl}/widgets/42/image"
+              },
+              "assertions": [
+                {
+                  "type": "header",
+                  "description": "responds with a content type",
+                  "expr": "Content-Type",
+                  "op": "exists"
+                }
+              ],
+              "skip": true
+            },
+            {
+              "name": "Partner token",
+              "protocol": "rest",
+              "request": {
+                "form": {
+                  "note": "hello world",
+                  "signing_secret": "${env:SIGNING_SECRET}"
+                },
+                "method": "POST",
+                "url": "${baseUrl}/partner/ping"
+              },
+              "auth": {
+                "use": [
+                  "oauth2-client-credentials"
+                ],
+                "inherit": false
+              },
+              "assertions": [
+                {
+                  "type": "header",
+                  "description": "responds with a content type",
+                  "expr": "Content-Type",
+                  "op": "exists"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

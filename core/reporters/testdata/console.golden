@@ -1,0 +1,15 @@
+Verity run: Demo <&> 東京 [env: dev "quoted"]
+============================================================
+[ABRT] SUITE Suite <&> ☃ (100ms)
+  [FAIL] case: feed case [row 2] (100ms)
+    [PASS] step: pass ✓ [rest] (10ms, 3 attempts)
+      [PASS] assert: status ✓
+    [FAIL] step: fail <&> [graphql] (20ms, 2 attempts)
+      [FAIL] assert: value <expected> & "quoted" — got 東京; token=***REDACTED***
+  [ABRT] case: errors & skips (200ms)
+    [ERR ] step: error [soap] (10ms)
+      ! error [transport_error]: bad <request> & ***REDACTED***
+    [SKIP] step: skip [rest] (20ms)
+    [ABRT] step: abort [rest] (30ms)
+------------------------------------------------------------
+Result: ABORTED (aborted) | suites=1 cases=2 steps=5 (failed=1, errors=1, skipped=1, aborted=1) assertions=2 (passed=1, failed=1) | 2000ms

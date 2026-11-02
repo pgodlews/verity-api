@@ -1,0 +1,103 @@
+package plugin
+
+import (
+	"context"
+	"encoding/json"
+	"sync"
+
+	"github.com/pgodlews/verity-api/core/secrets"
+	"github.com/pgodlews/verity-api/core/spi"
+	"github.com/pgodlews/verity-api/core/verr"
+)
+
+// reporterProxy adapts a plugin Client to spi.Reporter. The host serializes the
+// RunResult to JSON and the plugin writes its artifact; the host passes the
+// destination path so file-writing reporters work unchanged.
+type reporterProxy struct {
+	client *Client
+	typ    string
+}
+
+func (r *reporterProxy) Type() string { return r.typ }
+
+func (r *reporterProxy) Report(result *spi.RunResult, out string) error {
+	data, err := json.Marshal(result)
+	if err != nil {
+		return verr.Wrap(verr.CodePlugin, err, "marshal result for reporter plugin")
+	}
+	var resultMap map[string]any
+	if err := json.Unmarshal(data, &resultMap); err != nil {
+		return verr.Wrap(verr.CodePlugin, err, "remarshal result")
+	}
+	_, err = r.client.call(MethodReport, map[string]any{
+		"result": resultMap,
+		"out":    out,
+	})
+	return err
+}
+
+// authProxy adapts a plugin Client to spi.AuthProvider. It caches the provider
+// layer (queried once) and forwards Apply with the resolved request. The
+// redactor registers any secret material the host knows about; plugins are
+// expected to redact their own diagnostics too.
+type authProxy struct {
+	client *Client
+	typ    string
+	config map[string]any
+	red    *secrets.Redactor
+	mu     sync.Mutex
+	layer  *spi.AuthLayer
+}
+
+func (a *authProxy) Type() string { return a.typ }
+
+func (a *authProxy) Layer() spi.AuthLayer {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.layer != nil {
+		return *a.layer
+	}
+	res, err := a.client.call(MethodLayer, map[string]any{"config": a.config})
+	layer := spi.LayerMessage
+	if err == nil {
+		if int(asFloat(res["layer"])) == int(spi.LayerTransport) {
+			layer = spi.LayerTransport
+		}
+	}
+	a.layer = &layer
+	return layer
+}
+
+func (a *authProxy) Apply(_ context.Context, req *spi.Request) error {
+	res, err := a.client.call(MethodApply, map[string]any{
+		"config":  a.config,
+		"request": encodeRequest(req),
+	})
+	if err != nil {
+		return err
+	}
+	// The plugin returns the mutated request; merge headers/query/cookies back.
+	mutated, derr := decodeRequest(res["request"])
+	if derr != nil {
+		return derr
+	}
+	for k, vs := range mutated.Headers {
+		req.Headers.Del(k)
+		for _, v := range vs {
+			req.Headers.Add(k, v)
+		}
+	}
+	for k, v := range mutated.Query {
+		if req.Query == nil {
+			req.Query = map[string]string{}
+		}
+		req.Query[k] = v
+	}
+	for k, v := range mutated.Cookies {
+		if req.Cookies == nil {
+			req.Cookies = map[string]string{}
+		}
+		req.Cookies[k] = v
+	}
+	return nil
+}

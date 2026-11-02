@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Hand-written SoapUI project fixture for Verity.
+  Independent clean-room sample. Not a SmartBear project and not affiliated
+  with or endorsed by SmartBear.
+-->
+<con:soapui-project name="Sample API" xmlns:con="http://eviware.com/soapui/config">
+  <con:settings/>
+  <con:interface name="SampleSoap" type="wsdl" soapVersion="1_1">
+    <con:endpoints>
+      <con:endpoint>${#Project#ENDPOINT}</con:endpoint>
+    </con:endpoints>
+    <con:operation name="GetItem" action="urn:sample:getItem"/>
+  </con:interface>
+  <con:interface name="SampleREST" type="rest" basePath="/api">
+    <con:endpoints>
+      <con:endpoint>${#Project#ENDPOINT}</con:endpoint>
+    </con:endpoints>
+    <con:resource name="Item" path="/items/{id}">
+      <con:method name="GetItem" method="GET"/>
+    </con:resource>
+  </con:interface>
+  <con:testSuite name="Smoke">
+    <con:testCase name="Lookup">
+      <con:testStep type="request" name="Get item">
+        <con:config>
+          <con:interface>SampleSoap</con:interface>
+          <con:operation>GetItem</con:operation>
+          <con:request name="GetItem">
+            <con:endpoint>${#Project#ENDPOINT}/soap</con:endpoint>
+            <con:request><![CDATA[<soap:Envelope xmlns:soap="urn:envelope"><soap:Body><getItem><sku>${#TestCase#sku}</sku></getItem></soap:Body></soap:Envelope>]]></con:request>
+            <con:assertion type="Valid HTTP Status Codes" name="status">
+              <con:configuration><codes>200</codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="Contains" name="body has ok">
+              <con:configuration><token>ok</token><ignoreCase>false</ignoreCase><useRegEx>false</useRegEx></con:configuration>
+            </con:assertion>
+            <con:assertion type="Not Contains" name="body has no error">
+              <con:configuration><token>ERROR</token><ignoreCase>false</ignoreCase><useRegEx>false</useRegEx></con:configuration>
+            </con:assertion>
+            <con:assertion type="XPath Match" name="id">
+              <con:configuration><path>//id</path><content>42</content><allowWildcards>false</allowWildcards></con:configuration>
+            </con:assertion>
+          </con:request>
+        </con:config>
+      </con:testStep>
+      <con:testStep type="transfer" name="Copy id">
+        <con:config>
+          <con:transfers>
+            <con:name>Copy id</con:name>
+            <con:sourceType>Response</con:sourceType>
+            <con:sourceStep>Get item</con:sourceStep>
+            <con:sourcePath>//id</con:sourcePath>
+            <con:targetType>itemId</con:targetType>
+            <con:targetStep>#TestCase#</con:targetStep>
+          </con:transfers>
+        </con:config>
+      </con:testStep>
+      <con:testStep type="restrequest" name="Fetch item">
+        <con:config service="SampleREST" resourcePath="/items/{id}" methodName="GetItem">
+          <con:restRequest name="GetItem" mediaType="application/json">
+            <con:endpoint>${#Project#ENDPOINT}</con:endpoint>
+            <con:request/>
+            <con:parameters>
+              <con:parameter>
+                <con:name>id</con:name>
+                <con:value>${#TestCase#itemId}</con:value>
+                <con:style>TEMPLATE</con:style>
+              </con:parameter>
+            </con:parameters>
+            <con:assertion type="Valid HTTP Status Codes" name="status">
+              <con:configuration><codes>200</codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JsonPath Match" name="name">
+              <con:configuration><path>$.name</path><content>widget</content></con:configuration>
+            </con:assertion>
+            <con:assertion type="Response SLA" name="fast enough">
+              <con:configuration><SLA>5000</SLA></con:configuration>
+            </con:assertion>
+          </con:restRequest>
+        </con:config>
+      </con:testStep>
+      <con:testStep type="groovy" name="Log it">
+        <con:config>
+          <script>log.info("skip")</script>
+        </con:config>
+      </con:testStep>
+      <con:loadTest name="Busy"/>
+      <con:securityTest name="Scan"/>
+      <con:properties>
+        <con:property>
+          <con:name>sku</con:name>
+          <con:value>abc</con:value>
+        </con:property>
+      </con:properties>
+    </con:testCase>
+  </con:testSuite>
+  <con:properties>
+    <con:property>
+      <con:name>ENDPOINT</con:name>
+      <con:value></con:value>
+    </con:property>
+    <con:property>
+      <con:name>password</con:name>
+      <con:value>not-a-real-password</con:value>
+    </con:property>
+  </con:properties>
+  <con:wssContainer/>
+  <con:oAuth2ProfileContainer/>
+  <con:mockService name="SampleMock"/>
+</con:soapui-project>

@@ -1,0 +1,37 @@
+schemaVersion: "1.0"
+name: Plugin Demo
+description: >
+  Demonstrates an out-of-process plugin (json_array_len from
+  plugins/example-assertion) used alongside built-in assertions. Build the
+  plugin first:
+    (cd plugins/example-assertion && go build -o example-assertion .)
+  Then start the local mock and run:
+    go run ./examples/local-demo/mockserver --addr 127.0.0.1:8099
+    verity run examples/plugin-demo/project.yaml
+  The plugin is auto-discovered via examples/plugin-demo/.verity/plugins.json.
+
+environments:
+  - name: local
+    default: true
+    variables:
+      BASE_URL: "http://127.0.0.1:8099"
+
+suites:
+  - name: PluginAssertions
+    cases:
+      - name: tags array has expected length
+        steps:
+          - name: fetch
+            protocol: rest
+            request:
+              method: GET
+              url: "${BASE_URL}/json"
+            assertions:
+              # Built-in assertion:
+              - type: status
+                value: 200
+              # Plugin-provided assertion (json_array_len):
+              - type: json_array_len
+                expr: tags
+                op: eq
+                value: 2

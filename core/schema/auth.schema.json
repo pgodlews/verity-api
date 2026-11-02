@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://verity-api.dev/schemas/auth-1.0.json",
+  "title": "Verity Auth Provider Config",
+  "description": "Configuration shapes for built-in auth providers. Secrets must use ${env:VAR} or ${secret:...} references, never literals.",
+  "oneOf": [
+    {
+      "title": "none",
+      "type": "object",
+      "properties": { "type": { "const": "none" }, "config": { "type": "object" } },
+      "required": ["type"]
+    },
+    {
+      "title": "basic",
+      "type": "object",
+      "properties": {
+        "type": { "const": "basic" },
+        "config": {
+          "type": "object",
+          "required": ["username", "password"],
+          "properties": {
+            "username": { "type": "string" },
+            "password": { "type": "string", "description": "Use ${env:VAR}." }
+          }
+        }
+      },
+      "required": ["type", "config"]
+    },
+    {
+      "title": "digest",
+      "type": "object",
+      "properties": {
+        "type": { "const": "digest" },
+        "config": {
+          "type": "object",
+          "required": ["username", "password"],
+          "properties": {
+            "username": { "type": "string", "minLength": 1 },
+            "password": { "type": "string", "minLength": 1, "description": "Use ${env:VAR}." },
+            "algorithm": { "enum": ["MD5", "MD5-sess", "SHA-256", "SHA-256-sess"] }
+          }
+        }
+      },
+      "required": ["type", "config"]
+    },
+    {
+      "title": "bearer",
+      "type": "object",
+      "properties": {
+        "type": { "const": "bearer" },
+        "config": {
+          "type": "object",
+          "required": ["token"],
+          "properties": { "token": { "type": "string", "description": "Use ${env:VAR}." } }
+        }
+      },
+      "required": ["type", "config"]
+    },
+    {
+      "title": "apikey",
+      "type": "object",
+      "properties": {
+        "type": { "const": "apikey" },
+        "config": {
+          "type": "object",
+          "required": ["name", "value"],
+          "properties": {
+            "name": { "type": "string" },
+            "value": { "type": "string", "description": "Use ${env:VAR}." },
+            "in": { "type": "string", "enum": ["header", "query", "cookie"], "default": "header" }
+          }
+        }
+      },
+      "required": ["type", "config"]
+    },
+    {
+      "title": "mtls",
+      "type": "object",
+      "properties": {
+        "type": { "const": "mtls" },
+        "config": {
+          "type": "object",
+          "properties": {
+            "certPEM": { "type": "string" },
+            "keyPEM": { "type": "string" },
+            "caPEM": { "type": "string" },
+            "certFile": { "type": "string" },
+            "keyFile": { "type": "string" },
+            "caFile": { "type": "string" },
+            "minVersion": { "type": "string", "enum": ["1.0", "1.1", "1.2", "1.3"] },
+            "maxVersion": { "type": "string", "enum": ["1.0", "1.1", "1.2", "1.3"] },
+            "insecureSkipVerify": { "type": "boolean" }
+          }
+        }
+      },
+      "required": ["type", "config"]
+    },
+    {
+      "title": "oauth2 (oauth2_client_credentials alias)",
+      "type": "object",
+      "properties": {
+        "type": { "enum": ["oauth2", "oauth2_client_credentials"] },
+        "config": {
+          "type": "object",
+          "required": ["tokenUrl", "clientId"],
+          "properties": {
+            "grant": { "type": "string", "enum": ["client_credentials", "password", "refresh_token", "authorization_code"], "default": "client_credentials" },
+            "authUrl": { "type": "string", "minLength": 1 },
+            "redirectPort": { "type": "integer", "minimum": 0, "maximum": 65535, "default": 0 },
+            "scopes": { "oneOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }] },
+            "tokenUrl": { "type": "string", "minLength": 1 },
+            "clientId": { "type": "string", "minLength": 1 },
+            "clientSecret": { "type": "string", "minLength": 1, "description": "Use ${env:VAR}." },
+            "username": { "type": "string", "minLength": 1 },
+            "password": { "type": "string", "minLength": 1, "description": "Use ${env:VAR}." },
+            "refreshToken": { "type": "string", "minLength": 1, "description": "Use ${env:VAR}; rotation is kept in memory only." },
+            "scope": { "type": "string" },
+            "authStyle": { "type": "string", "enum": ["header", "body"], "default": "header" },
+            "refreshSkewSeconds": { "type": "integer", "minimum": 0 }
+          },
+          "allOf": [
+            {
+              "if": { "properties": { "grant": { "const": "authorization_code" } }, "required": ["grant"] },
+              "then": { "required": ["authUrl"] },
+              "else": { "required": ["clientSecret"] }
+            },
+            {
+              "if": { "properties": { "grant": { "const": "password" } }, "required": ["grant"] },
+              "then": { "required": ["username", "password"] }
+            },
+            {
+              "if": { "properties": { "grant": { "const": "refresh_token" } }, "required": ["grant"] },
+              "then": { "required": ["refreshToken"] }
+            }
+          ]
+        }
+      },
+      "required": ["type", "config"]
+    },
+    {
+      "title": "aws_sigv4",
+      "type": "object",
+      "properties": {
+        "type": { "const": "aws_sigv4" },
+        "config": {
+          "type": "object",
+          "required": ["region", "service"],
+          "additionalProperties": false,
+          "properties": {
+            "accessKeyId": { "type": "string", "description": "Omit to read AWS_ACCESS_KEY_ID. Use ${env:VAR} when set." },
+            "secretAccessKey": { "type": "string", "description": "Omit to read AWS_SECRET_ACCESS_KEY. Use ${env:VAR} when set." },
+            "sessionToken": { "type": "string", "description": "Omit to read AWS_SESSION_TOKEN when that variable is set. Use ${env:VAR} when set." },
+            "region": { "type": "string", "minLength": 1 },
+            "service": { "type": "string", "minLength": 1, "description": "Signing name such as s3 or execute-api. s3 uses single URI encoding and does not normalize the path." },
+            "unsignedPayload": { "type": "boolean", "default": false, "description": "When true, sign UNSIGNED-PAYLOAD instead of the body hash." }
+          }
+        }
+      },
+      "required": ["type", "config"]
+    },
+    {
+      "title": "hmac",
+      "type": "object",
+      "properties": {
+        "type": { "const": "hmac" },
+        "config": {
+          "type": "object",
+          "required": ["secret"],
+          "additionalProperties": false,
+          "properties": {
+            "secret": { "type": "string", "minLength": 1, "description": "Use ${env:VAR}." },
+            "algorithm": { "type": "string", "enum": ["sha1", "sha256", "sha512", "SHA1", "SHA256", "SHA512"], "default": "sha256" },
+            "header": { "type": "string", "pattern": "^[!#$%&'*+.^_\u0060|~0-9A-Za-z-]+$", "default": "X-Signature" },
+            "encoding": { "type": "string", "enum": ["hex", "base64", "HEX", "BASE64"], "default": "hex" },
+            "prefix": { "type": "string", "description": "Text prepended to the encoded MAC, such as sha256=." },
+            "message": { "type": "string", "description": "Template. ${method}, ${path}, ${query}, ${body}, ${timestamp}, and ${nonce} are filled when the request is signed. Omit to sign the raw body." },
+            "timestampHeader": { "type": "string", "pattern": "^[!#$%&'*+.^_\u0060|~0-9A-Za-z-]+$" },
+            "nonceHeader": { "type": "string", "pattern": "^[!#$%&'*+.^_\u0060|~0-9A-Za-z-]+$" }
+          }
+        }
+      },
+      "required": ["type", "config"]
+    }
+  ]
+}

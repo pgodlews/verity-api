@@ -1,0 +1,100 @@
+schemaVersion: "1.0"
+name: HTTPBin REST Example
+description: >
+  Demonstrates REST steps, JSONPath assertions, property transfer between steps,
+  environment variables, and bearer auth with a secret pulled from the
+  environment (never committed). Point BASE_URL at any httpbin-compatible server.
+
+environments:
+  - name: local
+    default: true
+    variables:
+      # Override with: verity run project.yaml --var BASE_URL=http://localhost:8080
+      BASE_URL: "https://httpbin.org"
+  - name: staging
+    variables:
+      BASE_URL: "https://staging.httpbin.example"
+
+auth:
+  # The token is resolved at run time from $API_TOKEN; it is never stored here.
+  - name: bearer-token
+    type: bearer
+    config:
+      token: "${env:API_TOKEN}"
+
+suites:
+  - name: Smoke
+    cases:
+      - name: GET returns JSON and headers
+        steps:
+          - name: get-json
+            protocol: rest
+            request:
+              method: GET
+              url: "${BASE_URL}/json"
+            assertions:
+              - type: status
+                value: 200
+              - type: header
+                expr: Content-Type
+                op: contains
+                value: application/json
+              - type: response_time
+                op: lt
+                value: 5000
+
+      - name: POST echoes body and transfers a value
+        steps:
+          - name: post-anything
+            protocol: rest
+            request:
+              method: POST
+              url: "${BASE_URL}/anything"
+              json:
+                widget: "sprocket"
+                qty: 3
+            assertions:
+              - type: status
+                value: 200
+              - type: jsonpath
+                expr: "$.json.widget"
+                value: "sprocket"
+            transfers:
+              # Capture the echoed URL for use by a later step.
+              - name: echoedUrl
+                from: jsonpath
+                expr: "$.url"
+          - name: confirm-transfer
+            protocol: rest
+            request:
+              method: GET
+              url: "${BASE_URL}/anything"
+              headers:
+                X-Previous-Url: "${echoedUrl}"
+            assertions:
+              - type: status
+                value: 200
+              - type: jsonpath
+                expr: "$.headers.X-Previous-Url"
+                op: exists
+
+  - name: Authenticated
+    # Suite-scoped auth applies to every case/step unless overridden.
+    auth:
+      use: [bearer-token]
+    cases:
+      - name: bearer header is attached
+        steps:
+          - name: inspect-headers
+            protocol: rest
+            request:
+              method: GET
+              url: "${BASE_URL}/headers"
+            assertions:
+              - type: status
+                value: 200
+              # httpbin echoes request headers; the Authorization header is sent
+              # but its value is redacted in all Verity output.
+              - type: jsonpath
+                expr: "$.headers.Authorization"
+                op: exists

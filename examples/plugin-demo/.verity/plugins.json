@@ -1,0 +1,9 @@
+{
+  "plugins": [
+    {
+      "name": "example-assertion",
+      "path": "../../../plugins/example-assertion/example-assertion",
+      "enabled": true
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+POST / HTTP/1.1
+My-Header2:value2
+Host:example.amazonaws.com
+My-Header1:value1
+X-Amz-Date:20150830T123600Z
+

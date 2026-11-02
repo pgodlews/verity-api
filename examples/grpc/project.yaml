@@ -1,0 +1,39 @@
+schemaVersion: "1.0"
+name: gRPC echo
+description: >
+  Unary gRPC via plugins/grpc. Build the plugin, set GRPC_TARGET to the
+  server (host:port or a unix socket URL), and export API_TOKEN.
+  See examples/grpc/README.md.
+
+environments:
+  - name: local
+    default: true
+
+suites:
+  - name: Echo
+    cases:
+      - name: unary echo
+        steps:
+          - name: Echo
+            protocol: grpc
+            timeoutMs: 5000
+            request:
+              target: "${GRPC_TARGET}"
+              method: "verity.testpb.Echo/Echo"
+              plaintext: true
+              # descriptorSet: echo.pb
+              message:
+                message: "hello"
+                n: 1
+              metadata:
+                authorization: "${env:API_TOKEN}"
+            assertions:
+              - type: status
+                value: 0
+              - type: jsonpath
+                expr: "$.message"
+                op: eq
+                value: "hello"
+              - type: header
+                expr: Grpc-Status
+                value: "0"

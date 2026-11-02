@@ -1,0 +1,167 @@
+# Push a v* tag to publish a GitHub release: the verity CLI and verity-grpc
+# plugin archives built by scripts/release.sh, the Linux, macOS and Windows
+# desktop apps, SHA256SUMS, a multi-arch image on ghcr.io and, for a final
+# (non pre-release) tag, the Homebrew formula in pgodlews/homebrew-verity.
+# See docs/releasing.md.
+
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  cli:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache: true
+      - name: Build archives
+        run: scripts/release.sh "${GITHUB_REF_NAME}" dist/release
+      - name: Verify
+        run: (cd dist/release && sha256sum -c SHA256SUMS)
+      - name: Push the image to ghcr.io
+        env:
+          TOKEN: ${{ github.token }}
+          IMAGE_SOURCE: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          CGO_ENABLED=0 go install github.com/google/go-containerregistry/cmd/crane@v0.20.2
+          export PATH="$(go env GOPATH)/bin:$PATH"
+          echo "$TOKEN" | crane auth login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
+          scripts/docker-image.sh "${GITHUB_REF_NAME}" "ghcr.io/pgodlews/verity" dist/release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cli
+          path: dist/release/
+
+  desktop-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install WebKitGTK
+        run: |
+          sudo apt-get update -qq
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq libgtk-3-dev libwebkit2gtk-4.1-dev pkg-config
+      - name: Build desktop app
+        run: |
+          go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+          cd gui
+          "$(go env GOPATH)/bin/wails" build -tags webkit2_41 -clean
+          d="verity-desktop_${GITHUB_REF_NAME}_linux_amd64"
+          mkdir -p "../dist/desktop/$d"
+          cp build/bin/verity-desktop ../LICENSE ../README.md "../dist/desktop/$d/"
+          tar -C ../dist/desktop -czf "../dist/desktop/$d.tar.gz" "$d"
+          rm -rf "../dist/desktop/$d"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-linux
+          path: dist/desktop/
+
+  # Unsigned universal (Intel + Apple silicon) app. macOS asks for
+  # confirmation on first open; see docs/releasing.md.
+  desktop-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Build desktop app
+        run: |
+          go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+          cd gui
+          "$(go env GOPATH)/bin/wails" build -platform darwin/universal -clean
+          mkdir -p ../dist/desktop
+          ditto -c -k --keepParent build/bin/verity-desktop.app "../dist/desktop/verity-desktop_${GITHUB_REF_NAME}_darwin_universal.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-macos
+          path: dist/desktop/
+
+  desktop-windows:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Build desktop app
+        run: |
+          go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+          cd gui
+          "$(go env GOPATH)/bin/wails" build -platform windows/amd64 -clean -o verity-desktop.exe
+          d="verity-desktop_${GITHUB_REF_NAME}_windows_amd64"
+          mkdir -p "../dist/desktop/$d"
+          cp build/bin/verity-desktop.exe ../LICENSE ../README.md "../dist/desktop/$d/"
+          (cd ../dist/desktop && zip -qr "$d.zip" "$d" && rm -rf "$d")
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-windows
+          path: dist/desktop/
+
+  publish:
+    needs: [cli, desktop-linux, desktop-macos, desktop-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          (cd dist/cli && sha256sum -c SHA256SUMS)
+          for d in desktop-linux desktop-macos desktop-windows; do (cd "dist/$d" && sha256sum -- * >> ../cli/SHA256SUMS); done
+          pre=""; case "$GITHUB_REF_NAME" in *-*) pre="--prerelease";; esac
+          gh release create "$GITHUB_REF_NAME" dist/cli/* dist/desktop-linux/* dist/desktop-macos/* dist/desktop-windows/* $pre \
+            --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" \
+            --notes "Verity $GITHUB_REF_NAME. Unsigned alpha builds; verify downloads with SHA256SUMS. See CHANGELOG.md."
+
+      # A final release updates Formula/verity.rb in pgodlews/homebrew-verity.
+      # HOMEBREW_TAP_TOKEN is a fine-grained token with contents:write on that
+      # repository only; without it the step is skipped with a warning.
+      - uses: actions/checkout@v4
+        if: ${{ !contains(github.ref_name, '-') }}
+        with:
+          path: src
+      - name: Update the Homebrew tap
+        if: ${{ !contains(github.ref_name, '-') }}
+        env:
+          TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [ -z "$TOKEN" ]; then echo "::warning::HOMEBREW_TAP_TOKEN is not set; skipping the Homebrew tap"; exit 0; fi
+          git clone -q "https://x-access-token:${TOKEN}@github.com/pgodlews/homebrew-verity.git" tap
+          mkdir -p tap/Formula
+          src/scripts/homebrew-formula.sh "$TAG" dist/cli/SHA256SUMS \
+            "https://github.com/${GITHUB_REPOSITORY}/releases/download/$TAG" > tap/Formula/verity.rb
+          cd tap
+          git add Formula/verity.rb
+          if git diff --cached --quiet; then echo "tap already up to date"; exit 0; fi
+          git -c user.name="Verity release" -c user.email="release@verity.invalid" commit -qm "verity $TAG"
+          git push -q origin HEAD

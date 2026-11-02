@@ -1,0 +1,16 @@
+{
+  "name": "verity-gui",
+  "outputfilename": "verity-desktop",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "Piotr Godlewski"
+  },
+  "info": {
+    "productName": "Verity",
+    "comments": "Lean, cross-platform API contract testing — a clean-room SoapUI alternative.",
+    "copyright": "Copyright (c) 2026 Piotr Godlewski"
+  }
+}

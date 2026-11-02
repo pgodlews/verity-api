@@ -1,0 +1,67 @@
+name: "Verity API contract tests"
+description: "Run a Verity project (verity) and fail the job on assertion/transport failures."
+author: "Verity"
+
+inputs:
+  project:
+    description: "Path to the Verity project file (YAML or JSON)."
+    required: true
+  env:
+    description: "Environment name to select (--env). Empty uses the project default."
+    required: false
+    default: ""
+  parallel:
+    description: "Max concurrent cases per suite (--parallel)."
+    required: false
+    default: "1"
+  junit:
+    description: "Path to write JUnit XML (optional)."
+    required: false
+    default: ""
+  json:
+    description: "Path to write the structured JSON result (optional)."
+    required: false
+    default: ""
+  html:
+    description: "Path to write an HTML report (optional)."
+    required: false
+    default: ""
+  vars:
+    description: "Space-separated KEY=VALUE variable overrides (optional)."
+    required: false
+    default: ""
+  plugins:
+    description: "Path to a plugins config JSON (optional)."
+    required: false
+    default: ""
+  go-version:
+    description: "Go version used to build verity from source."
+    required: false
+    default: "1.26"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ inputs.go-version }}
+
+    - name: Build verity
+      shell: bash
+      run: go build -o "$RUNNER_TEMP/verity" ./cmd/verity
+      working-directory: ${{ github.action_path }}/../../..
+
+    - name: Run Verity
+      shell: bash
+      run: |
+        set -euo pipefail
+        ARGS=(run "${{ inputs.project }}")
+        [ -n "${{ inputs.env }}" ]      && ARGS+=(--env "${{ inputs.env }}")
+        [ -n "${{ inputs.parallel }}" ] && ARGS+=(--parallel "${{ inputs.parallel }}")
+        [ -n "${{ inputs.junit }}" ]    && ARGS+=(--junit "${{ inputs.junit }}")
+        [ -n "${{ inputs.json }}" ]     && ARGS+=(--json "${{ inputs.json }}")
+        [ -n "${{ inputs.html }}" ]     && ARGS+=(--html "${{ inputs.html }}")
+        [ -n "${{ inputs.plugins }}" ]  && ARGS+=(--plugins "${{ inputs.plugins }}")
+        for kv in ${{ inputs.vars }}; do ARGS+=(--var "$kv"); done
+        "$RUNNER_TEMP/verity" "${ARGS[@]}"

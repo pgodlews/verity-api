@@ -1,0 +1,208 @@
+{
+  "info": {
+    "_postman_id": "0b7c1d2e-0000-4000-8000-000000000001",
+    "name": "Widget Shop",
+    "description": "Hand-written sample collection for the Verity Postman importer.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.test(\"responds with a content type\", function () {",
+          "    pm.response.to.have.header(\"Content-Type\");",
+          "});"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "apiKey", "value": "demo-api-key-not-a-real-secret" },
+    { "key": "unused", "value": "x", "disabled": true }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/health"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": { "exec": ["pm.response.to.have.status(200);"] }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set(\"token\", jsonData.access_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\": \"{{user}}\", \"password\": \"{{password}}\"}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["login"]
+            }
+          }
+        },
+        {
+          "name": "Me",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test(\"is ada\", () => {",
+                  "    pm.expect(body.user.name).to.eql(\"ada\");",
+                  "    pm.expect(body.user.roles[0]).to.exist;",
+                  "});",
+                  "console.log(body);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/me", "host": ["{{baseUrl}}"], "path": ["me"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Widgets",
+      "item": [
+        {
+          "name": "Get widget",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": { "exec": ["pm.variables.set(\"ts\", Date.now());"] }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.expect(pm.response.responseTime).to.be.below(1000);",
+                  "pm.expect(pm.response.text()).to.include(\"widget\");"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Trace", "value": "{{$guid}}" },
+              { "key": "X-Debug", "value": "1", "disabled": true }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/widgets/:id?expand=parts",
+              "host": ["{{baseUrl}}"],
+              "path": ["widgets", ":id"],
+              "query": [{ "key": "expand", "value": "parts" }],
+              "variable": [{ "key": "id", "value": "42" }]
+            }
+          }
+        },
+        {
+          "name": "Search",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query Search($q: String!) { widgets(q: $q) { id } }",
+                "variables": "{\"q\": \"{{query}}\"}"
+              }
+            },
+            "url": "{{baseUrl}}/graphql"
+          }
+        },
+        {
+          "name": "Admin",
+          "auth": {
+            "type": "basic",
+            "basic": [
+              { "key": "username", "value": "admin" },
+              { "key": "password", "value": "hunter2hunter2" }
+            ]
+          },
+          "item": [
+            {
+              "name": "Delete widget",
+              "request": { "method": "DELETE", "url": "{{baseUrl}}/widgets/42" }
+            },
+            {
+              "name": "Upload image",
+              "request": {
+                "method": "POST",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [{ "key": "file", "type": "file", "src": "widget.png" }]
+                },
+                "url": "{{baseUrl}}/widgets/42/image"
+              }
+            },
+            {
+              "name": "Partner token",
+              "request": {
+                "auth": {
+                  "type": "oauth2",
+                  "oauth2": [
+                    { "key": "grant_type", "value": "client_credentials" },
+                    { "key": "accessTokenUrl", "value": "{{baseUrl}}/oauth/token" },
+                    { "key": "clientId", "value": "partner" },
+                    { "key": "clientSecret", "value": "{{partnerSecret}}" },
+                    { "key": "scope", "value": "widgets:read" }
+                  ]
+                },
+                "method": "POST",
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    { "key": "note", "value": "hello world" },
+                    { "key": "signing_secret", "value": "abc123" }
+                  ]
+                },
+                "url": "{{baseUrl}}/partner/ping"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

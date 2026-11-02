@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="Demo &lt;&amp;&gt; 東京" tests="5" failures="1" errors="1" skipped="2" time="2">
+  <testsuite name="Suite &lt;&amp;&gt; ☃" tests="5" failures="1" errors="1" skipped="2" time="0.1">
+    <testcase name="pass ✓[2]" classname="Suite &lt;&amp;&gt; ☃.feed case" time="0.01">
+      <system-out>3 attempts</system-out>
+    </testcase>
+    <testcase name="fail &lt;&amp;&gt;[2]" classname="Suite &lt;&amp;&gt; ☃.feed case" time="0.02">
+      <failure message="assertion failure" type="assertion">after 2 attempts&#xA;- value &lt;expected&gt; &amp; &#34;quoted&#34;: got 東京; token=***REDACTED***&#xA;</failure>
+      <system-out>2 attempts</system-out>
+    </testcase>
+    <testcase name="error" classname="Suite &lt;&amp;&gt; ☃.errors &amp; skips" time="0.01">
+      <error message="transport_error" type="error">bad &lt;request&gt; &amp; ***REDACTED***</error>
+    </testcase>
+    <testcase name="skip" classname="Suite &lt;&amp;&gt; ☃.errors &amp; skips" time="0.02">
+      <skipped></skipped>
+    </testcase>
+    <testcase name="abort" classname="Suite &lt;&amp;&gt; ☃.errors &amp; skips" time="0.03">
+      <skipped message="aborted"></skipped>
+    </testcase>
+  </testsuite>
+</testsuites>

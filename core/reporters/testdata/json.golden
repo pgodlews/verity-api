@@ -1,0 +1,109 @@
+{
+  "project": "Demo \u003c\u0026\u003e 東京",
+  "environment": "dev \"quoted\"",
+  "startedAt": "2024-01-02T03:04:05Z",
+  "finishedAt": "2024-01-02T03:04:07Z",
+  "durationMs": 2000,
+  "suites": [
+    {
+      "name": "Suite \u003c\u0026\u003e ☃",
+      "status": "aborted",
+      "durationMs": 100,
+      "cases": [
+        {
+          "name": "feed case",
+          "status": "failed",
+          "durationMs": 100,
+          "iteration": 2,
+          "steps": [
+            {
+              "name": "pass ✓",
+              "protocol": "rest",
+              "status": "passed",
+              "durationMs": 10,
+              "attempts": 3,
+              "request": {
+                "method": "GET",
+                "url": "${BASE_URL}/widgets?note=\u003c\u0026\u003e",
+                "body": "secret=***REDACTED***"
+              },
+              "response": {
+                "statusCode": 200,
+                "body": "{\"message\":\"héllo \u003c\u0026\u003e\",\"token\":\"***REDACTED***\"}",
+                "durationMs": 10
+              },
+              "assertions": [
+                {
+                  "passed": true,
+                  "type": "status",
+                  "description": "status ✓"
+                }
+              ]
+            },
+            {
+              "name": "fail \u003c\u0026\u003e",
+              "protocol": "graphql",
+              "status": "failed",
+              "durationMs": 20,
+              "attempts": 2,
+              "assertions": [
+                {
+                  "passed": false,
+                  "type": "jsonpath",
+                  "description": "value \u003cexpected\u003e \u0026 \"quoted\"",
+                  "message": "got 東京; token=***REDACTED***",
+                  "expected": "\u003c\u0026\u003e",
+                  "actual": "***REDACTED***"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "errors \u0026 skips",
+          "status": "aborted",
+          "durationMs": 200,
+          "iteration": -1,
+          "steps": [
+            {
+              "name": "error",
+              "protocol": "soap",
+              "status": "error",
+              "durationMs": 10,
+              "error": {
+                "code": "transport_error",
+                "message": "bad \u003crequest\u003e \u0026 ***REDACTED***"
+              }
+            },
+            {
+              "name": "skip",
+              "protocol": "rest",
+              "status": "skipped",
+              "durationMs": 20
+            },
+            {
+              "name": "abort",
+              "protocol": "rest",
+              "status": "aborted",
+              "durationMs": 30
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "suites": 1,
+    "cases": 2,
+    "steps": 5,
+    "assertions": 2,
+    "passed": 1,
+    "failed": 1,
+    "errors": 1,
+    "skipped": 1,
+    "stepsFailed": 1,
+    "status": "aborted",
+    "aborted": true,
+    "stepsAborted": 1
+  }
+}
