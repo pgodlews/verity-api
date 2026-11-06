@@ -26,14 +26,20 @@ func TestWindowsGitHiddenConsole(t *testing.T) {
 	if out, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("build GUI launcher: %v\n%s", err, out)
 	}
-	cmd := exec.Command(launcher, "-test.run=^TestWindowsGitConsoleLauncher$")
-	cmd.Env = append(os.Environ(), "VERITY_WINDOWS_LAUNCHER_HELPER="+consoleExe)
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("helper: %v", err)
-	}
-	if strings.TrimSpace(string(out)) != "visible=0" {
-		t.Fatalf("child acquired a visible console: %q", out)
+	for _, background := range []string{"false", "true"} {
+		cmd := exec.Command(launcher, "-test.run=^TestWindowsGitConsoleLauncher$")
+		cmd.Env = append(os.Environ(), "VERITY_WINDOWS_LAUNCHER_HELPER="+consoleExe, "VERITY_WINDOWS_BACKGROUND_READ="+background)
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("helper: %v", err)
+		}
+		want := "visible=0"
+		if background == "true" {
+			want = "console=0"
+		}
+		if strings.TrimSpace(string(out)) != want {
+			t.Fatalf("background=%s console state: %q, want %q", background, out, want)
+		}
 	}
 }
 
@@ -43,8 +49,13 @@ func TestWindowsGitConsoleLauncher(t *testing.T) {
 		return
 	}
 	cmd := exec.Command(exe, "-test.run=^TestWindowsGitConsoleHelper$")
-	cmd.Env = append(os.Environ(), "VERITY_WINDOWS_CONSOLE_HELPER=report")
-	ownProcessGroup(cmd)
+	background := os.Getenv("VERITY_WINDOWS_BACKGROUND_READ") == "true"
+	mode := "report"
+	if background {
+		mode = "no-console"
+	}
+	cmd.Env = append(os.Environ(), "VERITY_WINDOWS_CONSOLE_HELPER="+mode)
+	ownProcessGroup(cmd, background)
 	out, err := commandOutput(cmd)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -107,7 +118,7 @@ func windowsConsoleHelper(t *testing.T, mode string) *exec.Cmd {
 	}
 	cmd := exec.Command(exe, "-test.run=^TestWindowsGitConsoleHelper$")
 	cmd.Env = append(os.Environ(), "VERITY_WINDOWS_CONSOLE_HELPER="+mode)
-	ownProcessGroup(cmd)
+	ownProcessGroup(cmd, false)
 	return cmd
 }
 
@@ -177,6 +188,10 @@ func TestWindowsGitConsoleHelper(t *testing.T) {
 	}
 	getConsoleWindow := syscall.NewLazyDLL("kernel32.dll").NewProc("GetConsoleWindow")
 	h, _, _ := getConsoleWindow.Call()
+	if mode == "no-console" {
+		fmt.Printf("console=%d\n", h)
+		os.Exit(0)
+	}
 	isWindowVisible := syscall.NewLazyDLL("user32.dll").NewProc("IsWindowVisible")
 	visible, _, _ := isWindowVisible.Call(h)
 	fmt.Printf("visible=%d\n", visible)

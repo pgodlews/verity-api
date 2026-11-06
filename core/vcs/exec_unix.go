@@ -8,7 +8,7 @@ import (
 	"syscall"
 )
 
-func ownProcessGroup(cmd *exec.Cmd) {
+func ownProcessGroup(cmd *exec.Cmd, _ bool) {
 	if cmd.SysProcAttr == nil {
 		cmd.SysProcAttr = &syscall.SysProcAttr{}
 	}

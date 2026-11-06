@@ -278,8 +278,8 @@ a remote whose name contains a slash is the remote that is fetched. Fetch,
 pull, and push run one at a time. Cancel signals Git (SIGINT on Unix, CTRL_C
 in an isolated console on Windows) and, after a short wait, kills it if needed.
 The graceful signal lets Git remove `index.lock`. The kill is tied to that process and is
-not delivered after git has exited. On Windows each Git command has a hidden
-private console and a job that ends child processes. A short-lived helper joins
+not delivered after git has exited. On Windows synchronous metadata polls run without a console. Cancellable
+commands have a hidden private console and a job that ends child processes. A short-lived helper joins
 that console and sends CTRL_C so Git can remove its locks, without changing the
 CLI or desktop process's own console or signal handlers. If signalling fails,
 cancellation falls back to terminating the job and process. `os.Interrupt` and

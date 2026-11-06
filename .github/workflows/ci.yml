@@ -17,6 +17,8 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.26"
+      - name: Test Windows console and cancellation regressions
+        run: go test ./core/vcs -v -run '^(TestWindowsGit|TestCancelStageRemovesIndexLock)' -count=1 -timeout=2m
       - name: Test WebView2 focus recovery
         working-directory: gui/third_party/go-webview2
         run: go test ./pkg/edge -run '^TestFocus' -count=1
