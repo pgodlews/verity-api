@@ -56,9 +56,9 @@ test("project files are selected by default and other files are not", () => {
 });
 
 test("selection keeps the user's choices and drops paths that disappeared", () => {
-  assert.deepEqual(reconcileSelection(null, files), ["project.yaml", "parts/api.yaml"]);
-  assert.deepEqual(reconcileSelection(["notes.txt", "gone.txt"], files), ["notes.txt"]);
-  assert.deepEqual(reconcileSelection([], files), []);
+  assert.deepEqual(reconcileSelection(new Map(), files), ["project.yaml", "parts/api.yaml"]);
+  assert.deepEqual(reconcileSelection(new Map([["project.yaml", false], ["parts/api.yaml", false], ["notes.txt", true], ["gone.txt", true]]), files), ["notes.txt"]);
+  assert.deepEqual(reconcileSelection(new Map(files.map((file) => [file.path, false])), files), []);
 });
 
 test("commit stays disabled until a file and a message are both present", () => {
@@ -269,4 +269,61 @@ test("?mock untracked restore errors keep the stash without merge state", async 
   await assert.rejects(mock.GitStashAction({ path, id, action: "pop" }), /could not restore untracked files/);
   assert.equal((await mock.GitStashes(path))[0].id, id);
   assert.equal((await mock.GitStatus(path)).merging, false);
+});
+
+test("SourceControl follows clean-to-modified status while retaining explicit choices", async () => {
+  const { build } = await import("esbuild");
+  const { createElement } = await import("react");
+  const { act, create } = await import("react-test-renderer");
+  const result = await build({
+    stdin: { contents: `export { SourceControl } from '../views/SourceControl'; export { api } from '../api';`, resolveDir: directory, loader: "tsx" },
+    bundle: true, platform: "node", format: "cjs", write: false,
+    external: ["react", "react-dom", "react/jsx-runtime"],
+    loader: { ".css": "empty", ".json": "json" }, define: { "import.meta.env.DEV": "false" },
+  });
+  const mod = { exports: {} };
+  new Function("module", "exports", "require", result.outputFiles[0].text)(mod, mod.exports, require);
+  const { SourceControl, api } = mod.exports;
+  let changed = [];
+  Object.assign(api, {
+    gitStatus: async () => ({ available: true, repo: true, files: changed }),
+    gitChanges: async () => ({ steps: [], environments: [], auth: [], suites: [], cases: [] }),
+    gitBranches: async () => [], gitStashes: async () => [], cancelGit: async () => {},
+  });
+  const originalWindow = globalThis.window;
+  globalThis.window = {};
+  let renderer;
+  let epoch = 0;
+  const props = { path: "project.yaml", dirty: false, onOpen() {}, onChanged() {} };
+  const refresh = async (paths, path = props.path) => {
+    changed = paths;
+    await act(async () => renderer.update(createElement(SourceControl, { ...props, path, epoch: ++epoch })));
+  };
+  const textOf = (node) => node.children.map((child) => typeof child === "string" ? child : textOf(child)).join("");
+  const checkbox = (path) => renderer.root.findAllByType("label").find((node) => textOf(node).startsWith(path)).findByType("input");
+  try {
+    await act(async () => { renderer = create(createElement(SourceControl, { ...props, epoch })); });
+    await refresh([files[0]]);
+    assert.equal(checkbox("project.yaml").props.checked, true);
+    await act(async () => checkbox("project.yaml").props.onChange({ target: { checked: false } }));
+    await refresh([files[0]]);
+    assert.equal(checkbox("project.yaml").props.checked, false);
+    await refresh([]);
+    await refresh(files);
+    assert.equal(checkbox("project.yaml").props.checked, false);
+    assert.equal(checkbox("parts/api.yaml").props.checked, true);
+    const other = renderer.root.findAllByType("button").find((node) => textOf(node).includes("Other files"));
+    await act(async () => other.props.onClick());
+    assert.equal(checkbox("notes.txt").props.checked, false);
+    await act(async () => checkbox("notes.txt").props.onChange({ target: { checked: true } }));
+    await refresh([]);
+    await refresh(files);
+    assert.equal(checkbox("notes.txt").props.checked, true);
+    await refresh(files, "other-project.yaml");
+    assert.equal(checkbox("project.yaml").props.checked, true);
+    assert.equal(checkbox("notes.txt").props.checked, false);
+  } finally {
+    if (renderer) await act(async () => renderer.unmount());
+    globalThis.window = originalWindow;
+  }
 });
