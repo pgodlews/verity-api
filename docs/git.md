@@ -93,6 +93,12 @@ staged content. A scan finding, a staged `.env` file, a value in a staged
 files are refused in staged mode rather than scanned as link text. `verity` must be on `PATH` when Git runs
 the hook. Git must also be installed when installing or uninstalling the hook.
 
+Directory symlink aliases are resolved consistently for project recognition,
+selected-file scans, dirty-file guards, and hook project paths. A selected commit
+stops if its project file list cannot be read, so repair a missing or invalid
+fragment before retrying. Tracked symlink files retain their Git entry identity
+and staged project symlinks are refused.
+
 Installation uses `git rev-parse --git-path hooks`, so `core.hooksPath` and
 worktrees are honoured. It refuses to replace an unrelated `pre-commit` hook.
 Use `--force` to move that hook to `pre-commit.verity-backup` first. Reinstalling

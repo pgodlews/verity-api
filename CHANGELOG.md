@@ -54,6 +54,9 @@ and distribution names below use the final public names.
 
 ### Security
 
+- Apply Git project-file recognition and commit secret checks consistently through
+  directory symlink aliases; refuse commits when the project file list cannot be read.
+
 - Fixed disclosure of values resolved from `${env:NAME}` and
   `${secret:provider:key}` in JSON reports and `verity load` output when
   request construction or target validation failed. Secrets are registered
