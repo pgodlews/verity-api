@@ -3,9 +3,9 @@
 > Historical observations against `cb8915c`, supplied with the original test materials.
 > These findings are not a claim about the current release. See [fix tracking and required native retests](README.md#findings-and-retests).
 
-**Date:** 6 November 2026  
-**Platform:** macOS 27.2, Apple silicon  
-**Revision:** `cb8915c`; source build with Go 1.26.10/Wails 2.12.0 plus published `v0.6.0-alpha.1` macOS archive.  
+**Date:** 6 November 2026\
+**Platform:** macOS 27.2, Apple silicon\
+**Revision:** `cb8915c`; source build with Go 1.26.10/Wails 2.12.0 plus published `v0.6.0-alpha.1` macOS archive.\
 **Method:** Native Wails UI driven with computer control; disposable project copies, a local fixture API and a local bare Git remote. A fixture-only API token was supplied to the app process. No production account or real credential was used.
 
 ## Results
