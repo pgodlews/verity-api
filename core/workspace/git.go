@@ -214,11 +214,12 @@ func WatchPaths(projectPath string) (sources, gitMeta []string, loaded bool, err
 	if !vcs.Available() {
 		return sources, nil, loaded, nil
 	}
-	root, rerr := vcs.RepoRoot(filepath.Dir(abs))
+	_, rerr := vcs.RepoRoot(filepath.Dir(abs))
 	if rerr != nil {
 		return sources, nil, loaded, nil
 	}
-	gitMeta = gitWatchPaths(root)
+	// Keep watcher metadata in the same directory representation as sources.
+	gitMeta = gitWatchPaths(filepath.Dir(abs))
 	return sources, gitMeta, loaded, nil
 }
 
@@ -275,7 +276,7 @@ func gitWatchPaths(root string) []string {
 }
 
 func projectDir(projectPath string) (abs, dir string, err error) {
-	abs, err = filepath.Abs(projectPath)
+	abs, err = gitPathIdentity(projectPath)
 	if err != nil {
 		return "", "", verr.Wrap(verr.CodeConfig, err, "resolve project path")
 	}
@@ -354,18 +355,33 @@ func relToProject(projectDir, abs string) string {
 }
 
 func projectFileSet(projectPath string) map[string]struct{} {
-	set := map[string]struct{}{}
-	files, err := ProjectFiles(projectPath)
-	if err != nil {
-		if abs, aerr := filepath.Abs(projectPath); aerr == nil {
-			set[filepath.Clean(abs)] = struct{}{}
-		}
+	set, err := projectGitFiles(projectPath)
+	if err == nil {
 		return set
 	}
-	for _, f := range files {
-		set[filepath.Clean(f)] = struct{}{}
+	// Status can still identify the root when a fragment is broken. A commit
+	// uses projectGitFiles directly and refuses an incomplete file list.
+	set = map[string]struct{}{}
+	if abs, err := gitPathIdentity(projectPath); err == nil {
+		set[abs] = struct{}{}
 	}
 	return set
+}
+
+func projectGitFiles(projectPath string) (map[string]struct{}, error) {
+	files, err := ProjectFiles(projectPath)
+	if err != nil {
+		return nil, err
+	}
+	set := map[string]struct{}{}
+	for _, f := range files {
+		canonical, err := gitPathIdentity(f)
+		if err != nil {
+			return nil, err
+		}
+		set[canonical] = struct{}{}
+	}
+	return set, nil
 }
 
 func diffAgainstHEAD(projectPath string, st *vcs.Snapshot) (*ProjectChanges, error) {
@@ -540,35 +556,43 @@ func mergeProjects(parts []*model.Project) *model.Project {
 	return &base
 }
 
-func repoRelative(root, file string) (string, error) {
+// gitPathIdentity resolves directory aliases, including the nearest existing
+// ancestor of a deleted path. The leaf is never followed: a tracked symlink
+// identifies the Git entry itself, not its target.
+func gitPathIdentity(file string) (string, error) {
 	abs, err := filepath.Abs(file)
 	if err != nil {
 		return "", err
 	}
-	top := root
-	if resolved, err := filepath.EvalSymlinks(root); err == nil {
-		top = resolved
-	}
-	// A stash can remove whole directories. Resolve the nearest existing
-	// ancestor, then append the missing suffix (without following the file
-	// itself, which may be a symlink tracked by Git).
 	ancestor := filepath.Dir(abs)
 	for {
-		if resolved, err := filepath.EvalSymlinks(ancestor); err == nil {
+		resolved, err := filepath.EvalSymlinks(ancestor)
+		if err == nil {
 			suffix, err := filepath.Rel(ancestor, abs)
 			if err != nil {
 				return "", err
 			}
-			abs = filepath.Join(resolved, suffix)
-			break
-		} else if !errors.Is(err, fs.ErrNotExist) {
+			return filepath.Join(resolved, suffix), nil
+		}
+		if !errors.Is(err, fs.ErrNotExist) {
 			return "", err
 		}
 		parent := filepath.Dir(ancestor)
 		if parent == ancestor {
-			break
+			return "", err
 		}
 		ancestor = parent
+	}
+}
+
+func repoRelative(root, file string) (string, error) {
+	top, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		return "", err
+	}
+	abs, err := gitPathIdentity(file)
+	if err != nil {
+		return "", err
 	}
 	rel, err := filepath.Rel(top, abs)
 	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {

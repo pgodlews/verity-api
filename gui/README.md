@@ -80,6 +80,10 @@ OS or browser persistence. See `docs/auth.md` for platform requirements.
 GraphQL variables cross the desktop bridge as source text, so formatting or an
 unrelated edit does not round large numbers, `1e400`, `-0`, or decimal literals.
 
+Request and environment saves normalize YAML indentation while preserving comments,
+document markers, and unrelated scalar values. Folded multiline text may use
+literal style to preserve its decoded value across repeated saves.
+
 With a project open, the status bar shows the git branch (or a detached short
 commit), how many paths differ from HEAD, and ahead/behind when the branch
 tracks a local upstream. The collection marks added and modified requests.
@@ -88,7 +92,9 @@ last commit: each request's changed parts (including order and a move's
 previous suite and case), environment and auth edits, suite and case fields,
 project metadata, and a count of other files in the repo. When the projects
 differ and none of those parts were reported, it shows one modified-project
-row. Project files start checked; other repo files are collapsed. Commit
+row. Newly changed project files start checked; other repo files are collapsed.
+Explicit checkbox choices survive refreshes and files disappearing and returning,
+until another project is opened. Commit
 stages only the checked paths, refuses a staged plaintext secret even when
 no hook is installed, then runs git's hooks. Pull is fast-forward only until
 you choose merge. Push never force-pushes; a branch without an upstream asks

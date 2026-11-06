@@ -244,31 +244,7 @@ func replaceStep(data []byte, file string, req SaveStepRequest) ([]byte, bool, e
 }
 
 func formatEditedYAML(original []byte, doc *yaml.Node) ([]byte, error) {
-	encoded, err := yaml.Marshal(doc)
-	if err != nil {
-		return nil, err
-	}
-	for _, marker := range []string{"---", "..."} {
-		if !hasYAMLDocumentMarker(original, marker) {
-			continue
-		}
-		if marker == "---" {
-			encoded = append([]byte("---\n"), encoded...)
-		} else {
-			encoded = append(encoded, []byte("...\n")...)
-		}
-	}
-	return model.FormatYAML(encoded)
-}
-
-func hasYAMLDocumentMarker(data []byte, marker string) bool {
-	for _, line := range strings.Split(string(data), "\n") {
-		line = strings.TrimSuffix(line, "\r")
-		if line == marker || strings.HasPrefix(line, marker+" #") {
-			return true
-		}
-	}
-	return false
+	return model.FormatYAMLNode(original, doc)
 }
 
 // findSteps returns the steps sequence of suite/case in a project mapping.

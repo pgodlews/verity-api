@@ -41,9 +41,8 @@ export function LoadView(props: {
   settings?: RunSettings;
   onStart: (opts: LoadOptions) => Promise<LoadReport>;
   onCancel: () => void;
-  onClearReport: () => void;
 }): JSX.Element {
-  const { info, environment, report, live, running, settings = {}, onStart, onCancel, onClearReport } = props;
+  const { info, environment, report, live, running, settings = {}, onStart, onCancel } = props;
 
   const [selectedSuites, setSelectedSuites] = useState<string[]>([]);
   const [selectedCases, setSelectedCases] = useState<string[]>([]);
@@ -160,7 +159,6 @@ export function LoadView(props: {
   }
 
   async function handleStart() {
-    onClearReport();
     setFormError("");
     setSavedNotice("");
     setSaveError("");

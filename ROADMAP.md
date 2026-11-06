@@ -33,6 +33,10 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` planned
 - [x] Wails desktop app: request editor, runner, imports, environments,
       load tests, and Git source control with stashes.
 - [x] Supported frontend tooling with refreshed development dependencies and explicit webview targets.
+- [x] Default Source control selection follows newly changed project files without overriding user choices.
+- [x] Preserve desktop load reports until a new run returns a replacement.
+- [x] Git status, selected commit scans, and hooks handle directory aliases consistently.
+- [x] Desktop YAML saves preserve unrelated multiline values, comments, and markers.
 - [x] JSON Schema (project + auth), Docker image, GitHub Action, AGENTS.md, docs.
 
 ---
