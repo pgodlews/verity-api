@@ -28,21 +28,28 @@ func FormatYAML(data []byte) ([]byte, error) {
 		return nil, verr.Wrap(verr.CodeConfig, err, "parse YAML")
 	}
 
-	normalizeFoldedScalars(&doc)
+	return FormatYAMLNode(data, &doc)
+}
+
+// FormatYAMLNode formats an edited YAML tree before any intermediate encoding
+// can change folded scalar values. It normalizes folded styles in place and
+// preserves document markers from original.
+func FormatYAMLNode(original []byte, doc *yaml.Node) ([]byte, error) {
+	normalizeFoldedScalars(doc)
 	var buf bytes.Buffer
 	enc := yaml.NewEncoder(&buf)
 	enc.SetIndent(2)
-	if err := enc.Encode(&doc); err != nil {
+	if err := enc.Encode(doc); err != nil {
 		return nil, verr.Wrap(verr.CodeConfig, err, "format YAML")
 	}
 	if err := enc.Close(); err != nil {
 		return nil, verr.Wrap(verr.CodeConfig, err, "format YAML")
 	}
 	out := buf.Bytes()
-	if hasYAMLMarker(data, "---") && !bytes.HasPrefix(out, []byte("---\n")) {
+	if hasYAMLMarker(original, "---") && !bytes.HasPrefix(out, []byte("---\n")) {
 		out = append([]byte("---\n"), out...)
 	}
-	if hasYAMLMarker(data, "...") && !bytes.HasSuffix(out, []byte("...\n")) {
+	if hasYAMLMarker(original, "...") && !bytes.HasSuffix(out, []byte("...\n")) {
 		out = append(out, []byte("...\n")...)
 	}
 	return out, nil
