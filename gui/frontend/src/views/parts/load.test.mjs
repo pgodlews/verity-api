@@ -329,7 +329,6 @@ test("LoadView renders target refusal, live stats with aria-live, and final per-
       running: false,
       onStart: async () => ({}),
       onCancel: () => {},
-      onClearReport: () => {},
     }),
   );
   assert.match(initialHtml, /refusing non-private target staging\.widgets\.example; pass --allow-remote to run it/);
@@ -347,7 +346,6 @@ test("LoadView renders target refusal, live stats with aria-live, and final per-
       running: true,
       onStart: async () => ({}),
       onCancel: () => {},
-      onClearReport: () => {},
     }),
   );
   assert.match(liveHtml, /aria-live="polite"/);
@@ -362,7 +360,6 @@ test("LoadView renders target refusal, live stats with aria-live, and final per-
     live: null,
     onStart: async () => ({}),
     onCancel: () => {},
-    onClearReport: () => {},
     report: {
       schemaVersion: "1",
       project: "Widget Shop",
