@@ -45,7 +45,7 @@ not cover them. Check the GUI backend and frontend with:
 On Windows also run the GUI's patched WebView2 dependency tests:
 
 ```bash
-(cd gui/third_party/go-webview2 && go test ./pkg/edge)
+(cd gui/third_party/go-webview2 && go test ./pkg/edge -run '^TestFocus')
 ```
 
 This local dependency is separate from the four application/plugin modules; see

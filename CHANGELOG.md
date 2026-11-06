@@ -51,6 +51,8 @@ and distribution names below use the final public names.
 ### Fixed
 
 - Avoid opening Windows console windows for Git subprocesses during desktop operations.
+- Let Windows Git clean up staging locks on cancellation by sending CTRL_C
+  in an isolated hidden console instead of CTRL_BREAK.
 - Keep the Windows desktop open when a WebView2 focus request fails, including
   during window switching and native dialogs; log only the numeric error code.
 - Generate valid Windows file URLs for Source control's system file opener.

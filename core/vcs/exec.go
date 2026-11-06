@@ -593,11 +593,10 @@ func gitLocale() string {
 }
 
 // cancelSucceeded reports whether a cancel attempt actually signalled git.
-// os.Interrupt is never success: on Windows, Process.Signal(os.Interrupt)
-// does not reach the process group, and a nil error from that call must
-// not be treated as a delivered interrupt.
+// os.Interrupt does not signal a Windows group, and CTRL_BREAK does not run
+// Git for Windows' SIGINT cleanup. Neither counts as graceful cancellation.
 func cancelSucceeded(method string, err error) bool {
-	if method == "os.Interrupt" {
+	if method == "os.Interrupt" || method == "ctrl-break" {
 		return false
 	}
 	return err == nil

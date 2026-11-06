@@ -22,8 +22,11 @@ includes equivalent handling. Keep this copy scoped to the GUI module.
 Run on Windows:
 
 ```sh
-go test ./pkg/edge
+go test ./pkg/edge -run '^TestFocus'
 ```
+
+Other upstream tests include browser integration and require an installed
+WebView2 runtime. The focused regression tests above use only fake COM calls.
 
 The native desktop still needs a Windows retest of Git polling, Alt+Tab,
 minimise/restore, and native save/open dialogs, including unsaved edits.

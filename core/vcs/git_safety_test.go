@@ -36,8 +36,11 @@ func TestCancelSucceededIgnoresInterrupt(t *testing.T) {
 	if cancelSucceeded("ctrl-break", errors.New("not delivered")) {
 		t.Fatal("failed ctrl-break was success")
 	}
-	if !cancelSucceeded("ctrl-break", nil) {
-		t.Fatal("delivered ctrl-break was not success")
+	if cancelSucceeded("ctrl-break", nil) {
+		t.Fatal("CTRL_BREAK was treated as graceful Git cancellation")
+	}
+	if cancelSucceeded("ctrl-c", errors.New("not delivered")) || !cancelSucceeded("ctrl-c", nil) {
+		t.Fatal("CTRL_C delivery result was not respected")
 	}
 }
 

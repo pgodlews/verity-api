@@ -275,9 +275,9 @@ select. Verity does not edit conflict markers itself.
 Fetch, pull, and push use `branch.<name>.remote` and `branch.<name>.merge`
 (`refs/heads/…`). They do not split the abbreviated `@{upstream}` name, so
 a remote whose name contains a slash is the remote that is fetched. Fetch,
-pull, and push run one at a time. Cancel signals git's process group
-(SIGINT, or `CTRL_BREAK_EVENT` on Windows) and, after a short wait, kills
-it, so `index.lock` is removed. The kill is tied to that process and is
+pull, and push run one at a time. Cancel signals Git (SIGINT on Unix, CTRL_C
+in an isolated console on Windows) and, after a short wait, kills it if needed.
+The graceful signal lets Git remove `index.lock`. The kill is tied to that process and is
 not delivered after git has exited. On Windows each Git command has a hidden
 private console and a job that ends child processes. A short-lived helper joins
 that console and sends CTRL_C so Git can remove its locks, without changing the
