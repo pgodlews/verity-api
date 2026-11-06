@@ -44,6 +44,8 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- Preserve unrelated folded YAML scalar values when saving requests and environments.
+
 - Preserve JSON numbers without losing precision when loading, editing, and
   saving project data, including large integer values.
 - Escape URL query names and values correctly so reserved characters in
