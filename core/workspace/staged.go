@@ -148,7 +148,10 @@ func ScanCommit(projectPath string, rels []string) (*StagedScan, error) {
 		consider(op.Path)
 		consider(op.From)
 	}
-	set := projectFileSet(abs)
+	set, err := projectGitFiles(abs)
+	if err != nil {
+		return nil, verr.Wrap(verr.CodeConfig, err, "identify project files before scanning the commit")
+	}
 	var found []secretscan.Finding
 	for _, rel := range rels {
 		absPath := filepath.Clean(filepath.Join(root, filepath.FromSlash(rel)))

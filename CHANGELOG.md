@@ -45,6 +45,8 @@ and distribution names below use the final public names.
 ### Fixed
 
 - Select newly changed project files in Source control while preserving explicit checkbox choices.
+- Keep the previous desktop load report when validation or starting a new run fails.
+- Preserve unrelated folded YAML scalar values when saving requests and environments.
 
 - Preserve JSON numbers without losing precision when loading, editing, and
   saving project data, including large integer values.
@@ -53,6 +55,9 @@ and distribution names below use the final public names.
 - Redact Digest authentication details consistently in captured output.
 
 ### Security
+
+- Apply Git project-file recognition and commit secret checks consistently through
+  directory symlink aliases; refuse commits when the project file list cannot be read.
 
 - Fixed disclosure of values resolved from `${env:NAME}` and
   `${secret:provider:key}` in JSON reports and `verity load` output when
