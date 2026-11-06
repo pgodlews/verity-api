@@ -9,5 +9,7 @@ export default defineConfig({
   plugins: [react(), verityBridge()],
   build: {
     outDir: "dist",
+    // Retain the previous webview/browser target across the Vite upgrade.
+    target: ["es2020", "edge88", "firefox78", "chrome87", "safari14"],
   },
 });

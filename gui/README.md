@@ -13,13 +13,17 @@ by core before they reach the frontend.
 ## Prerequisites
 
 - Go 1.26+
-- Node.js 20+ and npm
+- Node.js 20.19+ (20.x) or 22.12+ and npm
 - The Wails CLI:
   ```bash
   go install github.com/wailsapp/wails/v2/cmd/wails@latest
   ```
   Plus platform webview deps (see the Wails docs): WebKitGTK on Linux, WebView2
   on Windows, nothing extra on macOS.
+
+The frontend uses Vite 7. Its build keeps the earlier browser/webview targets
+explicitly rather than adopting newer Vite defaults. `npm audit` checks the
+development toolchain as well as application dependencies.
 
 ## Develop
 

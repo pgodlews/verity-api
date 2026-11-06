@@ -29,6 +29,9 @@ and distribution names below use the final public names.
 
 ### Changed
 
+- Upgrade frontend development tooling to Vite 7 and refresh audited dependencies.
+  Building the frontend now requires Node.js 20.19+ (20.x) or 22.12+.
+
 - **BREAKING:** renamed the CLI from `apitest` to `verity`, built from
   `./cmd/verity`. Update scripts and CI commands. After installing `verity`,
   reinstall an existing pre-commit hook from the repository root with
