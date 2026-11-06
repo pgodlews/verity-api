@@ -248,8 +248,7 @@ func TestReadAtRefusesSymlink(t *testing.T) {
 		t.Fatal(err)
 	}
 	// A Git symlink blob does not require OS symlink privileges to create.
-	stageBlob(t, dir, "120000", "link.txt", "target.txt")
-	gitRun(t, dir, "commit", "-m", "link")
+	commitBlob(t, dir, "120000", "link.txt", "target.txt")
 	got, err := ReadAt(dir, "HEAD", "link.txt")
 	if err == nil {
 		t.Fatalf("symlink was read: %q", got)
@@ -344,8 +343,7 @@ func TestReadAtAllowsNewlineInPath(t *testing.T) {
 	name := "project\nname.yaml"
 	// Reading a tree must work even if its names cannot be checked out on
 	// this platform. Construct the tree directly, without Windows file APIs.
-	stageBlob(t, dir, "100644", name, "nl\n")
-	gitRun(t, dir, "commit", "-m", "initial")
+	commitBlob(t, dir, "100644", name, "nl\n")
 	if err := validateRelPath(name); err != nil {
 		t.Fatal(err)
 	}
@@ -412,15 +410,23 @@ func gitInit(t *testing.T, dir string) {
 	gitRun(t, dir, "config", "core.autocrlf", "false")
 }
 
-func stageBlob(t *testing.T, dir, mode, name, body string) {
+func commitBlob(t *testing.T, dir, mode, name, body string) {
 	t.Helper()
-	cmd := exec.Command("git", "-C", dir, "hash-object", "-w", "--stdin")
-	cmd.Stdin = strings.NewReader(body)
-	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("hash fixture blob: %v\n%s", err, out)
-	} else {
-		gitRun(t, dir, "update-index", "--add", "--cacheinfo", mode, strings.TrimSpace(string(out)), name)
+	input := func(body string, args ...string) string {
+		t.Helper()
+		cmd := exec.Command("git", append([]string{"-C", dir}, args...)...)
+		cmd.Env = withIdentityEnv(os.Environ())
+		cmd.Stdin = strings.NewReader(body)
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("Git tree fixture: %v\n%s", err, out)
+		}
+		return strings.TrimSpace(string(out))
 	}
+	oid := input(body, "hash-object", "-w", "--stdin")
+	tree := input(mode+" blob "+oid+"\t"+name+"\x00", "mktree", "-z")
+	commit := input("", "commit-tree", tree, "-m", "fixture")
+	gitRun(t, dir, "update-ref", "HEAD", commit)
 }
 
 func gitAddCommit(t *testing.T, dir, message string) {

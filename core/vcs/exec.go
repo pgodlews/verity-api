@@ -24,8 +24,8 @@
 // worktree hash. Pull, switch, and merge do not run smudge; a checkout of
 // an LFS-tracked file leaves the pointer text until the user runs their
 // own smudge. Write commands set GIT_TERMINAL_PROMPT=0 and take a context.
-// Cancel signals the git process group (SIGINT on Unix, CTRL_BREAK_EVENT
-// on Windows), then kills it after a short wait, so git can remove
+// Cancel signals Git (SIGINT on Unix, CTRL_C_EVENT in a private hidden
+// console on Windows), then kills it after a short wait, so Git can remove
 // index.lock. The kill timer is stopped when the process exits. On
 // Windows, os.Interrupt is not a successful cancel: Go's Signal does not
 // reach the process group.

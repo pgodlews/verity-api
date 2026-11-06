@@ -278,11 +278,12 @@ a remote whose name contains a slash is the remote that is fetched. Fetch,
 pull, and push run one at a time. Cancel signals git's process group
 (SIGINT, or `CTRL_BREAK_EVENT` on Windows) and, after a short wait, kills
 it, so `index.lock` is removed. The kill is tied to that process and is
-not delivered after git has exited. On Windows the process is in a new
-group and a job that ends child processes; `os.Interrupt` is not treated
-as a successful signal. Git console windows are hidden. A desktop process temporarily attaches to
-the hidden console to deliver CTRL_BREAK, allowing Git to remove its index lock.
-If delivery fails, cancellation falls back to terminating the job and process.
+not delivered after git has exited. On Windows each Git command has a hidden
+private console and a job that ends child processes. A short-lived helper joins
+that console and sends CTRL_C so Git can remove its locks, without changing the
+CLI or desktop process's own console or signal handlers. If signalling fails,
+cancellation falls back to terminating the job and process. `os.Interrupt` and
+CTRL_BREAK are not treated as graceful Git cancellation on Windows.
 The toolbar stays frozen while a confirmation dialog is open, and Cancel
 and those dialogs stay up if you leave Source control. Progress lines are
 git's own `--progress` text when it prints some, plus a start and finish

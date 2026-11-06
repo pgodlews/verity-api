@@ -10,7 +10,7 @@ profiles, environment values, and machine identifiers are not copied here.
 | --- | --- | --- |
 | Request save changed unrelated folded YAML text | Failed on published alpha; passed on main | Existing PR #1 fix needs release-candidate retest |
 | Invalid load users erased the completed report | Failed on published alpha; passed on main, including export of the retained report | Existing PR #2 fix needs the remaining rejection variants tested |
-| Git subprocess consoles repeatedly appeared and disturbed focus | Observed on both builds | Hide console windows while keeping a console available for graceful Git cancellation |
+| Git subprocess consoles repeatedly appeared and disturbed focus | Observed on both builds | Hide console windows with private consoles and an isolated CTRL_C helper for graceful Git cancellation |
 | Focus errors exited the process | Recorded on both builds; one during report export and one outside dialogs | Patch the pinned WebView2 focus path to ignore lifecycle-inappropriate focus and report recoverable HRESULTs without exiting |
 | Git/workspace automated checks failed | Recorded on the Windows test machine | Correct drive-letter file URLs and platform-dependent fixture paths, line endings, modes, and Git commands; retain security and cancellation assertions |
 

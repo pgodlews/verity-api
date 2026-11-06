@@ -108,8 +108,66 @@ func windowsConsoleHelper(t *testing.T, mode string) *exec.Cmd {
 	cmd := exec.Command(exe, "-test.run=^TestWindowsGitConsoleHelper$")
 	cmd.Env = append(os.Environ(), "VERITY_WINDOWS_CONSOLE_HELPER="+mode)
 	ownProcessGroup(cmd)
-	cmd.SysProcAttr.CreationFlags |= 0x10 // CREATE_NEW_CONSOLE, like a GUI parent.
 	return cmd
+}
+
+func TestWindowsGitCancellationIsIsolated(t *testing.T) {
+	start := func() (*exec.Cmd, <-chan error) {
+		t.Helper()
+		cmd := windowsConsoleHelper(t, "wait")
+		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := cmd.Start(); err != nil {
+			t.Fatal(err)
+		}
+		attachJob(cmd)
+		t.Cleanup(func() { terminateGitTree(cmd); releaseGit(cmd) })
+		done := make(chan error, 1)
+		go func() { done <- cmd.Wait() }()
+		ready := make(chan bool, 1)
+		go func() {
+			s := bufio.NewScanner(stdout)
+			ready <- s.Scan() && s.Text() == "visible=0"
+		}()
+		select {
+		case ok := <-ready:
+			if !ok {
+				t.Fatal("hidden helper did not start")
+			}
+		case <-time.After(10 * time.Second):
+			t.Fatal("helper readiness timeout")
+		}
+		return cmd, done
+	}
+	first, firstDone := start()
+	second, secondDone := start()
+	if err := cancelGit(first); err != nil {
+		t.Fatalf("signal first private console: %v", err)
+	}
+	select {
+	case <-firstDone:
+	case <-time.After(gitCancelGrace + 5*time.Second):
+		t.Fatal("first process survived cancellation")
+	}
+	select {
+	case <-secondDone:
+		t.Fatal("cancellation reached another private console")
+	case <-time.After(100 * time.Millisecond):
+	}
+	// Also exercise the termination fallback when no signal can be delivered.
+	if handle, ok := winProcesses.LoadAndDelete(second); ok {
+		procCloseHandle.Call(uintptr(handle.(syscall.Handle)))
+	}
+	if err := cancelGit(second); err == nil {
+		t.Fatal("failed signal was reported as delivered")
+	}
+	select {
+	case <-secondDone:
+	case <-time.After(gitCancelGrace + 5*time.Second):
+		t.Fatal("fallback did not terminate the process")
+	}
 }
 
 func TestWindowsGitConsoleHelper(t *testing.T) {
