@@ -531,7 +531,11 @@ func trackFileRemote(t *testing.T, dir string) {
 }
 
 func fileURL(path string) string {
-	return (&url.URL{Scheme: "file", Path: filepath.ToSlash(path)}).String()
+	urlPath := filepath.ToSlash(path)
+	if filepath.VolumeName(path) != "" && !strings.HasPrefix(urlPath, "/") {
+		urlPath = "/" + urlPath
+	}
+	return (&url.URL{Scheme: "file", Path: urlPath}).String()
 }
 
 func head(t *testing.T, dir string) string {

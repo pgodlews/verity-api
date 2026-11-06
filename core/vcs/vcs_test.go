@@ -439,6 +439,10 @@ func gitRun(t *testing.T, dir string, args ...string) string {
 }
 
 func gitCmd(dir string, args ...string) ([]byte, error) {
+	if len(args) > 0 && args[0] == "clone" {
+		// Clone does not inherit the source repository's autocrlf setting.
+		args = append([]string{"clone", "-c", "core.autocrlf=false"}, args[1:]...)
+	}
 	cmd := exec.Command("git", args...)
 	if dir != "" {
 		cmd.Dir = dir
