@@ -44,6 +44,8 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- Select newly changed project files in Source control while preserving explicit checkbox choices.
+
 - Preserve JSON numbers without losing precision when loading, editing, and
   saving project data, including large integer values.
 - Escape URL query names and values correctly so reserved characters in

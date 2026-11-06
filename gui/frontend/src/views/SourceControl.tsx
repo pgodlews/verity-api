@@ -60,7 +60,7 @@ export function SourceControl({ path, epoch, dirty, active = true, onOpen, onCha
   const [remotes, setRemotes] = useState<string[]>([]);
   const [chosenRemote, setChosenRemote] = useState("");
   const [opened, setOpened] = useState("");
-  const memory = useRef<{ path: string; selected: string[] | null }>({ path: "", selected: null });
+  const memory = useRef<{ path: string; choices: Map<string, boolean> }>({ path: "", choices: new Map() });
   const statusGen = useRef(0);
   const changesGen = useRef(0);
   const branchGen = useRef(0);
@@ -82,10 +82,9 @@ export function SourceControl({ path, epoch, dirty, active = true, onOpen, onCha
     if (isCurrentGeneration(statusToken, statusGen.current)) {
       if (statusRes.status === "fulfilled") {
         const next = statusRes.value;
-        if (memory.current.path !== path) memory.current = { path, selected: null };
+        if (memory.current.path !== path) memory.current = { path, choices: new Map() };
         const files = next.files ?? [];
-        const nextSelected = reconcileSelection(memory.current.selected, files);
-        memory.current = { path, selected: nextSelected };
+        const nextSelected = reconcileSelection(memory.current.choices, files);
         setStatus(next);
         setSelected(nextSelected);
         setMachine((current) => current.hold === "conflict" && !files.some((file) => file.state === "conflicted") ? idleMachine() : current);
@@ -129,7 +128,8 @@ export function SourceControl({ path, epoch, dirty, active = true, onOpen, onCha
 
   function choose(file: string, on: boolean) {
     const next = on ? [...selected, file] : selected.filter((item) => item !== file);
-    memory.current = { path, selected: next };
+    if (memory.current.path !== path) memory.current = { path, choices: new Map() };
+    memory.current.choices.set(file, on);
     setSelected(next);
   }
 

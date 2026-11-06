@@ -84,7 +84,9 @@ last commit: each request's changed parts (including order and a move's
 previous suite and case), environment and auth edits, suite and case fields,
 project metadata, and a count of other files in the repo. When the projects
 differ and none of those parts were reported, it shows one modified-project
-row. Project files start checked; other repo files are collapsed. Commit
+row. Newly changed project files start checked; other repo files are collapsed.
+Explicit checkbox choices survive refreshes and files disappearing and returning,
+until another project is opened. Commit
 stages only the checked paths, refuses a staged plaintext secret even when
 no hook is installed, then runs git's hooks. Pull is fast-forward only until
 you choose merge. Push never force-pushes; a branch without an upstream asks
