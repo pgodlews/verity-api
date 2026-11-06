@@ -32,6 +32,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` planned
 - [x] Out-of-process plugin protocol (VPP/1) + SDK + scaffolder + example plugin.
 - [x] Wails desktop app: request editor, runner, imports, environments,
       load tests, and Git source control with stashes.
+- [x] Supported frontend tooling with refreshed development dependencies and explicit webview targets.
 - [x] JSON Schema (project + auth), Docker image, GitHub Action, AGENTS.md, docs.
 
 ---
