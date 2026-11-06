@@ -12,6 +12,9 @@ and distribution names below use the final public names.
 
 ### Added
 
+- Desktop release testing plans for Windows 11 and Linux, a shared scenario
+  checklist, and historical macOS findings with explicit coverage limits.
+
 - Server, client, and bidirectional streaming in the first-party gRPC plugin,
   with message and byte limits, idle timeouts, send intervals, and captured
   message counts and truncation status.
