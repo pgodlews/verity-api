@@ -198,3 +198,9 @@ In a request's Auth tab, an `oauth2` provider with
 browser handles consent; core manages PKCE and a loopback callback. Sessions
 last only for this desktop process and never expose tokens to React. See
 [`docs/auth.md`](../docs/auth.md) for callback registration and CI refresh tokens.
+
+## Release testing
+
+Use the [desktop testing index](../docs/testing/README.md) for shared scenarios,
+Windows 11 and Linux plans, historical macOS evidence, and the release result
+record. Planned scenarios are separate from completed native testing.

@@ -37,6 +37,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` planned
 - [x] Preserve desktop load reports until a new run returns a replacement.
 - [x] Git status, selected commit scans, and hooks handle directory aliases consistently.
 - [x] Desktop YAML saves preserve unrelated multiline values, comments, and markers.
+- [x] Desktop release scenario plans for Windows 11/Linux and historical macOS evidence with privacy guidance.
 - [x] JSON Schema (project + auth), Docker image, GitHub Action, AGENTS.md, docs.
 
 ---

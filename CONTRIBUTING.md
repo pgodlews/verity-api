@@ -81,6 +81,9 @@ verity hooks install --fmt project.yaml
 
 See [docs/git.md](docs/git.md) for hook behavior and project formatting.
 
+For native release validation, use the [desktop test plans](docs/testing/README.md)
+and record actual platform results separately from automated checks.
+
 ## Project rules
 
 - Keep protocol, authentication, assertion, runner, and reporting behavior in
