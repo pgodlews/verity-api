@@ -277,3 +277,7 @@ The **Load test** view (next to **Test runs** in the left rail) runs the same
   `min`/`mean`/`p50`/`p90`/`p95`/`p99`/`max` latency), status code counts, and
   **Save JSON report** (`SaveLoadReport`). Every string in the in-memory and
   saved report is redacted by `core/load` before it reaches the frontend.
+
+The previous report remains available if new settings are invalid or starting a
+run fails. During a new run its results are hidden; the completed or interrupted
+report replaces them when returned. Switching or closing projects clears reports.

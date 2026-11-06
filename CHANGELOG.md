@@ -44,6 +44,7 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- Keep the previous desktop load report when validation or starting a new run fails.
 - Preserve unrelated folded YAML scalar values when saving requests and environments.
 
 - Preserve JSON numbers without losing precision when loading, editing, and

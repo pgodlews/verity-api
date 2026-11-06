@@ -251,7 +251,7 @@ export function App() {
     runLock.current = true;
     loadRunningRef.current = true;
     setLoadRunning(true);
-    setLastLoad(null);
+    // Keep the previous report until a new (possibly partial) report replaces it.
     setLoadLive(null);
     setError("");
     try {
@@ -338,7 +338,7 @@ export function App() {
           settings={runSettings} onSettings={next => { setRunSettings(next); saveRunSettings(next); }} onCancel={() => { void api.cancel(); }} onRun={runCollection}
           onOpenStep={(suite, caseName, index) => { setOpenStep({ suite, caseName, index }); setView("workspace"); }} onSaveStep={saveStep} />}
         {info && view === "load" && <LoadView info={info} environment={environment} report={lastLoad} live={loadLive}
-          running={loadRunning} settings={runSettings} onClearReport={() => setLastLoad(null)} onStart={startLoad} onCancel={() => { void api.cancelLoad(); }} />}
+          running={loadRunning} settings={runSettings} onStart={startLoad} onCancel={() => { void api.cancelLoad(); }} />}
         {info && view === "environments" && <EnvironmentsView info={info} environment={environment} onSelectEnvironment={setEnvironment} onChanged={refreshProject} />}
         {view === "import" && <>
           {!info && <button className="btn welcome-back" onClick={() => setView("workspace")}>Back to welcome</button>}

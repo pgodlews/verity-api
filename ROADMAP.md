@@ -32,6 +32,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` planned
 - [x] Out-of-process plugin protocol (VPP/1) + SDK + scaffolder + example plugin.
 - [x] Wails desktop app: request editor, runner, imports, environments,
       load tests, and Git source control with stashes.
+- [x] Preserve desktop load reports until a new run returns a replacement.
 - [x] Git status, selected commit scans, and hooks handle directory aliases consistently.
 - [x] Desktop YAML saves preserve unrelated multiline values, comments, and markers.
 - [x] JSON Schema (project + auth), Docker image, GitHub Action, AGENTS.md, docs.
