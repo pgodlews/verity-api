@@ -204,3 +204,11 @@ last only for this desktop process and never expose tokens to React. See
 Use the [desktop testing index](../docs/testing/README.md) for shared scenarios,
 Windows 11 and Linux plans, historical macOS evidence, and the release result
 record. Planned scenarios are separate from completed native testing.
+
+## Windows focus compatibility
+
+The GUI module pins a small local copy of the WebView2 dependency used by Wails
+v2.12.0. It guards focus during startup/shutdown and treats a failed focus request
+as recoverable, preserving unsaved work. The patch, upstream provenance, licenses,
+and Windows regression command are documented in
+[the compatibility notes](third_party/go-webview2/VERITY.md).

@@ -10,6 +10,7 @@ commit and artifact checksum, and mark each scenario **pass**, **fail**,
 | --- | --- | --- |
 | [Shared release plan](desktop-release-test-plan.md) | P0/P1/P2 scenarios across desktop features | Living checklist; includes historical macOS observations |
 | [Windows 11 plan](windows-11-test-plan.md) | Shared scenarios plus Windows packaging, paths, WebView2, credentials, and accessibility | Authored 6 November 2026; native scenarios not executed in this work |
+| [Windows 11 findings](windows-findings-2026-11-06.md) | Supplied native observations, fix scope, and required retests | Targeted published-alpha/main testing; patched native retest outstanding |
 | [Linux plan](linux-test-plan.md) | Shared scenarios plus distribution/session, WebKitGTK, permissions, Secret Service, and accessibility | Authored 6 November 2026; native scenarios not executed in this work |
 | [macOS follow-up](macos-ui-followup-2026-11-06.md) | Observed Apple-silicon native scenarios and gaps | Historical testing of `cb8915c` and `v0.6.0-alpha.1` |
 | [Original findings](findings-2026-11-06.md) | Reproductions and limitations behind the fixes | Historical observations, not a current pass/fail record |

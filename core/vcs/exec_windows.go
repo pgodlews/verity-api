@@ -4,24 +4,26 @@ package vcs
 
 import (
 	"bytes"
+	"context"
 	"errors"
+	"fmt"
+	"os"
 	"os/exec"
+	"strconv"
 	"sync"
 	"syscall"
 	"unsafe"
 )
 
-// Windows has no SIGINT process group. Git is started in a new process
-// group so CTRL_BREAK_EVENT reaches it and the children that share that
-// group, and it is placed in a Job Object that ends those children when
-// the job is terminated. os.Interrupt is never used: Go's Signal returns
-// an error for it and does not signal the group. A nil error from that
-// call would be a false success, so cancelSucceeded("os.Interrupt", …)
-// is always false.
+// Git for Windows cleans up locks on CTRL_C_EVENT, not CTRL_BREAK_EVENT.
+// CTRL_C cannot be scoped to a process group, so cancellable Git commands get a
+// separate hidden console. A short-lived re-exec helper joins that console
+// to signal only Git and its children, leaving the host's console and signal
+// handlers untouched. A Job Object still supplies the termination fallback.
 
 const (
-	createNewProcessGroup = 0x00000200
-	ctrlBreakEvent        = 1
+	createNewConsole = 0x00000010
+	createNoWindow   = 0x08000000
 
 	jobObjectExtendedLimitInformation = 9
 	jobObjectLimitKillOnJobClose      = 0x2000
@@ -39,7 +41,47 @@ var (
 	procOpenProcess              = kernel32.NewProc("OpenProcess")
 	procGenerateConsoleCtrlEvent = kernel32.NewProc("GenerateConsoleCtrlEvent")
 	procCloseHandle              = kernel32.NewProc("CloseHandle")
+	procAttachConsole            = kernel32.NewProc("AttachConsole")
+	procFreeConsole              = kernel32.NewProc("FreeConsole")
+	procSetConsoleCtrlHandler    = kernel32.NewProc("SetConsoleCtrlHandler")
 )
+
+const gitInterruptHelper = "--verity-internal-git-interrupt"
+
+func init() {
+	// This mode is internal to runGit. Handle it before either the desktop or
+	// CLI starts; the helper never opens a window or reads project data.
+	if len(os.Args) != 3 || os.Args[1] != gitInterruptHelper {
+		return
+	}
+	pid, err := strconv.ParseUint(os.Args[2], 10, 32)
+	if err != nil || pid == 0 {
+		os.Exit(2)
+	}
+	os.Exit(interruptConsole(uint32(pid)))
+}
+
+func interruptConsole(pid uint32) int {
+	// A console-subsystem executable may inherit an association even when
+	// launched hidden. Detach only this helper before joining Git's console.
+	procFreeConsole.Call()
+	attached, _, _ := procAttachConsole.Call(uintptr(pid))
+	if attached == 0 {
+		return 3
+	}
+	// Ignore CTRL_C in this helper only. Git has its own enabled handler.
+	ignored, _, _ := procSetConsoleCtrlHandler.Call(0, 1)
+	if ignored == 0 {
+		return 4
+	}
+	delivered, _, _ := procGenerateConsoleCtrlEvent.Call(0, 0)
+	if delivered == 0 {
+		return 5
+	}
+	// Keep the ignore attribute until process exit: FreeConsole resets the
+	// handler table and could make a queued CTRL_C kill this helper first.
+	return 0
+}
 
 // Field order matches the Windows x64 SDK structures. If SetInformationJobObject
 // rejects the struct, job setup fails and cancel still uses the process
@@ -75,12 +117,22 @@ type jobObjectExtendedLimits struct {
 }
 
 var winJobs sync.Map
+var winProcesses sync.Map
 
-func ownProcessGroup(cmd *exec.Cmd) {
+func ownProcessGroup(cmd *exec.Cmd, backgroundRead bool) {
 	if cmd.SysProcAttr == nil {
 		cmd.SysProcAttr = &syscall.SysProcAttr{}
 	}
-	cmd.SysProcAttr.CreationFlags |= createNewProcessGroup
+	// CREATE_NO_WINDOW and CREATE_NEW_PROCESS_GROUP both prevent delivery of
+	// the CTRL_C Git needs to clean up locks. Use a private hidden console.
+	cmd.SysProcAttr.HideWindow = true
+	if backgroundRead {
+		// Synchronous metadata reads do not take Git locks or need a graceful
+		// interrupt. Avoid allocating a console for every status/config poll.
+		cmd.SysProcAttr.CreationFlags |= createNoWindow
+	} else {
+		cmd.SysProcAttr.CreationFlags |= createNewConsole
+	}
 }
 
 func commandOutput(cmd *exec.Cmd) ([]byte, error) {
@@ -101,6 +153,9 @@ func commandOutput(cmd *exec.Cmd) ([]byte, error) {
 }
 
 func releaseGitExtra(cmd *exec.Cmd) {
+	if v, ok := winProcesses.LoadAndDelete(cmd); ok {
+		procCloseHandle.Call(uintptr(v.(syscall.Handle)))
+	}
 	v, ok := winJobs.LoadAndDelete(cmd)
 	if !ok {
 		return
@@ -116,13 +171,12 @@ func cancelGit(cmd *exec.Cmd) error {
 	if cmd == nil || cmd.Process == nil {
 		return errors.New("git process is not running")
 	}
-	err := sendCtrlBreak(uint32(cmd.Process.Pid))
-	if !cancelSucceeded("ctrl-break", err) {
-		// Do not report os.Interrupt, and do not claim the break was
-		// delivered. End the tree now; Wait still reap the process.
+	err := sendGitInterrupt(cmd)
+	if !cancelSucceeded("ctrl-c", err) {
+		// Do not claim a signal was delivered. Wait still reaps the process.
 		terminateGitTree(cmd)
 		if err == nil {
-			return errors.New("CTRL_BREAK_EVENT was not delivered")
+			return errors.New("git interrupt was not delivered")
 		}
 		return err
 	}
@@ -135,16 +189,26 @@ func cancelGit(cmd *exec.Cmd) error {
 	return nil
 }
 
-func sendCtrlBreak(pid uint32) error {
-	if pid == 0 {
-		return errors.New("git process is not running")
+func sendGitInterrupt(cmd *exec.Cmd) error {
+	// Retain an OS handle until Wait and cancellation finish so this PID
+	// cannot be recycled while the helper is starting.
+	if _, ok := winProcesses.Load(cmd); !ok {
+		return errors.New("git process is not attached")
 	}
-	r1, _, err := procGenerateConsoleCtrlEvent.Call(uintptr(ctrlBreakEvent), uintptr(pid))
-	if r1 == 0 {
-		if err != nil && err != syscall.Errno(0) {
-			return err
+	exe, err := os.Executable()
+	if err != nil {
+		return errors.New("cannot locate git interrupt helper")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), gitCancelGrace)
+	defer cancel()
+	helper := exec.CommandContext(ctx, exe, gitInterruptHelper, strconv.Itoa(cmd.Process.Pid))
+	helper.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: createNoWindow}
+	if err := helper.Run(); err != nil {
+		var exit *exec.ExitError
+		if errors.As(err, &exit) {
+			return fmt.Errorf("git interrupt helper failed (exit %d)", exit.ExitCode())
 		}
-		return errors.New("CTRL_BREAK_EVENT was not delivered")
+		return errors.New("git interrupt helper failed")
 	}
 	return nil
 }
@@ -167,6 +231,11 @@ func attachJob(cmd *exec.Cmd) {
 	if cmd == nil || cmd.Process == nil {
 		return
 	}
+	proc, _, _ := procOpenProcess.Call(uintptr(processTerminate|processSetQuota), 0, uintptr(cmd.Process.Pid))
+	if proc == 0 {
+		return
+	}
+	winProcesses.Store(cmd, syscall.Handle(proc))
 	job, _, err := procCreateJobObjectW.Call(0, 0)
 	if job == 0 {
 		return
@@ -184,12 +253,6 @@ func attachJob(cmd *exec.Cmd) {
 		procCloseHandle.Call(uintptr(handle))
 		return
 	}
-	proc, _, err := procOpenProcess.Call(uintptr(processTerminate|processSetQuota), 0, uintptr(cmd.Process.Pid))
-	if proc == 0 {
-		procCloseHandle.Call(uintptr(handle))
-		return
-	}
-	defer procCloseHandle.Call(proc)
 	r1, _, err = procAssignProcessToJobObject.Call(uintptr(handle), proc)
 	if r1 == 0 {
 		procCloseHandle.Call(uintptr(handle))

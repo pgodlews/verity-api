@@ -8,7 +8,7 @@ import (
 	"os/exec"
 )
 
-func ownProcessGroup(cmd *exec.Cmd) {}
+func ownProcessGroup(cmd *exec.Cmd, _ bool) {}
 
 func commandOutput(cmd *exec.Cmd) ([]byte, error) {
 	out, err := cmd.Output()

@@ -214,7 +214,7 @@ func TestCancelDuringStageRestoresIndex(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ".gitattributes"), []byte("* filter=slow\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	gitRun(t, dir, "config", "filter.slow.clean", script)
+	gitRun(t, dir, "config", "filter.slow.clean", shQuote(script))
 	edited := strings.Replace(cleanProject, "name: Demo", "name: Other", 1)
 	writeRepoFile(t, dir, "project.yaml", edited)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -382,14 +382,15 @@ func TestFileURLStaysInWorkTree(t *testing.T) {
 	}
 	dir := t.TempDir()
 	gitInit(t, dir)
-	project := filepath.Join(dir, "project.yaml")
-	writeRepoFile(t, dir, "project.yaml", cleanProject)
+	name := "project #ą.yaml"
+	project := filepath.Join(dir, name)
+	writeRepoFile(t, dir, name, cleanProject)
 	gitAddCommit(t, dir, "init")
-	u, err := FileURL(project, "project.yaml")
+	u, err := FileURL(project, name)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasPrefix(u, "file:///") || !strings.Contains(u, "project.yaml") {
+	if !strings.HasPrefix(u, "file:///") || !strings.Contains(u, "project%20%23") {
 		t.Fatalf("url %s", u)
 	}
 	if _, err := FileURL(project, "../outside"); err == nil {

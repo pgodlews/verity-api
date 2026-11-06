@@ -428,7 +428,12 @@ func FileURL(projectPath, rel string) (string, error) {
 		return "", err
 	}
 	abs := filepath.Clean(filepath.Join(root, filepath.FromSlash(rels[0])))
-	return (&url.URL{Scheme: "file", Path: filepath.ToSlash(abs)}).String(), nil
+	path := filepath.ToSlash(abs)
+	// A drive letter is part of the URL path, not a URL authority.
+	if volume := filepath.VolumeName(abs); volume != "" && !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+	return (&url.URL{Scheme: "file", Path: path}).String(), nil
 }
 
 func dirtyRefusal(projectPath string) (*BranchWriteResult, error) {

@@ -320,6 +320,7 @@ func hasScope(list []ScopeChange, suite, name, state string) bool {
 func gitInit(t *testing.T, dir string) {
 	t.Helper()
 	gitRun(t, dir, "-c", "init.defaultBranch=main", "init")
+	gitRun(t, dir, "config", "core.autocrlf", "false")
 }
 
 func gitAddCommit(t *testing.T, dir, message string) {
@@ -330,6 +331,9 @@ func gitAddCommit(t *testing.T, dir, message string) {
 
 func gitRun(t *testing.T, dir string, args ...string) {
 	t.Helper()
+	if len(args) > 0 && args[0] == "clone" {
+		args = append([]string{"clone", "-c", "core.autocrlf=false"}, args[1:]...)
+	}
 	cmd := exec.Command("git", args...)
 	if dir != "" {
 		cmd.Dir = dir

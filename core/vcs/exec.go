@@ -24,8 +24,8 @@
 // worktree hash. Pull, switch, and merge do not run smudge; a checkout of
 // an LFS-tracked file leaves the pointer text until the user runs their
 // own smudge. Write commands set GIT_TERMINAL_PROMPT=0 and take a context.
-// Cancel signals the git process group (SIGINT on Unix, CTRL_BREAK_EVENT
-// on Windows), then kills it after a short wait, so git can remove
+// Cancel signals Git (SIGINT on Unix, CTRL_C_EVENT in a private hidden
+// console on Windows), then kills it after a short wait, so Git can remove
 // index.lock. The kill timer is stopped when the process exits. On
 // Windows, os.Interrupt is not a successful cancel: Go's Signal does not
 // reach the process group.
@@ -224,6 +224,9 @@ func configArgs(dir string) []string {
 
 // gitOpt is the per-call variation on the shared runner.
 type gitOpt struct {
+	// backgroundRead avoids allocating a Windows console for synchronous
+	// metadata reads. Only pure reads with context.Background set this.
+	backgroundRead bool
 	// terminalPrompt sets GIT_TERMINAL_PROMPT=0 so a missing credential
 	// fails instead of reading the terminal. Write operations set it.
 	terminalPrompt bool
@@ -255,7 +258,7 @@ type gitOpt struct {
 // the directory that is inspected. Successful stdout is returned raw:
 // callers read blobs and porcelain from it. Failures carry redacted text.
 func git(dir string, args ...string) ([]byte, error) {
-	out, _, err := runGit(context.Background(), dir, gitOpt{readOnly: true}, args...)
+	out, _, err := runGit(context.Background(), dir, gitOpt{readOnly: true, backgroundRead: true}, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -287,7 +290,7 @@ func runGit(ctx context.Context, dir string, opt gitOpt, args ...string) ([]byte
 	cmd.Env = gitEnv(dir, opt)
 	cmd.WaitDelay = gitCancelGrace
 	cmd.Cancel = func() error { return cancelGit(cmd) }
-	ownProcessGroup(cmd)
+	ownProcessGroup(cmd, opt.backgroundRead)
 	if len(opt.stdin) > 0 {
 		cmd.Stdin = bytes.NewReader(opt.stdin)
 	}
@@ -383,7 +386,7 @@ func envValue(env []string, key string) string {
 }
 
 func configuredSSH(dir string) string {
-	stdout, _, err := runGit(context.Background(), dir, gitOpt{skipFilters: true, skipSSH: true, readOnly: true}, "config", "--get", "core.sshCommand")
+	stdout, _, err := runGit(context.Background(), dir, gitOpt{skipFilters: true, skipSSH: true, readOnly: true, backgroundRead: true}, "config", "--get", "core.sshCommand")
 	if err != nil {
 		return ""
 	}
@@ -430,7 +433,7 @@ func mergeDriverNames(dir string) ([]string, error) {
 	seen := map[string]bool{}
 	var names []string
 	for _, scope := range []string{"--local", "--worktree"} {
-		out, _, err := runGit(context.Background(), dir, gitOpt{skipFilters: true, skipSSH: true, readOnly: true},
+		out, _, err := runGit(context.Background(), dir, gitOpt{skipFilters: true, skipSSH: true, readOnly: true, backgroundRead: true},
 			"config", scope, "--name-only", "--get-regexp", "^merge\\..*\\.driver$")
 		if err != nil {
 			if len(out) > 0 {
@@ -482,7 +485,7 @@ func filterNames(dir string) ([]string, error) {
 }
 
 func filterNamesInScope(dir, scope string) ([]string, error) {
-	stdout, _, err := runGit(context.Background(), dir, gitOpt{skipFilters: true, skipSSH: true, readOnly: true}, "config", scope, "--name-only", "--get-regexp", "^filter\\.")
+	stdout, _, err := runGit(context.Background(), dir, gitOpt{skipFilters: true, skipSSH: true, readOnly: true, backgroundRead: true}, "config", scope, "--name-only", "--get-regexp", "^filter\\.")
 	if err != nil {
 		// git config exits 1 when nothing matches. A failure that still
 		// printed keys is partial: do not continue with those filters on.
@@ -593,11 +596,10 @@ func gitLocale() string {
 }
 
 // cancelSucceeded reports whether a cancel attempt actually signalled git.
-// os.Interrupt is never success: on Windows, Process.Signal(os.Interrupt)
-// does not reach the process group, and a nil error from that call must
-// not be treated as a delivered interrupt.
+// os.Interrupt does not signal a Windows group, and CTRL_BREAK does not run
+// Git for Windows' SIGINT cleanup. Neither counts as graceful cancellation.
 func cancelSucceeded(method string, err error) bool {
-	if method == "os.Interrupt" {
+	if method == "os.Interrupt" || method == "ctrl-break" {
 		return false
 	}
 	return err == nil

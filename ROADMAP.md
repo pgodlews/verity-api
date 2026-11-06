@@ -10,6 +10,9 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` planned
 
 ## 0. Current implementation (including unreleased work)
 
+- [x] Run Windows Git subprocesses with hidden consoles and retain graceful cancellation.
+- [x] Recover from Windows WebView2 focus failures without exiting; guard focus during startup/shutdown.
+- [x] Correct Windows file URLs and make Git/workspace regression fixtures portable across platforms.
 - [x] Core engine: model, registry, SPI interfaces, runner (goroutine
       parallelism, per-step retry and timeout), secrets/redaction, structured
       errors (`verr`).

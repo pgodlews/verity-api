@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -246,11 +247,8 @@ func TestReadAtRefusesSymlink(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "target.txt"), []byte("secret-body"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink("target.txt", filepath.Join(dir, "link.txt")); err != nil {
-		t.Fatal(err)
-	}
-	gitRun(t, dir, "add", "--", "link.txt")
-	gitAddCommit(t, dir, "link")
+	// A Git symlink blob does not require OS symlink privileges to create.
+	commitBlob(t, dir, "120000", "link.txt", "target.txt")
 	got, err := ReadAt(dir, "HEAD", "link.txt")
 	if err == nil {
 		t.Fatalf("symlink was read: %q", got)
@@ -343,8 +341,9 @@ func TestReadAtAllowsNewlineInPath(t *testing.T) {
 	dir := t.TempDir()
 	gitInit(t, dir)
 	name := "project\nname.yaml"
-	writeFile(t, dir, name, "nl\n")
-	gitAddCommit(t, dir, "initial")
+	// Reading a tree must work even if its names cannot be checked out on
+	// this platform. Construct the tree directly, without Windows file APIs.
+	commitBlob(t, dir, "100644", name, "nl\n")
 	if err := validateRelPath(name); err != nil {
 		t.Fatal(err)
 	}
@@ -358,6 +357,9 @@ func TestReadAtAllowsNewlineInPath(t *testing.T) {
 }
 
 func TestStatusUnusualNames(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows filesystems do not support control characters in filenames; porcelain parsing is covered by TestParseStatusKeepsTabCRLF")
+	}
 	skipNoGit(t)
 	dir := t.TempDir()
 	gitInit(t, dir)
@@ -405,6 +407,26 @@ func skipNoGit(t *testing.T) {
 func gitInit(t *testing.T, dir string) {
 	t.Helper()
 	gitRun(t, dir, "-c", "init.defaultBranch=main", "init")
+	gitRun(t, dir, "config", "core.autocrlf", "false")
+}
+
+func commitBlob(t *testing.T, dir, mode, name, body string) {
+	t.Helper()
+	input := func(body string, args ...string) string {
+		t.Helper()
+		cmd := exec.Command("git", append([]string{"-C", dir}, args...)...)
+		cmd.Env = withIdentityEnv(os.Environ())
+		cmd.Stdin = strings.NewReader(body)
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("Git tree fixture: %v\n%s", err, out)
+		}
+		return strings.TrimSpace(string(out))
+	}
+	oid := input(body, "hash-object", "-w", "--stdin")
+	tree := input(mode+" blob "+oid+"\t"+name+"\x00", "mktree", "-z")
+	commit := input("", "commit-tree", tree, "-m", "fixture")
+	gitRun(t, dir, "update-ref", "HEAD", commit)
 }
 
 func gitAddCommit(t *testing.T, dir, message string) {
@@ -423,6 +445,10 @@ func gitRun(t *testing.T, dir string, args ...string) string {
 }
 
 func gitCmd(dir string, args ...string) ([]byte, error) {
+	if len(args) > 0 && args[0] == "clone" {
+		// Clone does not inherit the source repository's autocrlf setting.
+		args = append([]string{"clone", "-c", "core.autocrlf=false"}, args[1:]...)
+	}
 	cmd := exec.Command("git", args...)
 	if dir != "" {
 		cmd.Dir = dir

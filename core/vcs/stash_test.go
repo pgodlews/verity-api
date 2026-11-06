@@ -257,9 +257,9 @@ func TestStashDisablesRepoProgramsAndHonoursCancel(t *testing.T) {
 	}
 	writeFile(t, dir, ".gitattributes", "tracked.txt filter=hostile diff=hostile\n")
 	gitAddCommit(t, dir, "attributes")
-	gitRun(t, dir, "config", "core.fsmonitor", script)
-	gitRun(t, dir, "config", "filter.hostile.clean", script)
-	gitRun(t, dir, "config", "filter.hostile.smudge", script)
+	gitRun(t, dir, "config", "core.fsmonitor", shQuote(script))
+	gitRun(t, dir, "config", "filter.hostile.clean", shQuote(script))
+	gitRun(t, dir, "config", "filter.hostile.smudge", shQuote(script))
 	gitRun(t, dir, "config", "diff.hostile.command", script)
 	gitRun(t, dir, "config", "diff.hostile.textconv", script)
 	gitRun(t, dir, "config", "diff.external", script)

@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -32,7 +33,7 @@ func TestHookLifecycle(t *testing.T) {
 		!strings.Contains(string(first), "verity fmt --check --staged 'apis/project.yaml'") {
 		t.Fatalf("hook commands:\n%s", first)
 	}
-	if st, _ := os.Stat(hook); st.Mode().Perm()&0o111 == 0 {
+	if st, _ := os.Stat(hook); runtime.GOOS != "windows" && st.Mode().Perm()&0o111 == 0 {
 		t.Fatalf("hook is not executable: %v", st.Mode())
 	}
 	if _, err := InstallHook(HookOptions{Project: project, Fmt: true}); err != nil {
@@ -48,7 +49,7 @@ func TestHookLifecycle(t *testing.T) {
 	if _, err := InstallHook(HookOptions{Project: project, Fmt: true}); err != nil {
 		t.Fatal(err)
 	}
-	if st, _ := os.Stat(hook); st.Mode().Perm()&0o111 == 0 {
+	if st, _ := os.Stat(hook); runtime.GOOS != "windows" && st.Mode().Perm()&0o111 == 0 {
 		t.Fatal("reinstall did not restore the executable bit")
 	}
 

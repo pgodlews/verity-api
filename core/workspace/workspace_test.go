@@ -73,6 +73,10 @@ func writeProject(t *testing.T) string {
 
 func TestSaveStepKeepsCommentsAndLayout(t *testing.T) {
 	path := writeProject(t)
+	beforeInfo, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
 	step := model.Step{Name: "Me", Protocol: "rest", Request: map[string]any{
 		"method": "GET", "url": "${BASE_URL}/me?verbose=1",
 	}, Assertions: []model.Assertion{{Type: "status", Value: 200}}}
@@ -90,7 +94,7 @@ func TestSaveStepKeepsCommentsAndLayout(t *testing.T) {
 			t.Errorf("saved file lost %q:\n%s", want, out)
 		}
 	}
-	if st, _ := os.Stat(path); st.Mode().Perm() != 0o640 {
+	if st, _ := os.Stat(path); st.Mode().Perm() != beforeInfo.Mode().Perm() {
 		t.Errorf("file mode changed to %v", st.Mode().Perm())
 	}
 	p, err := model.Load(path)

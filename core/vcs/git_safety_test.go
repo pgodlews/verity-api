@@ -36,8 +36,11 @@ func TestCancelSucceededIgnoresInterrupt(t *testing.T) {
 	if cancelSucceeded("ctrl-break", errors.New("not delivered")) {
 		t.Fatal("failed ctrl-break was success")
 	}
-	if !cancelSucceeded("ctrl-break", nil) {
-		t.Fatal("delivered ctrl-break was not success")
+	if cancelSucceeded("ctrl-break", nil) {
+		t.Fatal("CTRL_BREAK was treated as graceful Git cancellation")
+	}
+	if cancelSucceeded("ctrl-c", errors.New("not delivered")) || !cancelSucceeded("ctrl-c", nil) {
+		t.Fatal("CTRL_C delivery result was not respected")
 	}
 }
 
@@ -102,7 +105,7 @@ func TestDottedFilterIsBlanked(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ".gitattributes"), []byte("* filter=foo.bar\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	gitRun(t, dir, "config", "filter.foo.bar.clean", script)
+	gitRun(t, dir, "config", "filter.foo.bar.clean", shQuote(script))
 	writeFile(t, dir, "f.txt", "two\n")
 	if _, err := Status(dir); err != nil {
 		t.Fatal(err)
@@ -134,16 +137,13 @@ func TestGlobalFilterIsNotBlanked(t *testing.T) {
 	globalScript := filepath.Join(dir, "global.sh")
 	writeFilterScript(t, localScript, localMark)
 	writeFilterScript(t, globalScript, globalMark)
-	body := "[filter \"lfs\"]\n\tclean = " + globalScript + "\n"
-	if err := os.WriteFile(global, []byte(body), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	gitRun(t, dir, "config", "--file", global, "filter.lfs.clean", shQuote(globalScript))
 	writeFile(t, dir, "g.txt", "global\n")
 	gitAddCommit(t, dir, "tracked")
 	if err := os.WriteFile(filepath.Join(dir, ".gitattributes"), []byte("f.txt filter=evil\ng.txt filter=lfs\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	gitRun(t, dir, "config", "filter.evil.clean", localScript)
+	gitRun(t, dir, "config", "filter.evil.clean", shQuote(localScript))
 	writeFile(t, dir, "f.txt", "two\n")
 	writeFile(t, dir, "g.txt", "global-two\n")
 	if _, err := Status(dir); err != nil {
@@ -153,7 +153,7 @@ func TestGlobalFilterIsNotBlanked(t *testing.T) {
 		t.Fatal("status ran the repository-local filter")
 	}
 	kept, _, err := runGit(context.Background(), dir, gitOpt{readOnly: true}, "config", "--get", "filter.lfs.clean")
-	if err != nil || strings.TrimSpace(string(kept)) != globalScript {
+	if err != nil || strings.TrimSpace(string(kept)) != shQuote(globalScript) {
 		t.Fatalf("global filter was blanked: %q %v", kept, err)
 	}
 	blanked, _, err := runGit(context.Background(), dir, gitOpt{readOnly: true}, "config", "--get", "filter.evil.clean")
@@ -183,7 +183,7 @@ func TestSpaceFilterIsBlanked(t *testing.T) {
 	if err := os.WriteFile(script, []byte("#!/bin/sh\ncat\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	gitRun(t, dir, "config", "filter.foo bar.clean", script)
+	gitRun(t, dir, "config", "filter.foo bar.clean", shQuote(script))
 	args, err := filterOverrideArgs(dir, gitOpt{})
 	if err != nil {
 		t.Fatal(err)
@@ -211,7 +211,7 @@ func TestUnsafeFilterFailsClosed(t *testing.T) {
 	marker := filepath.Join(dir, "unsafe-ran")
 	script := filepath.Join(dir, "unsafe.sh")
 	writeFilterScript(t, script, marker)
-	gitRun(t, dir, "config", "filter.a=b.clean", script)
+	gitRun(t, dir, "config", "filter.a=b.clean", shQuote(script))
 	if err := os.WriteFile(filepath.Join(dir, ".gitattributes"), []byte("* filter=a=b\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}

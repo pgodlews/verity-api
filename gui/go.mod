@@ -55,3 +55,6 @@ require (
 
 // Build against the local core during development.
 replace github.com/pgodlews/verity-api => ../
+
+// Focus failures are recoverable; see third_party/go-webview2/VERITY.md.
+replace github.com/wailsapp/go-webview2 => ./third_party/go-webview2
