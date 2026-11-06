@@ -280,7 +280,9 @@ pull, and push run one at a time. Cancel signals git's process group
 it, so `index.lock` is removed. The kill is tied to that process and is
 not delivered after git has exited. On Windows the process is in a new
 group and a job that ends child processes; `os.Interrupt` is not treated
-as a successful signal.
+as a successful signal. Git console windows are hidden. A desktop process temporarily attaches to
+the hidden console to deliver CTRL_BREAK, allowing Git to remove its index lock.
+If delivery fails, cancellation falls back to terminating the job and process.
 The toolbar stays frozen while a confirmation dialog is open, and Cancel
 and those dialogs stay up if you leave Source control. Progress lines are
 git's own `--progress` text when it prints some, plus a start and finish

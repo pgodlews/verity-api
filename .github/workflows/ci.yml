@@ -9,6 +9,28 @@ permissions:
   contents: read
 
 jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+      - name: Test Windows Git process handling
+        run: go test ./core/vcs ./core/workspace -count=1
+      - name: Vet Windows core packages
+        run: go vet ./core/vcs ./core/workspace
+      - name: Test WebView2 focus recovery
+        working-directory: gui/third_party/go-webview2
+        run: go test ./pkg/edge -count=1
+      - name: Test Windows desktop backend
+        working-directory: gui
+        run: go vet ./...; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; go test ./...
+      - name: Build Windows desktop
+        working-directory: gui
+        run: go build -trimpath -tags production -ldflags=-H=windowsgui -o verity-desktop.exe .
+
   ci:
     runs-on: ubuntu-latest
     steps:

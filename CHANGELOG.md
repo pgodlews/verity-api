@@ -50,6 +50,10 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- Avoid opening Windows console windows for Git subprocesses during desktop operations.
+- Keep the Windows desktop open when a WebView2 focus request fails, including
+  during window switching and native dialogs; log only the numeric error code.
+- Generate valid Windows file URLs for Source control's system file opener.
 - Select newly changed project files in Source control while preserving explicit checkbox choices.
 - Keep the previous desktop load report when validation or starting a new run fails.
 - Preserve unrelated folded YAML scalar values when saving requests and environments.

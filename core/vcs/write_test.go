@@ -96,7 +96,7 @@ func TestCommitDoesNotRunFsmonitor(t *testing.T) {
 	if err := os.WriteFile(script, []byte(body), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	gitRun(t, dir, "config", "core.fsmonitor", script)
+	gitRun(t, dir, "config", "core.fsmonitor", shQuote(script))
 	plain := exec.Command("git", "-C", dir, "status", "--porcelain=v2")
 	plain.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1", "GIT_TERMINAL_PROMPT=0")
 	_, _ = plain.CombinedOutput()
@@ -516,6 +516,7 @@ func twoClones(t *testing.T) (bare, a, b string) {
 }
 
 func shQuote(s string) string {
+	s = filepath.ToSlash(s)
 	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
 }
 
@@ -591,7 +592,7 @@ func TestStatusSkipsCleanFilterButAddRunsIt(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ".gitattributes"), []byte("* filter=evil\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	gitRun(t, dir, "config", "filter.evil.clean", script)
+	gitRun(t, dir, "config", "filter.evil.clean", shQuote(script))
 	writeFile(t, dir, "f.txt", "two\n")
 	if _, err := Status(dir); err != nil {
 		t.Fatal(err)
@@ -840,7 +841,7 @@ func TestCancelStageRemovesIndexLock(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ".gitattributes"), []byte("* filter=slow\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	gitRun(t, dir, "config", "filter.slow.clean", script)
+	gitRun(t, dir, "config", "filter.slow.clean", shQuote(script))
 	writeFile(t, dir, "f.txt", "two\n")
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)

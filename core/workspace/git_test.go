@@ -320,6 +320,7 @@ func hasScope(list []ScopeChange, suite, name, state string) bool {
 func gitInit(t *testing.T, dir string) {
 	t.Helper()
 	gitRun(t, dir, "-c", "init.defaultBranch=main", "init")
+	gitRun(t, dir, "config", "core.autocrlf", "false")
 }
 
 func gitAddCommit(t *testing.T, dir, message string) {

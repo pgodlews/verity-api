@@ -39,7 +39,13 @@ var (
 	procOpenProcess              = kernel32.NewProc("OpenProcess")
 	procGenerateConsoleCtrlEvent = kernel32.NewProc("GenerateConsoleCtrlEvent")
 	procCloseHandle              = kernel32.NewProc("CloseHandle")
+	procAttachConsole            = kernel32.NewProc("AttachConsole")
+	procFreeConsole              = kernel32.NewProc("FreeConsole")
 )
+
+// Attaching a console changes process-wide state. Serialise cancellation so
+// concurrent commands cannot detach a console another cancellation is using.
+var consoleMu sync.Mutex
 
 // Field order matches the Windows x64 SDK structures. If SetInformationJobObject
 // rejects the struct, job setup fails and cancel still uses the process
@@ -80,6 +86,10 @@ func ownProcessGroup(cmd *exec.Cmd) {
 	if cmd.SysProcAttr == nil {
 		cmd.SysProcAttr = &syscall.SysProcAttr{}
 	}
+	// Hide newly allocated consoles when launched by the desktop. Keep the
+	// console itself: CREATE_NO_WINDOW prevents CTRL_BREAK delivery, so Git
+	// cannot clean up its index lock on cancellation.
+	cmd.SysProcAttr.HideWindow = true
 	cmd.SysProcAttr.CreationFlags |= createNewProcessGroup
 }
 
@@ -138,6 +148,16 @@ func cancelGit(cmd *exec.Cmd) error {
 func sendCtrlBreak(pid uint32) error {
 	if pid == 0 {
 		return errors.New("git process is not running")
+	}
+	consoleMu.Lock()
+	defer consoleMu.Unlock()
+	// A GUI-subsystem parent has no console. Temporarily join the child's
+	// hidden console so GenerateConsoleCtrlEvent can reach its process group.
+	// A CLI parent already shares its console; AttachConsole then fails and
+	// we leave that console attached. Never detach a pre-existing console.
+	attached, _, _ := procAttachConsole.Call(uintptr(pid))
+	if attached != 0 {
+		defer procFreeConsole.Call()
 	}
 	r1, _, err := procGenerateConsoleCtrlEvent.Call(uintptr(ctrlBreakEvent), uintptr(pid))
 	if r1 == 0 {

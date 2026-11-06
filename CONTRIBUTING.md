@@ -42,6 +42,15 @@ not cover them. Check the GUI backend and frontend with:
 (cd gui/frontend && npm ci && npm test && npx tsc --noEmit && npx vite build)
 ```
 
+On Windows also run the GUI's patched WebView2 dependency tests:
+
+```bash
+(cd gui/third_party/go-webview2 && go test ./pkg/edge)
+```
+
+This local dependency is separate from the four application/plugin modules; see
+[its provenance and patch notes](gui/third_party/go-webview2/VERITY.md).
+
 Build or develop the desktop app with Wails from `gui/`:
 
 ```bash

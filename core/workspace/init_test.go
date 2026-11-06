@@ -104,6 +104,10 @@ func TestInitProtectsEnvExampleWithoutForce(t *testing.T) {
 	if err := os.Chmod(path, 0o640); err != nil {
 		t.Fatal(err)
 	}
+	beforeInfo, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if _, err := Init(InitOptions{Dir: dir}); err != nil {
 		t.Fatal(err)
 	}
@@ -124,7 +128,7 @@ func TestInitProtectsEnvExampleWithoutForce(t *testing.T) {
 	if string(got) == string(custom) || !strings.Contains(string(got), "API_TOKEN=\n") {
 		t.Fatalf("forced init did not refresh .env.example:\n%s", got)
 	}
-	if st, _ := os.Stat(path); st.Mode().Perm() != 0o640 {
+	if st, _ := os.Stat(path); st.Mode().Perm() != beforeInfo.Mode().Perm() {
 		t.Fatalf("file mode changed to %v", st.Mode().Perm())
 	}
 }

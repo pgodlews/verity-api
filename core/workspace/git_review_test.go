@@ -262,13 +262,15 @@ func TestGenericModifiedWhenNothingSpecific(t *testing.T) {
 }
 
 func TestRetainSourcesOnLoadFailure(t *testing.T) {
-	prev := []string{"/proj/project.yaml", "/proj/parts/api.yaml"}
-	got := RetainSources(prev, []string{"/proj/project.yaml"}, "/proj/project.yaml", false)
+	root := filepath.Join(t.TempDir(), "project.yaml")
+	part := filepath.Join(filepath.Dir(root), "parts", "api.yaml")
+	prev := []string{root, part}
+	got := RetainSources(prev, []string{root}, root, false)
 	if len(got) != 2 {
 		t.Fatalf("retained: %v", got)
 	}
-	fresh := RetainSources(nil, []string{"/proj/project.yaml", "/proj/parts/api.yaml"}, "/proj/project.yaml", true)
-	if len(fresh) != 2 || fresh[0] != "/proj/project.yaml" {
+	fresh := RetainSources(nil, []string{root, part}, root, true)
+	if len(fresh) != 2 || fresh[0] != root {
 		t.Fatalf("loaded: %v", fresh)
 	}
 }
@@ -347,7 +349,7 @@ func TestGitStatusDoesNotRunFsmonitor(t *testing.T) {
 	if err := os.WriteFile(script, []byte(body), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	gitRun(t, dir, "config", "core.fsmonitor", script)
+	gitRun(t, dir, "config", "core.fsmonitor", shQuote(script))
 	plain := exec.Command("git", "-C", dir, "status", "--porcelain=v2")
 	plain.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1", "GIT_TERMINAL_PROMPT=0")
 	_, _ = plain.CombinedOutput()
@@ -657,5 +659,6 @@ func absGitPath(dir, p string) string {
 }
 
 func shQuote(s string) string {
+	s = filepath.ToSlash(s)
 	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
 }

@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -246,11 +247,9 @@ func TestReadAtRefusesSymlink(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "target.txt"), []byte("secret-body"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink("target.txt", filepath.Join(dir, "link.txt")); err != nil {
-		t.Fatal(err)
-	}
-	gitRun(t, dir, "add", "--", "link.txt")
-	gitAddCommit(t, dir, "link")
+	// A Git symlink blob does not require OS symlink privileges to create.
+	stageBlob(t, dir, "120000", "link.txt", "target.txt")
+	gitRun(t, dir, "commit", "-m", "link")
 	got, err := ReadAt(dir, "HEAD", "link.txt")
 	if err == nil {
 		t.Fatalf("symlink was read: %q", got)
@@ -343,8 +342,10 @@ func TestReadAtAllowsNewlineInPath(t *testing.T) {
 	dir := t.TempDir()
 	gitInit(t, dir)
 	name := "project\nname.yaml"
-	writeFile(t, dir, name, "nl\n")
-	gitAddCommit(t, dir, "initial")
+	// Reading a tree must work even if its names cannot be checked out on
+	// this platform. Construct the tree directly, without Windows file APIs.
+	stageBlob(t, dir, "100644", name, "nl\n")
+	gitRun(t, dir, "commit", "-m", "initial")
 	if err := validateRelPath(name); err != nil {
 		t.Fatal(err)
 	}
@@ -358,6 +359,9 @@ func TestReadAtAllowsNewlineInPath(t *testing.T) {
 }
 
 func TestStatusUnusualNames(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows filesystems do not support control characters in filenames; porcelain parsing is covered by TestParseStatusKeepsTabCRLF")
+	}
 	skipNoGit(t)
 	dir := t.TempDir()
 	gitInit(t, dir)
@@ -405,6 +409,18 @@ func skipNoGit(t *testing.T) {
 func gitInit(t *testing.T, dir string) {
 	t.Helper()
 	gitRun(t, dir, "-c", "init.defaultBranch=main", "init")
+	gitRun(t, dir, "config", "core.autocrlf", "false")
+}
+
+func stageBlob(t *testing.T, dir, mode, name, body string) {
+	t.Helper()
+	cmd := exec.Command("git", "-C", dir, "hash-object", "-w", "--stdin")
+	cmd.Stdin = strings.NewReader(body)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("hash fixture blob: %v\n%s", err, out)
+	} else {
+		gitRun(t, dir, "update-index", "--add", "--cacheinfo", mode, strings.TrimSpace(string(out)), name)
+	}
 }
 
 func gitAddCommit(t *testing.T, dir, message string) {
