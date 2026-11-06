@@ -41,7 +41,7 @@ func InstallHook(opts HookOptions) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	relProject, err := filepath.Rel(root, absProject)
+	relProject, err := repoRelative(root, absProject)
 	if err != nil || relProject == ".." || strings.HasPrefix(relProject, ".."+string(filepath.Separator)) {
 		return "", verr.New(verr.CodeConfig, "hook project must be inside the git repository")
 	}
