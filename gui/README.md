@@ -76,6 +76,10 @@ OS or browser persistence. See `docs/auth.md` for platform requirements.
 GraphQL variables cross the desktop bridge as source text, so formatting or an
 unrelated edit does not round large numbers, `1e400`, `-0`, or decimal literals.
 
+Request and environment saves normalize YAML indentation while preserving comments,
+document markers, and unrelated scalar values. Folded multiline text may use
+literal style to preserve its decoded value across repeated saves.
+
 With a project open, the status bar shows the git branch (or a detached short
 commit), how many paths differ from HEAD, and ahead/behind when the branch
 tracks a local upstream. The collection marks added and modified requests.
