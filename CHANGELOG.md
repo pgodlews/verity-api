@@ -44,6 +44,7 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- Select newly changed project files in Source control while preserving explicit checkbox choices.
 - Keep the previous desktop load report when validation or starting a new run fails.
 - Preserve unrelated folded YAML scalar values when saving requests and environments.
 

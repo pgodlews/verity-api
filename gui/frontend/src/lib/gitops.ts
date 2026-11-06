@@ -28,11 +28,9 @@ export function defaultSelectedPaths(files: FileChoice[]): string[] {
   return files.filter((file) => file.projectFile).map((file) => file.path);
 }
 
-/** previous null means the user has not chosen yet: select project files. */
-export function reconcileSelection(previous: string[] | null, files: FileChoice[]): string[] {
-  if (previous == null) return defaultSelectedPaths(files);
-  const known = new Set(files.map((file) => file.path));
-  return previous.filter((path) => known.has(path));
+/** Only explicit choices override the default, even after a file disappears. */
+export function reconcileSelection(choices: ReadonlyMap<string, boolean>, files: FileChoice[]): string[] {
+  return files.filter((file) => choices.get(file.path) ?? file.projectFile).map((file) => file.path);
 }
 
 export function splitFiles<T extends FileChoice>(files: T[]): { project: T[]; other: T[] } {
