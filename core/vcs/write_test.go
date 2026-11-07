@@ -839,7 +839,9 @@ func TestCancelStageRemovesIndexLock(t *testing.T) {
 	dir := committedRepo(t)
 	marker := filepath.Join(dir, "stage-started")
 	script := filepath.Join(dir, "slow-clean.sh")
-	body := "#!/bin/sh\ntouch " + shQuote(marker) + " || exit 1\nsleep 60 || exit 1\ncat\n"
+	// Check that sleep can execute before publishing readiness. Otherwise a
+	// missing sleep can race cancellation after touch and give a false pass.
+	body := "#!/bin/sh\nsleep 0 || exit 1\ntouch " + shQuote(marker) + " || exit 1\nsleep 60 || exit 1\ncat\n"
 	if err := os.WriteFile(script, []byte(body), 0o755); err != nil {
 		t.Fatal(err)
 	}

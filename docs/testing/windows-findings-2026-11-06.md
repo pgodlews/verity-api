@@ -54,6 +54,10 @@ go test ./core/vcs -run '^TestWindowsGitGUICancel$' -count=3 -v -timeout=2m
 go test ./core/vcs -run '^TestCancelStageRemovesIndexLock$' -count=1 -v -timeout=2m
 ```
 
+The slow-filter fixture requires a working `sleep` command on Git's shell PATH.
+The fixture checks it before writing its readiness marker, so a missing command
+should fail with a staging diagnostic instead of appearing to pass cancellation.
+
 Record whether staging returned early or was still running at the readiness
 deadline, along with the separate filter marker and index lock states. If a
 filter or executable was refused, check the corresponding Windows application
