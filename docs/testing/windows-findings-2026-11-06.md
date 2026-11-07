@@ -37,3 +37,31 @@ unchanged. Its fake-COM tests do not establish native dialog or focus coverage.
 CI adds Windows Git/workspace and desktop backend checks, a GUI-subsystem process
 launcher regression, focus recovery tests, and a desktop build. CI is automated
 evidence and does not replace this native retest or grant release approval.
+
+## Follow-up on `c790bb5`
+
+The Windows source build opened, saved, and refreshed a Git-backed project
+without visible consoles or a focus exit during the targeted retest. The
+GUI-parent cancellation test passed in one focused run, then failed in the
+full Git package run and three isolated retries. The console-parent test
+passed. The failures occurred before the test attempted cancellation.
+
+On the affected Windows machine, run these separately from the repository root
+with the updated test diagnostics:
+
+```powershell
+go test ./core/vcs -run '^TestWindowsGitGUICancel$' -count=3 -v -timeout=2m
+go test ./core/vcs -run '^TestCancelStageRemovesIndexLock$' -count=1 -v -timeout=2m
+```
+
+Record whether staging returned early or was still running at the readiness
+deadline, along with the separate filter marker and index lock states. If a
+filter or executable was refused, check the corresponding Windows application
+control event at the failure time. If the test reaches cancellation, it now
+requires a cancellation error, removal of the lock, and an unchanged index.
+For the desktop check, configure an optional slow clean filter for a modified
+project file in a disposable repository. Select the file in Source control,
+enter a commit message, and click **Commit** to start staging. Click **Cancel**
+after the filter marker and `index.lock` appear. Verify that Git and its filter
+stop, the lock disappears, the staged entries match the original snapshot,
+and `HEAD` and the worktree edit are unchanged.
