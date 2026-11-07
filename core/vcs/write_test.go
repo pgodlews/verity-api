@@ -1,6 +1,7 @@
 package vcs
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"net/http"
@@ -838,7 +839,9 @@ func TestCancelStageRemovesIndexLock(t *testing.T) {
 	dir := committedRepo(t)
 	marker := filepath.Join(dir, "stage-started")
 	script := filepath.Join(dir, "slow-clean.sh")
-	body := "#!/bin/sh\ntouch " + shQuote(marker) + "\nsleep 60\ncat\n"
+	// Check that sleep can execute before publishing readiness. Otherwise a
+	// missing sleep can race cancellation after touch and give a false pass.
+	body := "#!/bin/sh\nsleep 0 || exit 1\ntouch " + shQuote(marker) + " || exit 1\nsleep 60 || exit 1\ncat\n"
 	if err := os.WriteFile(script, []byte(body), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -846,40 +849,91 @@ func TestCancelStageRemovesIndexLock(t *testing.T) {
 		t.Fatal(err)
 	}
 	gitRun(t, dir, "config", "filter.slow.clean", shQuote(script))
+	// A failed filter must surface as a staging error instead of Git
+	// silently staging the original contents and releasing the lock.
+	gitRun(t, dir, "config", "filter.slow.required", "true")
 	writeFile(t, dir, "f.txt", "two\n")
+	index, err := GitPath(dir, "index")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lock := index + ".lock"
+	before := mustRead(t, index)
+	redact := strings.NewReplacer(dir, "<test-repo>", filepath.ToSlash(dir), "<test-repo>")
+	detail := func(err error) string {
+		if err == nil {
+			return "success"
+		}
+		return redactGit(redact.Replace(err.Error()))
+	}
+	state := func(err error) string {
+		switch {
+		case err == nil:
+			return "present"
+		case os.IsNotExist(err):
+			return "missing"
+		default:
+			return detail(err)
+		}
+	}
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	done := make(chan error, 1)
 	go func() {
 		done <- Stage(ctx, dir, []string{"f.txt"})
 	}()
-	deadline := time.Now().Add(8 * time.Second)
-	lock := strings.TrimSpace(gitRun(t, dir, "rev-parse", "--git-path", "index.lock"))
-	if !filepath.IsAbs(lock) {
-		lock = filepath.Join(dir, lock)
-	}
+	deadline := time.NewTimer(8 * time.Second)
+	defer deadline.Stop()
+	poll := time.NewTicker(20 * time.Millisecond)
+	defer poll.Stop()
+	ready := false
+readiness:
 	for {
-		_, started := os.Stat(marker)
-		_, locked := os.Stat(lock)
-		if started == nil && locked == nil {
+		_, markerErr := os.Stat(marker)
+		_, lockErr := os.Stat(lock)
+		if markerErr == nil && lockErr == nil {
+			ready = true
 			break
 		}
-		if time.Now().After(deadline) {
-			cancel()
-			t.Fatal("stage did not take index.lock")
+		select {
+		case err := <-done:
+			// Check the files again now that staging has returned.
+			_, markerErr = os.Stat(marker)
+			_, lockErr = os.Stat(lock)
+			if err == nil {
+				t.Fatalf("stage succeeded before readiness (filter marker: %s, index.lock: %s)", state(markerErr), state(lockErr))
+			}
+			t.Fatalf("stage failed before readiness (filter marker: %s, index.lock: %s): %s",
+				state(markerErr), state(lockErr), detail(err))
+		case <-deadline.C:
+			t.Errorf("stage has not returned and readiness timed out (filter marker: %s, index.lock: %s)", state(markerErr), state(lockErr))
+			break readiness
+		case <-poll.C:
 		}
-		time.Sleep(20 * time.Millisecond)
 	}
 	cancel()
 	select {
-	case <-done:
+	case err := <-done:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("stage returned %s after cancellation, want context cancellation", detail(err))
+		}
 	case <-time.After(8 * time.Second):
 		t.Fatal("cancelled stage did not return")
 	}
-	if _, err := os.Stat(lock); !os.IsNotExist(err) {
-		t.Fatalf("index.lock left behind: %v", err)
+	if !ready {
+		return
 	}
+	if _, err := os.Stat(lock); !os.IsNotExist(err) {
+		t.Fatalf("index.lock after cancellation: %s", state(err))
+	}
+	if !bytes.Equal(before, mustRead(t, index)) {
+		t.Fatal("index changed during cancelled stage")
+	}
+	// Status disables repository filters. The fixture only needs its filter
+	// to be required while staging, so Git can report an invocation failure.
+	gitRun(t, dir, "config", "--unset", "filter.slow.required")
 	if _, err := Status(dir); err != nil {
-		t.Fatal(err)
+		t.Fatalf("status after cancelled stage: %s", detail(err))
 	}
 }
 
