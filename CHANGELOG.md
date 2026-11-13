@@ -32,6 +32,13 @@ and distribution names below use the final public names.
 
 ### Changed
 
+- **BREAKING:** a project's own `.verity/plugins.json` no longer runs
+  automatically. `verity run`, `run --watch`, and `verity load` exit 3 with a
+  `config_error` naming the file, without starting any plugin, unless you pass
+  `--trust-plugins` or `--plugins FILE`, or set `VERITY_TRUST_PLUGINS=1` (CI).
+  The desktop app asks once per plugins file and remembers the answer outside
+  the project until the file changes. Cloning or opening a project can no
+  longer execute programs it ships.
 - Upgrade frontend development tooling to Vite 7 and refresh audited dependencies.
   Building the frontend now requires Node.js 20.19+ (20.x) or 22.12+.
 

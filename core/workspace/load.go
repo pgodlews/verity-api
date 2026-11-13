@@ -51,12 +51,12 @@ type SaveLoadReportRequest struct {
 // redacted report. It does not stream live stats; use LoadStream or
 // Session.Load for that.
 func Load(ctx context.Context, opts LoadOptions) (*load.Report, error) {
-	return runLoad(ctx, opts, nil, nil)
+	return runLoad(ctx, opts, nil, plugin.TrustFromEnv, nil)
 }
 
 // LoadStream is Load with a live-stats callback. onLive may be nil.
 func LoadStream(ctx context.Context, opts LoadOptions, onLive func(load.LiveStats)) (*load.Report, error) {
-	return runLoad(ctx, opts, nil, onLive)
+	return runLoad(ctx, opts, nil, plugin.TrustFromEnv, onLive)
 }
 
 // Load starts a load run on this session. A second Run or Load while one is
@@ -82,13 +82,14 @@ func (s *Session) Load(ctx context.Context, opts LoadOptions, oauth *OAuthSessio
 		s.cancel = nil
 		s.mu.Unlock()
 	}()
-	return runLoad(runCtx, opts, oauth, onLive)
+	return runLoad(runCtx, opts, oauth, s.TrustPlugins, onLive)
 }
 
 // LoadTargets resolves the target hosts for the selected suites, cases, and
 // environment and reports which are outside the private allow-list without
-// sending any traffic.
-func LoadTargets(ctx context.Context, opts LoadOptions, sessions *OAuthSessions) (*load.TargetReport, error) {
+// sending any traffic. trust decides whether the project's
+// .verity/plugins.json may run; nil refuses it.
+func LoadTargets(ctx context.Context, opts LoadOptions, sessions *OAuthSessions, trust plugin.TrustFunc) (*load.TargetReport, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -100,14 +101,11 @@ func LoadTargets(ctx context.Context, opts LoadOptions, sessions *OAuthSessions)
 		return nil, verr.Wrap(verr.CodeValidation, verrs[0], "project validation failed")
 	}
 	reg := bootstrap.Default()
-	auto := filepath.Join(p.SourceDir, ".verity", "plugins.json")
-	if _, statErr := os.Stat(auto); statErr == nil {
-		mgr, perr := plugin.LoadFile(ctx, reg, auto)
-		if perr != nil {
-			return nil, perr
-		}
-		defer mgr.Close()
+	mgr, perr := plugin.LoadForProject(ctx, reg, p.SourceDir, "", trust)
+	if perr != nil {
+		return nil, perr
 	}
+	defer mgr.Close()
 	lopts, err := toLoadOptions(p, opts, sessions, nil)
 	if err != nil {
 		return nil, err
@@ -149,7 +147,7 @@ func SaveLoadReport(req SaveLoadReportRequest) (string, error) {
 	return out, nil
 }
 
-func runLoad(ctx context.Context, opts LoadOptions, sessions *OAuthSessions, onLive func(load.LiveStats)) (*load.Report, error) {
+func runLoad(ctx context.Context, opts LoadOptions, sessions *OAuthSessions, trust plugin.TrustFunc, onLive func(load.LiveStats)) (*load.Report, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -161,14 +159,11 @@ func runLoad(ctx context.Context, opts LoadOptions, sessions *OAuthSessions, onL
 		return nil, verr.Wrap(verr.CodeValidation, verrs[0], "project validation failed")
 	}
 	reg := bootstrap.Default()
-	auto := filepath.Join(p.SourceDir, ".verity", "plugins.json")
-	if _, statErr := os.Stat(auto); statErr == nil {
-		mgr, perr := plugin.LoadFile(ctx, reg, auto)
-		if perr != nil {
-			return nil, perr
-		}
-		defer mgr.Close()
+	mgr, perr := plugin.LoadForProject(ctx, reg, p.SourceDir, "", trust)
+	if perr != nil {
+		return nil, perr
 	}
+	defer mgr.Close()
 	lopts, err := toLoadOptions(p, opts, sessions, onLive)
 	if err != nil {
 		return nil, err

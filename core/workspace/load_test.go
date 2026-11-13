@@ -76,7 +76,7 @@ suites:
 		Path:        path,
 		Environment: "remote",
 		Cases:       []string{"fast"},
-	}, nil)
+	}, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

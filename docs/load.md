@@ -28,6 +28,8 @@ Pass `--duration` or `--iterations`, not both.
   step's own `timeoutMs` still overrides it).
 - `--plugins FILE` loads an explicit plugin manifest instead of
   `<project-dir>/.verity/plugins.json`.
+- `--trust-plugins` runs the plugins in `<project-dir>/.verity/plugins.json`
+  (or set `VERITY_TRUST_PLUGINS=1`); without it such a project is refused.
 
 ## What one iteration is
 
@@ -191,7 +193,8 @@ guard above. Pass a transport of your own only when embedding `core/load`;
 if it has no dialer of its own, the guard is installed on it.
 
 Plugins are loaded the same way as `verity run`: `--plugins FILE`, or
-`<project-dir>/.verity/plugins.json` when that file is present.
+`<project-dir>/.verity/plugins.json` when that file is present and trusted
+(`--trust-plugins` or `VERITY_TRUST_PLUGINS=1`).
 
 ## JSON report
 

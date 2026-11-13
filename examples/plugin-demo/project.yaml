@@ -7,8 +7,8 @@ description: >
     (cd plugins/example-assertion && go build -o example-assertion .)
   Then start the local mock and run:
     go run ./examples/local-demo/mockserver --addr 127.0.0.1:8099
-    verity run examples/plugin-demo/project.yaml
-  The plugin is auto-discovered via examples/plugin-demo/.verity/plugins.json.
+    verity run examples/plugin-demo/project.yaml --trust-plugins
+  --trust-plugins runs examples/plugin-demo/.verity/plugins.json.
 
 environments:
   - name: local

@@ -49,6 +49,7 @@ type watchConfig struct {
 	Quiet              bool
 	FollowRedirects    bool
 	PluginsFile        string
+	TrustPlugins       bool
 	UntilStep          int
 	Bail               bool
 	AllowExternalFiles bool
@@ -168,20 +169,11 @@ func runOnce(ctx context.Context, cfg watchConfig) (code int, result *spi.RunRes
 
 	warnLiteralSecrets(project)
 	reg := bootstrap.Default()
-	pluginsPath := cfg.PluginsFile
-	if pluginsPath == "" {
-		auto := filepath.Join(project.SourceDir, ".verity", "plugins.json")
-		if _, statErr := os.Stat(auto); statErr == nil {
-			pluginsPath = auto
-		}
+	mgr, perr := plugin.LoadForProject(ctx, reg, project.SourceDir, cfg.PluginsFile, pluginTrust(cfg.TrustPlugins))
+	if perr != nil {
+		return failJSON(cfg.JSONStdout, exitConfig, "plugins", perr), nil, files
 	}
-	if pluginsPath != "" {
-		mgr, perr := plugin.LoadFile(ctx, reg, pluginsPath)
-		if perr != nil {
-			return failJSON(cfg.JSONStdout, exitConfig, "plugins", perr), nil, files
-		}
-		defer mgr.Close()
-	}
+	defer mgr.Close()
 
 	result, err = runner.New(reg).Run(ctx, project, runner.Options{
 		Environment:        cfg.Env,

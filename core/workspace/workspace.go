@@ -7,8 +7,6 @@ package workspace
 
 import (
 	"context"
-	"os"
-	"path/filepath"
 	"sync"
 	"time"
 
@@ -78,22 +76,24 @@ type RunOptions struct {
 }
 
 // Run loads, validates and executes a project, returning the redacted
-// result. Plugins listed in <project-dir>/.verity/plugins.json are loaded as
-// the CLI does. It does not stream progress; use RunStream for that.
+// result. Plugins listed in <project-dir>/.verity/plugins.json are loaded
+// only when VERITY_TRUST_PLUGINS=1 is set (the CLI dev bridge); otherwise
+// such a project fails with a config_error. It does not stream progress;
+// use RunStream for that.
 func Run(ctx context.Context, opts RunOptions) (*spi.RunResult, error) {
-	return run(ctx, opts, nil, nil)
+	return run(ctx, opts, nil, plugin.TrustFromEnv, nil)
 }
 
 // RunStream is Run with a progress callback. onEvent may be nil. It is
 // invoked from the runner's case goroutines and must be concurrency-safe.
 // The events carry the same redacted step results as the returned report.
 func RunStream(ctx context.Context, opts RunOptions, onEvent func(spi.RunEvent)) (*spi.RunResult, error) {
-	return run(ctx, opts, nil, onEvent)
+	return run(ctx, opts, nil, plugin.TrustFromEnv, onEvent)
 }
 
-// run is Run with desktop OAuth sessions (nil outside the desktop app) and
-// an optional progress callback.
-func run(ctx context.Context, opts RunOptions, sessions *OAuthSessions, onEvent func(spi.RunEvent)) (*spi.RunResult, error) {
+// run is Run with desktop OAuth sessions (nil outside the desktop app), the
+// project plugins trust decision, and an optional progress callback.
+func run(ctx context.Context, opts RunOptions, sessions *OAuthSessions, trust plugin.TrustFunc, onEvent func(spi.RunEvent)) (*spi.RunResult, error) {
 	p, err := model.Load(opts.Path)
 	if err != nil {
 		return nil, err
@@ -103,14 +103,11 @@ func run(ctx context.Context, opts RunOptions, sessions *OAuthSessions, onEvent 
 	}
 
 	reg := bootstrap.Default()
-	auto := filepath.Join(p.SourceDir, ".verity", "plugins.json")
-	if _, statErr := os.Stat(auto); statErr == nil {
-		mgr, perr := plugin.LoadFile(ctx, reg, auto)
-		if perr != nil {
-			return nil, perr
-		}
-		defer mgr.Close()
+	mgr, perr := plugin.LoadForProject(ctx, reg, p.SourceDir, "", trust)
+	if perr != nil {
+		return nil, perr
 	}
+	defer mgr.Close()
 
 	tokens, err := sessions.forRun(p, opts)
 	if err != nil {
@@ -137,6 +134,10 @@ func run(ctx context.Context, opts RunOptions, sessions *OAuthSessions, onEvent 
 // and the one-run rule live next to the runner. Run and RunStream stay
 // stateless for the CLI dev bridge.
 type Session struct {
+	// TrustPlugins decides whether a project's .verity/plugins.json may run.
+	// nil refuses every auto-discovered plugins file.
+	TrustPlugins plugin.TrustFunc
+
 	mu      sync.Mutex
 	cancel  context.CancelFunc
 	running bool
@@ -164,7 +165,7 @@ func (s *Session) Run(ctx context.Context, opts RunOptions, oauth *OAuthSessions
 		s.cancel = nil
 		s.mu.Unlock()
 	}()
-	return run(runCtx, opts, oauth, onEvent)
+	return run(runCtx, opts, oauth, s.TrustPlugins, onEvent)
 }
 
 // Cancel cancels the in-flight run, if any.

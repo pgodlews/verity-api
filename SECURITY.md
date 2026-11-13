@@ -61,7 +61,11 @@ The following areas deserve particular scrutiny:
   listening on other interfaces requires an explicit `--host` choice.
 - **Plugin process boundary:** plugins run as separate processes over VPP/1.
   That separation is not an OS sandbox; install only trusted plugins, which
-  run with the user's permissions. Host-side protocol validation, lifecycle
+  run with the user's permissions. A project's own `.verity/plugins.json` is
+  never executed without consent: the CLI needs `--plugins FILE`,
+  `--trust-plugins`, or `VERITY_TRUST_PLUGINS=1`, and the desktop app asks
+  once per file content and location. Running a plugin from an untrusted
+  project without that consent, host-side protocol validation, lifecycle
   handling, and redaction failures are in scope.
 - **Untrusted imports:** OpenAPI, WSDL, Postman, and SoapUI parsing, including
   resource exhaustion, unsafe file access, and credential disclosure in

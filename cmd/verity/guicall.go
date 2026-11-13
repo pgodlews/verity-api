@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	"github.com/pgodlews/verity-api/core/model"
+	"github.com/pgodlews/verity-api/core/plugin"
 	"github.com/pgodlews/verity-api/core/secrets"
 	"github.com/pgodlews/verity-api/core/workspace"
 )
@@ -90,7 +91,7 @@ func cmdGUICall(args []string) int {
 		if err := arg(0, &opts); err != nil {
 			return guiReply(nil, err)
 		}
-		return guiReply(workspace.LoadTargets(ctx, opts, nil))
+		return guiReply(workspace.LoadTargets(ctx, opts, nil, plugin.TrustFromEnv))
 	case "SaveLoadReport":
 		var req workspace.SaveLoadReportRequest
 		if err := arg(0, &req); err != nil {

@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 
 	"github.com/pgodlews/verity-api/core/bootstrap"
@@ -103,24 +102,15 @@ func cmdLoad(args []string) int {
 	defer signal.Stop(sigs)
 	go watchInterrupt(sigs, cancel, done, os.Exit)
 
-	pluginsPath := common.pluginsFile
-	if pluginsPath == "" {
-		auto := filepath.Join(project.SourceDir, ".verity", "plugins.json")
-		if _, statErr := os.Stat(auto); statErr == nil {
-			pluginsPath = auto
+	mgr, perr := plugin.LoadForProject(ctx, reg, project.SourceDir, common.pluginsFile, pluginTrust(common.trustPlugins))
+	if perr != nil {
+		if ctx.Err() != nil {
+			return exitInterrupted
 		}
+		fmt.Fprintf(stderr, "plugins: %v\n", perr)
+		return exitConfig
 	}
-	if pluginsPath != "" {
-		mgr, perr := plugin.LoadFile(ctx, reg, pluginsPath)
-		if perr != nil {
-			if ctx.Err() != nil {
-				return exitInterrupted
-			}
-			fmt.Fprintf(stderr, "plugins: %v\n", perr)
-			return exitConfig
-		}
-		defer mgr.Close()
-	}
+	defer mgr.Close()
 
 	opts := load.Options{
 		Redactor:        red,
