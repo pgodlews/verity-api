@@ -23,6 +23,10 @@ type Manifest struct {
 	Args []string `json:"args,omitempty"`
 	// Enabled allows disabling a plugin without removing its entry.
 	Enabled *bool `json:"enabled,omitempty"`
+	// Override lets the plugin replace an extension type that is already
+	// registered (a built-in such as rest, bearer, or json). Without it only
+	// the core gRPC stub may be replaced.
+	Override bool `json:"override,omitempty"`
 }
 
 // PluginsFile is the on-disk shape of a plugins config.
@@ -86,12 +90,46 @@ func Load(ctx context.Context, reg *registry.Registry, manifests []Manifest) (*M
 			return nil, err
 		}
 		m.clients = append(m.clients, client)
+		if err := checkOverride(reg, client.Handshake(), man); err != nil {
+			m.Close()
+			return nil, err
+		}
 		if err := register(reg, client); err != nil {
 			m.Close()
 			return nil, err
 		}
 	}
 	return m, nil
+}
+
+// checkOverride refuses a plugin that would silently replace an extension
+// type already in the registry, unless its manifest sets "override": true.
+// The core gRPC protocol stub exists to be replaced by plugins/grpc.
+func checkOverride(reg *registry.Registry, hs Handshake, man Manifest) error {
+	if man.Override || (hs.Kind == "protocol" && hs.Type == "grpc") {
+		return nil
+	}
+	var err error
+	switch hs.Kind {
+	case "protocol":
+		_, err = reg.Protocol(hs.Type)
+	case "assertion":
+		_, err = reg.Assertion(hs.Type)
+	case "datasource":
+		_, err = reg.DataSource(hs.Type)
+	case "auth":
+		_, err = reg.AuthFactory(hs.Type)
+	case "reporter":
+		_, err = reg.Reporter(hs.Type)
+	default:
+		return nil // register reports the unknown kind
+	}
+	if err == nil {
+		return verr.Newf(verr.CodePlugin,
+			"plugin %q would replace the existing %s type %q; set \"override\": true in its plugins entry to allow it",
+			man.Name, hs.Kind, hs.Type)
+	}
+	return nil
 }
 
 // register installs a launched plugin into the registry based on its handshake
