@@ -21,8 +21,8 @@ through one core library; the CLI and GUI are thin shells over it.
    `${secret:keychain:project/NAME}` reads service `verity`, account
    `project/NAME`; the scope is explicit, never based on the project path.
    `verity secret set NAME --json` reads piped/redirected stdin only.
-   `get` masks unless `--reveal` (which warns); `rm` deletes. Portable `list`
-   is unsupported (exit 3). Missing/locked/unavailable items are config
+   `get` masks unless `--reveal` (which warns); `rm` deletes. There is no
+   `list` (the portable backend cannot enumerate names). Missing/locked/unavailable items are config
    errors; use environment secrets in headless CI. See `docs/auth.md`.
 3. **Drive everything with `--json`.** Every command emits structured JSON for
    machine consumption. Parse that, not the human console text.

@@ -265,8 +265,8 @@ Map these SoapUI assertion types; warn on anything else.
       lifecycle, and isolation proposal. No scripting implementation ships.
 - [ ] Implement embedded scripting; proposed engine is goja (JavaScript).
 - [x] OS keychain integration for secret storage: `keychain` provider,
-      `verity secret set|get|rm|list`, desktop store-and-rewrite action and
-      in-memory mock. Portable listing is explicitly unsupported (exit 3).
+      `verity secret set|get|rm`, desktop store-and-rewrite action and
+      in-memory mock. There is no `list`: the portable backend cannot enumerate names.
 - [ ] Full WS-Security.
 
 ## 6. Quality & DX

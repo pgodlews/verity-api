@@ -45,7 +45,6 @@ verity schema [--kind project|auth]
 verity secret set NAME [--force] [--json] # piped/redirected stdin only
 verity secret get NAME [--reveal] [--json]
 verity secret rm NAME [--json]
-verity secret list [--json]               # unsupported by portable backend
 verity version [--json]
 ```
 

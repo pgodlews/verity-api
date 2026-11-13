@@ -130,7 +130,6 @@ Usage:
   verity secret set NAME [--force] [--json]  read value from stdin; --force replaces
   verity secret get NAME [--reveal] [--json]
   verity secret rm NAME [--json]
-  verity secret list [--json]           unsupported by portable backend (exit 3)
   verity version [--json]
 
 Run:

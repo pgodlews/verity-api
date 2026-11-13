@@ -235,9 +235,3 @@ func (k *Keychain) Exists(name string) (bool, error) {
 	}
 	return true, nil
 }
-
-// List cannot enumerate accounts: go-keyring has no portable listing API.
-// Do not maintain a second on-disk index of credential names.
-func (k *Keychain) List() ([]string, error) {
-	return nil, verr.New(verr.CodeConfig, "keychain listing is unsupported by the portable backend; manage known names with secret get or secret rm")
-}

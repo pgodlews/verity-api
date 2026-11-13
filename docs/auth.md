@@ -412,7 +412,6 @@ printf '%s' "$API_TOKEN" | verity secret set project/API_TOKEN --json
 verity secret get project/API_TOKEN --json          # masked
 verity secret get project/API_TOKEN --reveal        # plaintext; warns on stderr
 verity secret rm project/API_TOKEN --json
-verity secret list --json                          # unsupported; config error
 ```
 
 `set` refuses an existing item unless `--force` is supplied. It accepts piped
@@ -424,8 +423,8 @@ There is no echoing terminal prompt and no secret value argument. `get` verifies
 the item exists and prints `***REDACTED***` by default. `--reveal` deliberately bypasses masking
 for that value, including with `--json`; its warning goes to stderr. Avoid it
 in captured terminals or CI logs. `set` and `rm` output only the name/status.
-The portable go-keyring API cannot list names; `list` reports unsupported
-with `config_error` and exit 3 rather than pretending the store is empty.
+The portable go-keyring API cannot list names, so there is no `secret list`
+command; keep track of the names your projects reference.
 There is no separate file containing an index of keychain items.
 
 The backend uses macOS Keychain through `/usr/bin/security`, Linux Secret
