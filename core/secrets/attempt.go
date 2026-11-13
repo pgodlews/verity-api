@@ -23,6 +23,20 @@ func (r *Redactor) AttemptScope(ctx context.Context) (context.Context, *Redactor
 	}
 }
 
+// AddPerRequest registers a value that changes with every request (a
+// signature): only for the current attempt when ctx belongs to an
+// AttemptScope, so the run-wide literal set does not grow with every
+// request; run-wide otherwise, so the value is never left unregistered.
+func (r *Redactor) AddPerRequest(ctx context.Context, secret string) {
+	if ctx != nil {
+		if scoped, ok := ctx.Value(attemptRedactorKey{}).(*Redactor); ok {
+			scoped.addLocal(secret)
+			return
+		}
+	}
+	r.Add(secret)
+}
+
 // AddTemporary registers a value only when ctx belongs to an AttemptScope.
 // Outside an attempt the structural redaction patterns remain the fallback.
 func (r *Redactor) AddTemporary(ctx context.Context, secret string) {
@@ -47,5 +61,5 @@ func (r *Redactor) addLocal(secret string) {
 		return
 	}
 	r.literals[secret] = struct{}{}
-	r.ordered = orderedLiterals(r.literals)
+	r.ordered = insertOrdered(r.ordered, secret)
 }

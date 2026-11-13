@@ -111,7 +111,7 @@ func randomNonce() (string, error) {
 	return hex.EncodeToString(buf[:]), nil
 }
 
-func (p *hmacProvider) Apply(_ context.Context, req *spi.Request) error {
+func (p *hmacProvider) Apply(ctx context.Context, req *spi.Request) error {
 	if req.Headers == nil {
 		req.Headers = http.Header{}
 	}
@@ -149,8 +149,9 @@ func (p *hmacProvider) Apply(_ context.Context, req *spi.Request) error {
 	}
 	value := p.prefix + encoded
 	req.Headers.Set(p.header, value)
-	p.red.Add(encoded)
-	p.red.Add(value)
+	// The MAC changes with every request: register it for this attempt only.
+	p.red.AddPerRequest(ctx, encoded)
+	p.red.AddPerRequest(ctx, value)
 	return nil
 }
 

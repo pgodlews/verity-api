@@ -80,7 +80,7 @@ func boolConfig(config map[string]any, key string) (bool, error) {
 	return b, nil
 }
 
-func (p *sigV4Provider) Apply(_ context.Context, req *spi.Request) error {
+func (p *sigV4Provider) Apply(ctx context.Context, req *spi.Request) error {
 	if req.Headers == nil {
 		req.Headers = http.Header{}
 	}
@@ -117,7 +117,9 @@ func (p *sigV4Provider) Apply(_ context.Context, req *spi.Request) error {
 		return err
 	}
 	req.Headers.Set("Authorization", signed.authorization)
-	p.red.Add(signed.signature)
+	// The signature changes with every request: register it for this
+	// attempt only.
+	p.red.AddPerRequest(ctx, signed.signature)
 	return nil
 }
 
