@@ -82,6 +82,10 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- Request captures in reports and the desktop app show the URL that was sent,
+  including the step's `query:` map and auth-added query parameters such as
+  an API key (redacted), and a new `request.cookies` map (additive; values
+  masked) lists the cookies sent.
 - A data feed with no rows now reports its case as `skipped` (with a `feed`
   step explaining why) instead of running it once with literal `${column}`
   placeholders. CSV feeds strip a UTF-8 byte-order mark (Excel exports) and

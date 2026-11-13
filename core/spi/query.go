@@ -9,6 +9,23 @@ import (
 // With no extra parameters it returns raw unchanged. Otherwise the query is
 // re-encoded once, sorted by key, with spaces as %20 rather than '+'. Callers
 // apply EscapeQuery to the result so a signer and the sender share the wire form.
+// WireURL returns the URL a request is sent to: rawURL with the request's
+// query map (the step's query: and auth-added parameters) merged in and the
+// query escaped the way the HTTP protocols send it. Captures use the same
+// function so reports show the URL that was on the wire.
+func WireURL(rawURL string, query map[string]string) (string, error) {
+	target := NormalizeTargetQuery(rawURL)
+	if len(query) > 0 {
+		u, err := url.Parse(target)
+		if err != nil {
+			return "", err
+		}
+		u.RawQuery = MergeQuery(u.RawQuery, query)
+		target = u.String()
+	}
+	return NormalizeTargetQuery(target), nil
+}
+
 func MergeQuery(raw string, extra map[string]string) string {
 	if len(extra) == 0 {
 		return raw

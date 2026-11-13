@@ -16,9 +16,23 @@ func captureRequest(req *spi.Request, red *secrets.Redactor) *spi.RequestCapture
 			headers[k] = red.Redact(strings.Join(vs, ", "))
 		}
 	}
-	// Query params may carry API keys; redact and fold into the URL view.
+	// Query params (the step's query: map and auth-added ones such as an
+	// apikey in the query) may carry API keys: fold them into the URL view
+	// exactly as they are sent, then redact.
 	// BodySummary replaces raw bytes for uploads so file contents stay out of reports.
-	url := req.URL
+	url, err := spi.WireURL(req.URL, req.Query)
+	if err != nil {
+		url = req.URL
+	}
+	var cookies map[string]string
+	if len(req.Cookies) > 0 {
+		cookies = make(map[string]string, len(req.Cookies))
+		for k := range req.Cookies {
+			// Cookie values are masked like Cookie headers: they are
+			// session credentials as often as not. Names stay visible.
+			cookies[k] = secrets.Mask
+		}
+	}
 	body := string(req.Body)
 	if req.BodySummary != nil {
 		body = *req.BodySummary
@@ -27,6 +41,7 @@ func captureRequest(req *spi.Request, red *secrets.Redactor) *spi.RequestCapture
 		Method:  req.Method,
 		URL:     red.Redact(url),
 		Headers: headers,
+		Cookies: cookies,
 		Body:    red.Redact(body),
 	}
 }

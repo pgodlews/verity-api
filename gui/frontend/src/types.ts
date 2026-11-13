@@ -51,6 +51,8 @@ export interface RequestCapture {
   method?: string;
   url?: string;
   headers?: Record<string, string>;
+  /** Request cookie names; values are always masked. */
+  cookies?: Record<string, string>;
   body?: string;
 }
 

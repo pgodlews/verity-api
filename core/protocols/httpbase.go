@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -22,16 +21,10 @@ import (
 // captures the response. It applies Query and Cookies contributed by auth
 // providers and records timing. It is shared by all HTTP-based protocols.
 func doHTTP(ctx context.Context, pctx *spi.ProtocolContext, req *spi.Request) (*spi.Response, error) {
-	target := spi.NormalizeTargetQuery(req.URL)
-	if len(req.Query) > 0 {
-		u, err := url.Parse(target)
-		if err != nil {
-			return nil, fmt.Errorf("parse URL %q: %w", target, err)
-		}
-		u.RawQuery = spi.MergeQuery(u.RawQuery, req.Query)
-		target = u.String()
+	target, err := spi.WireURL(req.URL, req.Query)
+	if err != nil {
+		return nil, fmt.Errorf("parse URL %q: %w", req.URL, err)
 	}
-	target = spi.NormalizeTargetQuery(target)
 
 	method := req.Method
 	if method == "" {
