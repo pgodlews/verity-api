@@ -7,7 +7,6 @@
 package verr
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 )
@@ -50,7 +49,9 @@ const (
 	CodeGit Code = "git_error"
 )
 
-// Error is Verity's structured error. It implements error and json.Marshaler.
+// Error is Verity's structured error. It implements error. JSON encodes the
+// exported fields only, so the wrapped cause (which may be unstructured)
+// is never emitted.
 type Error struct {
 	Code    Code   `json:"code"`
 	Message string `json:"message"`
@@ -72,18 +73,6 @@ func (e *Error) Error() string {
 
 // Unwrap returns the wrapped cause, if any.
 func (e *Error) Unwrap() error { return e.wrapped }
-
-// MarshalJSON ensures the wrapped error is not emitted (it may be unstructured)
-// while keeping the public, typed fields.
-func (e *Error) MarshalJSON() ([]byte, error) {
-	type alias struct {
-		Code    Code           `json:"code"`
-		Message string         `json:"message"`
-		Path    string         `json:"path,omitempty"`
-		Details map[string]any `json:"details,omitempty"`
-	}
-	return json.Marshal(alias{e.Code, e.Message, e.Path, e.Details})
-}
 
 // New builds a structured error.
 func New(code Code, msg string) *Error {
