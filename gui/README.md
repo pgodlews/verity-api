@@ -77,7 +77,8 @@ the backend — handy for working on views. Screenshots of the UI live in
 - `src/App.tsx` — shell: welcome, header, activity rail, status bar.
 - `src/views/` — Workspace (request editor), Runner, Load test, Import, Environments, Changes.
 - `src/components/`, `src/lib/` — Workspace parts and helpers
-  (`node --test src/lib/workspace.test.mjs src/lib/stepSecrets.test.mjs`).
+  (`npm test` runs every `*.test.mjs` file under `src/` and the bridge
+  test; a new test file needs no registration).
 
 While a request has unsaved edits, the editor asks `CheckStep` whether any
 header, query parameter, JSON or form field, or step variable is a plaintext
