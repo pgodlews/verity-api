@@ -27,13 +27,33 @@ inputs:
     required: false
     default: ""
   vars:
-    description: "Space-separated KEY=VALUE variable overrides (optional)."
+    description: "Variable overrides, one KEY=VALUE per line (values may contain spaces). Pass secrets through job environment variables instead."
+    required: false
+    default: ""
+  suite:
+    description: "Suites to run, one name or glob per line (--suite). Empty runs all."
+    required: false
+    default: ""
+  case:
+    description: "Cases to run, one name or glob per line (--case). Empty runs all."
+    required: false
+    default: ""
+  bail:
+    description: "Set to true to stop scheduling new cases after the first failure (--bail)."
+    required: false
+    default: "false"
+  env-file:
+    description: "Dotenv files to load, one path per line (--env-file)."
     required: false
     default: ""
   plugins:
-    description: "Path to a plugins config JSON (optional)."
+    description: "Path to a plugins config JSON (optional); naming it trusts it."
     required: false
     default: ""
+  trust-plugins:
+    description: "Set to true to run the project's own .verity/plugins.json (--trust-plugins)."
+    required: false
+    default: "false"
   go-version:
     description: "Go version used to build verity from source."
     required: false
@@ -54,14 +74,44 @@ runs:
 
     - name: Run Verity
       shell: bash
+      # Inputs reach the script only as environment variables, never as text
+      # interpolated into it, so quotes or $(...) in an input cannot run.
+      env:
+        IN_PROJECT: ${{ inputs.project }}
+        IN_ENV: ${{ inputs.env }}
+        IN_PARALLEL: ${{ inputs.parallel }}
+        IN_JUNIT: ${{ inputs.junit }}
+        IN_JSON: ${{ inputs.json }}
+        IN_HTML: ${{ inputs.html }}
+        IN_PLUGINS: ${{ inputs.plugins }}
+        IN_VARS: ${{ inputs.vars }}
+        IN_SUITE: ${{ inputs.suite }}
+        IN_CASE: ${{ inputs.case }}
+        IN_BAIL: ${{ inputs.bail }}
+        IN_ENV_FILE: ${{ inputs.env-file }}
+        IN_TRUST_PLUGINS: ${{ inputs.trust-plugins }}
       run: |
         set -euo pipefail
-        ARGS=(run "${{ inputs.project }}")
-        [ -n "${{ inputs.env }}" ]      && ARGS+=(--env "${{ inputs.env }}")
-        [ -n "${{ inputs.parallel }}" ] && ARGS+=(--parallel "${{ inputs.parallel }}")
-        [ -n "${{ inputs.junit }}" ]    && ARGS+=(--junit "${{ inputs.junit }}")
-        [ -n "${{ inputs.json }}" ]     && ARGS+=(--json "${{ inputs.json }}")
-        [ -n "${{ inputs.html }}" ]     && ARGS+=(--html "${{ inputs.html }}")
-        [ -n "${{ inputs.plugins }}" ]  && ARGS+=(--plugins "${{ inputs.plugins }}")
-        for kv in ${{ inputs.vars }}; do ARGS+=(--var "$kv"); done
+        ARGS=(run "$IN_PROJECT")
+        [ -n "$IN_ENV" ]      && ARGS+=(--env "$IN_ENV")
+        [ -n "$IN_PARALLEL" ] && ARGS+=(--parallel "$IN_PARALLEL")
+        [ -n "$IN_JUNIT" ]    && ARGS+=(--junit "$IN_JUNIT")
+        [ -n "$IN_JSON" ]     && ARGS+=(--json "$IN_JSON")
+        [ -n "$IN_HTML" ]     && ARGS+=(--html "$IN_HTML")
+        [ -n "$IN_PLUGINS" ]  && ARGS+=(--plugins "$IN_PLUGINS")
+        [ "$IN_BAIL" = true ] && ARGS+=(--bail)
+        [ "$IN_TRUST_PLUGINS" = true ] && ARGS+=(--trust-plugins)
+        # One value per line; blank lines are ignored.
+        add_lines() {
+          local flag=$1 text=$2 line
+          while IFS= read -r line || [ -n "$line" ]; do
+            line="${line%$'\r'}"
+            if [ -n "${line//[[:space:]]/}" ]; then ARGS+=("$flag" "$line"); fi
+          done <<< "$text"
+          return 0
+        }
+        add_lines --var "$IN_VARS"
+        add_lines --suite "$IN_SUITE"
+        add_lines --case "$IN_CASE"
+        add_lines --env-file "$IN_ENV_FILE"
         "$RUNNER_TEMP/verity" "${ARGS[@]}"
