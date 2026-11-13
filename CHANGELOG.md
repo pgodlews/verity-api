@@ -58,6 +58,9 @@ and distribution names below use the final public names.
   the plugin process resolves and dials the name, where the private-address
   guard cannot check the real address. IP literals and `unix:` sockets are
   screened as before. (S-5 follow-up)
+- **BREAKING:** a `${secret:file:PATH}` whose file does not exist is now a
+  `config_error`. Previously it was treated like an unset variable, so a
+  request could carry the literal `${secret:file:...}` text.
 - **BREAKING:** `include` fragments must be inside the project directory
   (the root file's directory, after resolving symlinks), like every other
   file a project names; `--allow-external-files` lifts it. That flag is now
