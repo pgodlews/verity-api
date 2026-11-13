@@ -155,11 +155,7 @@ func decodeOrderedJSON(dec *json.Decoder) (*orderedJSON, error) {
 			return nil, fmt.Errorf("unexpected delimiter %q", v)
 		}
 	case string:
-		encoded, err := json.Marshal(v)
-		if err != nil {
-			return nil, err
-		}
-		return &orderedJSON{kind: 's', value: string(encoded)}, nil
+		return &orderedJSON{kind: 's', value: string(marshalJSONString(v))}, nil
 	case json.Number:
 		return &orderedJSON{kind: 'n', value: v.String()}, nil
 	case bool:
@@ -181,8 +177,7 @@ func (n *orderedJSON) encode(buf *bytes.Buffer, depth int) {
 		buf.WriteString("{\n")
 		for i, pair := range n.pairs {
 			writeJSONIndent(buf, depth+1)
-			key, _ := json.Marshal(pair.key)
-			buf.Write(key)
+			buf.Write(marshalJSONString(pair.key))
 			buf.WriteString(": ")
 			pair.value.encode(buf, depth+1)
 			if i+1 < len(n.pairs) {

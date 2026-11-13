@@ -312,7 +312,7 @@ func replaceStepJSON(data []byte, req SaveStepRequest) ([]byte, bool, error) {
 				return nil, false, fmt.Errorf("step index %d out of range (case has %d steps)", req.Index, len(c.Steps))
 			}
 			c.Steps[req.Index] = req.Step
-			encoded, err := json.MarshalIndent(&p, "", "  ")
+			encoded, err := model.MarshalJSONIndent(&p)
 			if err != nil {
 				return nil, false, err
 			}
@@ -325,6 +325,11 @@ func replaceStepJSON(data []byte, req SaveStepRequest) ([]byte, bool, error) {
 
 // writeKeepingMode replaces a file via a temp file and rename, keeping its mode.
 func writeKeepingMode(path string, data []byte) error {
+	// Write through a symlinked project file: replace its target, not the
+	// link, so the link and the file it points to stay as the user set them.
+	if real, err := filepath.EvalSymlinks(path); err == nil {
+		path = real
+	}
 	mode := os.FileMode(0o644)
 	if st, err := os.Stat(path); err == nil {
 		mode = st.Mode().Perm()

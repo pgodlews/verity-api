@@ -103,6 +103,11 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- JSON project saves (desktop step and environment saves, imports) and
+  `verity fmt` no longer HTML-escape `<`, `>`, and `&`, so SOAP/XML bodies
+  and URLs stay readable instead of becoming `\u003c…`. Desktop saves to a
+  symlinked project file now write the link's target instead of replacing
+  the link with a regular file.
 - OAuth2: an invalid `refreshSkewSeconds` (not an integer, negative, or
   over a day) is a `config_error` instead of being ignored silently.
 - mTLS: an unknown `minVersion`/`maxVersion` (or a minimum above the
