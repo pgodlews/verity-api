@@ -56,7 +56,7 @@ func collectHosts(x *runner.CaseExec, allowRemote bool) ([]string, error) {
 		if step == nil || step.Skip {
 			return nil
 		}
-		raws, err := endpointRaws(x, step, allowRemote)
+		raws, hides, err := endpointRaws(x, step, allowRemote)
 		if err != nil {
 			return err
 		}
@@ -73,6 +73,9 @@ func collectHosts(x *runner.CaseExec, allowRemote bool) ([]string, error) {
 				continue
 			}
 			for _, h := range found {
+				if hides && !allowRemote && net.ParseIP(h) == nil {
+					return unguardedNameError(step.Name, h)
+				}
 				addHost(h)
 			}
 		}
@@ -109,7 +112,7 @@ func collectHosts(x *runner.CaseExec, allowRemote bool) ([]string, error) {
 // endpointRaws lists the address strings a step may dial. An out-of-process
 // protocol with none of the known keys is refused unless allowRemote is set:
 // the dial guard cannot see that process.
-func endpointRaws(x *runner.CaseExec, step *model.Step, allowRemote bool) ([]string, error) {
+func endpointRaws(x *runner.CaseExec, step *model.Step, allowRemote bool) ([]string, bool, error) {
 	hides := true
 	if p, err := x.Protocol(step.Protocol); err == nil {
 		hides = plugin.HidesDial(p)
@@ -127,11 +130,22 @@ func endpointRaws(x *runner.CaseExec, step *model.Step, allowRemote bool) ([]str
 		}
 	}
 	if hides && len(raws) == 0 && !allowRemote {
-		return nil, verr.Newf(verr.CodeConfig,
+		return nil, true, verr.Newf(verr.CodeConfig,
 			"refusing plugin step %q: no target, url, address, endpoint, or host to screen; pass --allow-remote",
-			step.Name)
+			step.Name).WithDetail("step", step.Name)
 	}
-	return raws, nil
+	return raws, hides, nil
+}
+
+// unguardedNameError refuses a plugin step that dials a host name. The plugin
+// process resolves and dials it itself, so the private-address guard cannot
+// check the address it really connects to (DNS can answer differently than
+// it did for the screen). An IP literal or a unix socket is fixed and is
+// screened; --allow-remote accepts the risk.
+func unguardedNameError(step, host string) error {
+	return verr.Newf(verr.CodeConfig,
+		"refusing plugin step %q: it dials %q from the plugin process, where the private-address guard cannot check the address it connects to; use an IP address or a unix socket, or pass --allow-remote",
+		step, host).WithDetail("step", step).WithDetail("host", host)
 }
 
 // endpointHosts extracts the hosts from an HTTP URL or a gRPC dial target.
