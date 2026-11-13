@@ -14,6 +14,12 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` planned
       Dependabot, `go mod tidy`/staticcheck/govulncheck checks, macOS CI,
       Node.js 22, SHA-pinned actions, test-gated least-privilege releases,
       reproducible archives, and an injection-safe composite action.
+- [x] Performance under load: load latency measures the protocol call (step
+      time reported separately) with lean captures, bounded redactor growth,
+      cached JSON Schemas and SDL files, 1 MiB capture cap, and gRPC
+      connection and descriptor reuse.
+- [ ] Concurrent plugin dispatch (request ids, VPP/2) so parallel cases and
+      load-test users are not serialized through one plugin process.
 - [x] Require consent before running a project's `.verity/plugins.json`
       (`--trust-plugins`, `VERITY_TRUST_PLUGINS=1`, or a remembered desktop approval).
 - [x] Confine secret files, mTLS files, JSON Schema files, feeds, and uploads to
