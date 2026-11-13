@@ -103,6 +103,8 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- `verity run` rejects `--parallel` below 1 and a negative `--until-step`
+  with a usage error (exit 2) instead of accepting them.
 - `verity import --out FILE` no longer overwrites an existing file unless
   the new `--force` is given (the desktop import already refused), and a
   failure to save the project exits 3 instead of 4.
