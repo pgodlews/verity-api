@@ -46,6 +46,11 @@ and distribution names below use the final public names.
 
 ### Changed
 
+- **BREAKING:** `verity load` refuses a plugin-protocol step (gRPC, for
+  example) whose endpoint is a host name unless `--allow-remote` is set:
+  the plugin process resolves and dials the name, where the private-address
+  guard cannot check the real address. IP literals and `unix:` sockets are
+  screened as before. (S-5 follow-up)
 - **BREAKING:** `include` fragments must be inside the project directory
   (the root file's directory, after resolving symlinks), like every other
   file a project names; `--allow-external-files` lifts it. That flag is now

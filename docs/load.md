@@ -102,7 +102,12 @@ host in the path. That path is screened, and so is a non-empty authority
 An out-of-process protocol is screened on `target`, `url`, `address`,
 `endpoint`, and `host`. The dial guard cannot see sockets that process
 opens. A plugin step with none of those fields is refused unless
-`--allow-remote` is set; the message names the step.
+`--allow-remote` is set; the message names the step. A plugin step whose
+endpoint is a host name (`localhost:50051`, `dns:///svc:443`) is refused
+the same way, with a `config_error` naming the step and the host: the
+plugin process resolves the name itself, so the guard cannot check the
+address it really connects to. Use an IP address (`127.0.0.1:50051`) or a
+`unix:` socket, or pass `--allow-remote`.
 
 The same allow-list is applied again at connect time, unless
 `--allow-remote` is set. Every HTTP connection the load run opens — the
