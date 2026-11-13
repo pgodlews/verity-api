@@ -42,6 +42,13 @@ redacted results. OAuth sign-in sessions require the desktop app because
 the browser bridge starts a fresh CLI process per call. Mock mode simulates
 sign-in and sign-out without opening a browser.
 
+The dev server listens on `localhost` only. The bridge answers `403` unless
+the request's `Host` is a loopback name, it carries the `X-Verity-Bridge: 1`
+header the frontend sends, and any `Origin`/`Sec-Fetch-Site` header names the
+dev server itself, so other web pages open in the same browser cannot drive
+it. A project's `.verity/plugins.json` runs through the bridge only when
+`VERITY_TRUST_PLUGINS=1` is set for `npm run dev`.
+
 ```bash
 go build -o verity ./cmd/verity                 # at the repo root; or set VERITY_BIN
 cd gui/frontend && npm ci && npm run dev  # open the URL printed by Vite

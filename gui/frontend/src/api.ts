@@ -101,7 +101,12 @@ interface GoBindings {
 // httpBindings calls the dev bridge, which answers with {ok, value | error}.
 const httpBindings = new Proxy({} as GoBindings, {
   get: (_, method: string) => async (...args: unknown[]) => {
-    const res = await fetch(`/__verity/${method}`, { method: "POST", body: JSON.stringify(args) });
+    // vite.bridge.ts refuses requests without this header (cross-site guard).
+    const res = await fetch(`/__verity/${method}`, {
+      method: "POST",
+      headers: { "X-Verity-Bridge": "1" },
+      body: JSON.stringify(args),
+    });
     const out = await res.json();
     if (!out.ok) throw new Error(out.error);
     return out.value;

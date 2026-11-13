@@ -31,6 +31,49 @@ function guiCall(method: string, args: string): Promise<string> {
   });
 }
 
+type Headers = Record<string, string | string[] | undefined>;
+
+const loopbackHosts = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
+function single(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+/**
+ * bridgeForbidden returns why a bridge request must be refused, or null when
+ * it is allowed. The bridge runs real commands (save, commit, push, run), so
+ * a page on another site must not reach it: the Host must be a loopback name
+ * (no DNS rebinding), the request must carry X-Verity-Bridge: 1 (a custom
+ * header, so a cross-origin browser request cannot be a "simple" no-preflight
+ * POST), and an Origin or Sec-Fetch-Site header, when present, must name this
+ * dev server itself.
+ */
+export function bridgeForbidden(headers: Headers): string | null {
+  const host = single(headers.host);
+  if (!host) return "missing Host header";
+  let self: URL;
+  try {
+    self = new URL(`http://${host}`);
+  } catch {
+    return "invalid Host header";
+  }
+  if (!loopbackHosts.has(self.hostname)) return "Host is not a loopback name";
+  if (single(headers["x-verity-bridge"]) !== "1") return "missing X-Verity-Bridge header";
+  const origin = single(headers.origin);
+  if (origin !== undefined) {
+    let from: URL;
+    try {
+      from = new URL(origin);
+    } catch {
+      return "invalid Origin header";
+    }
+    if (from.host !== self.host || !/^https?:$/.test(from.protocol)) return "cross-origin request";
+  }
+  const site = single(headers["sec-fetch-site"]);
+  if (site !== undefined && site !== "same-origin") return "cross-site request";
+  return null;
+}
+
 export function verityBridge(): Plugin {
   return {
     name: "verity-dev-bridge",
@@ -41,6 +84,13 @@ export function verityBridge(): Plugin {
         if (!/^[A-Za-z]+$/.test(method) || req.method !== "POST") {
           res.statusCode = 404;
           res.end();
+          return;
+        }
+        const reason = bridgeForbidden(req.headers);
+        if (reason) {
+          res.statusCode = 403;
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify({ ok: false, error: `dev bridge refused: ${reason}` }));
           return;
         }
         let body = "";
