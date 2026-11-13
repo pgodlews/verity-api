@@ -14,7 +14,8 @@ import (
 )
 
 // allowedIP reports whether ip is a target the load command may hit without
-// --allow-remote: 127.0.0.0/8, ::1, RFC1918, or link-local unicast
+// --allow-remote: loopback (127.0.0.0/8, ::1), private (RFC 1918 and IPv6
+// unique-local fc00::/7, via net.IP.IsPrivate), or link-local unicast
 // (169.254.0.0/16, fe80::/10). IPv4-mapped IPv6 addresses are judged as IPv4.
 func allowedIP(ip net.IP) bool {
 	if ip == nil {
@@ -23,23 +24,7 @@ func allowedIP(ip net.IP) bool {
 	if v4 := ip.To4(); v4 != nil {
 		ip = v4
 	}
-	if ip.IsLoopback() || ip.IsLinkLocalUnicast() {
-		return true
-	}
-	v4 := ip.To4()
-	if v4 == nil {
-		return false
-	}
-	if v4[0] == 10 {
-		return true
-	}
-	if v4[0] == 172 && v4[1] >= 16 && v4[1] <= 31 {
-		return true
-	}
-	if v4[0] == 192 && v4[1] == 168 {
-		return true
-	}
-	return false
+	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast()
 }
 
 // httpEndpointKeys are the request fields an in-process HTTP step dials.
@@ -206,12 +191,11 @@ func hostOnly(hostport string) string {
 	return hostport
 }
 
-// hostAllowed reports whether host is a loopback, RFC1918, or link-local
-// address. IP literals are judged without a lookup. Other names are resolved
-// with lookup; every returned address must be allowed. An unresolvable name
-// is not allowed unless allowRemote is set (the caller still refuses when
-// allowRemote is false).
-func hostAllowed(host string, lookup func(string) ([]net.IP, error), allowRemote bool) bool {
+// hostAllowed reports whether host is a loopback, private, or link-local
+// address (see allowedIP). IP literals are judged without a lookup. Other
+// names are resolved with lookup; every returned address must be allowed. An
+// unresolvable name is not allowed.
+func hostAllowed(host string, lookup func(string) ([]net.IP, error)) bool {
 	if ip := net.ParseIP(host); ip != nil {
 		return allowedIP(ip)
 	}
@@ -220,7 +204,7 @@ func hostAllowed(host string, lookup func(string) ([]net.IP, error), allowRemote
 	}
 	ips, err := lookup(host)
 	if err != nil || len(ips) == 0 {
-		return allowRemote
+		return false
 	}
 	for _, ip := range ips {
 		if !allowedIP(ip) {
@@ -268,7 +252,7 @@ func classifyTargets(x *runner.CaseExec, allowRemote bool, lookup func(string) (
 			shown = red.Redact(h)
 		}
 		hosts = append(hosts, shown)
-		if !hostAllowed(h, lookup, false) {
+		if !hostAllowed(h, lookup) {
 			refused = append(refused, shown)
 		}
 	}

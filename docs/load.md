@@ -77,7 +77,7 @@ Before any request, Verity resolves every selected request `url` and `target`
 and refuses the run unless each host is:
 
 - IPv4 or IPv6 loopback
-- RFC1918 private IPv4
+- RFC1918 private IPv4 and IPv6 unique-local (`fc00::/7`)
 - IPv4 or IPv6 link-local unicast
 
 IP literals are checked as addresses. They are not dialed when the run is

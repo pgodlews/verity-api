@@ -31,6 +31,9 @@ func TestAllowedIP(t *testing.T) {
 		{"fe80::1", true},
 		{"::ffff:10.0.0.1", true},
 		{"::ffff:127.0.0.1", true},
+		{"fd12:3456::1", true}, // IPv6 unique-local (fc00::/7)
+		{"fc00::1", true},
+		{"fe00::1", false},
 		{"172.15.0.1", false},
 		{"172.32.0.1", false},
 		{"11.0.0.1", false},
@@ -60,13 +63,13 @@ func TestHostAllowedUsesLookupForNamesOnly(t *testing.T) {
 		}
 		return []net.IP{net.ParseIP("203.0.113.10")}, nil
 	}
-	if hostAllowed("203.0.113.10", lookup, false) {
+	if hostAllowed("203.0.113.10", lookup) {
 		t.Fatal("public literal should be refused")
 	}
 	if looked {
 		t.Fatal("IP literal was resolved")
 	}
-	if hostAllowed("name.invalid", lookup, false) {
+	if hostAllowed("name.invalid", lookup) {
 		t.Fatal("name resolving to a public address should be refused")
 	}
 	if !looked {
@@ -74,23 +77,18 @@ func TestHostAllowedUsesLookupForNamesOnly(t *testing.T) {
 	}
 	if !hostAllowed("loop.invalid", func(string) ([]net.IP, error) {
 		return []net.IP{net.ParseIP("127.0.0.1")}, nil
-	}, false) {
+	}) {
 		t.Fatal("name resolving only to loopback should be allowed")
 	}
 	if hostAllowed("missing.invalid", func(string) ([]net.IP, error) {
 		return nil, errors.New("no such host")
-	}, false) {
+	}) {
 		t.Fatal("unresolvable name should be refused")
-	}
-	if !hostAllowed("missing.invalid", func(string) ([]net.IP, error) {
-		return nil, errors.New("no such host")
-	}, true) {
-		t.Fatal("unresolvable name is the caller's risk when allow-remote is set")
 	}
 	if hostAllowed("${BASE}", func(string) ([]net.IP, error) {
 		t.Fatal("unresolved template should not be looked up")
 		return nil, nil
-	}, false) {
+	}) {
 		t.Fatal("unresolved template should be refused")
 	}
 }
