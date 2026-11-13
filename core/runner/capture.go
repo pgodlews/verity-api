@@ -1,7 +1,9 @@
 package runner
 
 import (
+	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/pgodlews/verity-api/core/secrets"
 	"github.com/pgodlews/verity-api/core/spi"
@@ -37,13 +39,44 @@ func captureRequest(req *spi.Request, red *secrets.Redactor) *spi.RequestCapture
 	if req.BodySummary != nil {
 		body = *req.BodySummary
 	}
+	captured, truncated := captureBody(body, red)
 	return &spi.RequestCapture{
-		Method:  req.Method,
-		URL:     red.Redact(url),
-		Headers: headers,
-		Cookies: cookies,
-		Body:    red.Redact(body),
+		Method:        req.Method,
+		URL:           red.Redact(url),
+		Headers:       headers,
+		Cookies:       cookies,
+		Body:          captured,
+		BodyTruncated: truncated,
 	}
+}
+
+// captureMaxBody caps a captured body in results and reports. Assertions
+// and transfers still see the full body. A variable so tests can lower it.
+var captureMaxBody = 1 << 20
+
+// captureRedactSlack is how far past the cap a body is still redacted, so a
+// secret (or PEM block) that straddles the cut is masked before cutting.
+const captureRedactSlack = 64 << 10
+
+// captureBody redacts body and caps it at captureMaxBody bytes, noting the
+// original size, without redacting (or copying) the rest of a large body.
+func captureBody(body string, red *secrets.Redactor) (string, bool) {
+	if len(body) <= captureMaxBody {
+		return red.Redact(body), false
+	}
+	window := body
+	if len(window) > captureMaxBody+captureRedactSlack {
+		window = window[:captureMaxBody+captureRedactSlack]
+	}
+	redacted := red.Redact(window)
+	if len(redacted) > captureMaxBody {
+		cut := captureMaxBody
+		for cut > 0 && !utf8.RuneStart(redacted[cut]) {
+			cut--
+		}
+		redacted = redacted[:cut]
+	}
+	return redacted + fmt.Sprintf("\n… [capture truncated: body is %d bytes; reports keep the first %d]", len(body), captureMaxBody), true
 }
 
 // captureResponse builds a redacted snapshot of a response.
@@ -54,12 +87,14 @@ func captureResponse(resp *spi.Response, red *secrets.Redactor) *spi.ResponseCap
 			headers[k] = red.Redact(strings.Join(vs, ", "))
 		}
 	}
+	body, truncated := captureBody(string(resp.Body), red)
 	return &spi.ResponseCapture{
-		StatusCode: resp.StatusCode,
-		Status:     resp.Status,
-		Headers:    headers,
-		Body:       red.Redact(string(resp.Body)),
-		DurationMS: resp.Duration.Milliseconds(),
+		StatusCode:    resp.StatusCode,
+		Status:        resp.Status,
+		Headers:       headers,
+		Body:          body,
+		BodyTruncated: truncated,
+		DurationMS:    resp.Duration.Milliseconds(),
 	}
 }
 
