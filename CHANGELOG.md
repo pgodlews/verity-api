@@ -63,6 +63,11 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- A plain `${NAME}` that falls back to the process environment is now
+  redacted like `${env:NAME}`; before, a forgotten `env:` prefix printed the
+  value in console, JSON, JUnit, and HTML reports and in the desktop app.
+  `verity validate` adds a `warnings` array (additive) and reports such
+  references as `env_fallback`.
 - Suite teardown no longer runs under a shared 10-second deadline in every
   run: teardown steps use the normal `--timeout`/`timeoutMs`/retry limits and
   Ctrl-C interrupts them. The 10-second grace budget applies only to the

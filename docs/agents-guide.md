@@ -13,7 +13,9 @@ through one core library; the CLI and GUI are thin shells over it.
 
 1. **Author projects against the JSON Schema.** Get it with `verity schema`
    (project) and `verity schema --kind auth` (auth config). Validate before
-   running: `verity validate project.yaml --json`.
+   running: `verity validate project.yaml --json`. Read its `warnings`
+   array too: `env_fallback` names a plain `${NAME}` that only the process
+   environment defines (write `${env:NAME}` if that is intended).
 2. **Never put plaintext secrets in project files.** Use `${env:VAR}` or
    `${secret:provider:key}`. Validation warns on literal-looking secrets.
    `${secret:keychain:project/NAME}` reads service `verity`, account
