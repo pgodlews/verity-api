@@ -57,6 +57,11 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- A `null` configuration value (for example `token:` with no value) no longer
+  becomes the text `<nil>`: auth fields count as missing (`bearer auth
+  requires 'token'`), null headers are omitted, null SOAP parameters are empty,
+  and JSON data-feed nulls are empty strings. Nested JSON feed objects and
+  arrays become compact JSON text instead of Go formatting.
 - The frontend development bridge (`npm run dev`) refuses cross-site
   requests: it needs a loopback `Host`, the `X-Verity-Bridge: 1` header, and
   a same-origin `Origin`, so another page in the browser can no longer save,

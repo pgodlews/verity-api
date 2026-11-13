@@ -73,7 +73,7 @@ func TestJSONSourceValuesAndErrors(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := map[string]string{"number": "10000000", "decimal": "19.99", "text": "value", "bool": "true", "null": "<nil>", "object": "map[id:1]", "array": "[1 2]"}
+	want := map[string]string{"number": "10000000", "decimal": "19.99", "text": "value", "bool": "true", "null": "", "object": `{"id":1}`, "array": "[1,2]"}
 	if len(rows) != 1 || !reflect.DeepEqual(rows[0], want) {
 		t.Fatalf("row = %#v, want %#v", rows, want)
 	}

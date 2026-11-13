@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/pgodlews/verity-api/core/internal/scalar"
 	"github.com/pgodlews/verity-api/core/registry"
 	"github.com/pgodlews/verity-api/core/secrets"
 	"github.com/pgodlews/verity-api/core/spi"
@@ -36,15 +37,9 @@ func Register(r *registry.Registry) {
 	r.RegisterAuth("hmac", newHMAC)
 }
 
-// strConfig fetches a string config value, returning "" when absent.
+// strConfig fetches a string config value, returning "" when absent or null.
 func strConfig(config map[string]any, key string) string {
-	if v, ok := config[key]; ok {
-		if s, ok := v.(string); ok {
-			return s
-		}
-		return fmt.Sprintf("%v", v)
-	}
-	return ""
+	return scalar.String(config[key])
 }
 
 // noneProvider is the explicit no-auth provider. Useful to override an

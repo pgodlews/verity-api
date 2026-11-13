@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pgodlews/verity-api/core/internal/scalar"
 	"github.com/pgodlews/verity-api/core/spi"
 	"github.com/pgodlews/verity-api/core/verr"
 )
@@ -134,27 +135,20 @@ func headersFromConfig(raw map[string]any) http.Header {
 		return h
 	}
 	for k, v := range m {
-		h.Set(k, fmt.Sprintf("%v", v))
+		if v == nil {
+			continue // a null header is omitted, not sent as "<nil>"
+		}
+		h.Set(k, scalar.String(v))
 	}
 	return h
 }
 
-// bodyFromConfig extracts a request body from config. A "body" string is used
-// verbatim; a "json" value is marshaled (handled by callers needing JSON).
+// stringField returns a config value as text; absent or null is "".
 func stringField(raw map[string]any, key string) string {
-	if v, ok := raw[key]; ok {
-		if s, ok := v.(string); ok {
-			return s
-		}
-		return fmt.Sprintf("%v", v)
-	}
-	return ""
+	return scalar.String(raw[key])
 }
 
 // fmtAny renders an arbitrary value to string for header/query coercion.
 func fmtAny(v any) string {
-	if v == nil {
-		return ""
-	}
-	return fmt.Sprintf("%v", v)
+	return scalar.String(v)
 }

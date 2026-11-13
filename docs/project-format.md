@@ -548,7 +548,8 @@ cases:
 ```
 
 CSV: first row is the header by default (`config.header: false` to disable).
-JSON: an array of objects; values are coerced to strings.
+JSON: an array of objects; values are coerced to strings (`null` becomes an
+empty string; nested objects and arrays become compact JSON text).
 
 ## Git-friendly split
 
