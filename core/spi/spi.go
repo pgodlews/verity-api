@@ -83,9 +83,15 @@ type Response struct {
 	Duration time.Duration
 	// ContentType is the resolved content type, if known.
 	ContentType string
-	// Meta carries protocol-specific extras (e.g. gRPC trailers).
+	// Meta carries protocol-specific extras (e.g. gRPC trailers). See
+	// MetaTruncated.
 	Meta map[string]any
 }
+
+// MetaTruncated is the Response.Meta key (value true) a protocol sets when
+// it cut the body at its size limit. Body assertions then fail instead of
+// evaluating a partial body.
+const MetaTruncated = "truncated"
 
 // ProtocolContext carries everything a Protocol plugin needs to execute a
 // request without reaching into global state.
