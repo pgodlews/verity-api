@@ -1,0 +1,30 @@
+# Dependency update PRs for the four Go modules, the frontend, and the
+# GitHub Actions used by the workflows and the composite action.
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directories:
+      - "/"
+      - "/gui"
+      - "/plugins/grpc"
+      - "/plugins/example-assertion"
+    schedule:
+      interval: weekly
+    groups:
+      golang-x:
+        patterns:
+          - "golang.org/x/*"
+    open-pull-requests-limit: 10
+
+  - package-ecosystem: npm
+    directory: "/gui/frontend"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+
+  - package-ecosystem: github-actions
+    directories:
+      - "/"
+      - "/.github/actions/verity"
+    schedule:
+      interval: weekly

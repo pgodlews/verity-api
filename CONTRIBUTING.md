@@ -12,6 +12,8 @@ vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
 ## Prerequisites
 
 - Go 1.26 or newer for the core, CLI, GUI backend, and Go plugin modules.
+  Each module pins `toolchain go1.26.11`; with the default `GOTOOLCHAIN=auto`
+  the `go` command downloads that patch release when yours is older.
 - Git; desktop branch switching requires Git 2.23 or newer.
 - Node.js 20.19+ (20.x) or 22.12+ and npm for `gui/frontend`.
 - Wails v2 for desktop development (the release workflows use v2.12.0), with

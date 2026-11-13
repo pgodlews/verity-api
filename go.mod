@@ -1,6 +1,8 @@
 module github.com/pgodlews/verity-api
 
-go 1.26
+go 1.26.0
+
+toolchain go1.26.11
 
 require (
 	github.com/PaesslerAG/jsonpath v0.1.1
@@ -19,7 +21,7 @@ require (
 	github.com/danieljoos/wincred v1.2.3 // indirect
 	github.com/godbus/dbus/v5 v5.2.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
-	golang.org/x/net v0.33.0 // indirect
-	golang.org/x/sys v0.28.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
+	golang.org/x/net v0.62.0 // indirect
+	golang.org/x/sys v0.50.0 // indirect
+	golang.org/x/text v0.44.0 // indirect
 )
