@@ -19,6 +19,7 @@ func (r *Redactor) AttemptScope(ctx context.Context) (context.Context, *Redactor
 		scoped.literals = map[string]struct{}{}
 		scoped.short = map[string]*regexp.Regexp{}
 		scoped.ordered = nil
+		scoped.shortList = nil
 		scoped.mu.Unlock()
 	}
 }
@@ -53,7 +54,11 @@ func (r *Redactor) addLocal(secret string) {
 	defer r.mu.Unlock()
 	if len(secret) < 4 {
 		if _, ok := r.short[secret]; !ok {
-			r.short[secret] = shortSecretPattern(secret)
+			re := shortSecretPattern(secret)
+			r.short[secret] = re
+			list := make([]*regexp.Regexp, len(r.shortList), len(r.shortList)+1)
+			copy(list, r.shortList)
+			r.shortList = append(list, re)
 		}
 		return
 	}

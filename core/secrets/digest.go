@@ -8,12 +8,11 @@ type digestMaskSpan struct{ start, end int }
 // response= inside arbitrary text. JSON-escaped quotes are normalized with an
 // index map so only the original hash bytes are replaced.
 func maskDigestResponses(s string) string {
-	positions := make([]int, len(s)+1)
-	for i := range positions {
-		positions[i] = i
-	}
-	spans := digestResponseSpans(s, positions)
-	if len(spans) == 0 {
+	// nil positions means identity: no index map is allocated unless the
+	// JSON-escaped form has to be normalized.
+	spans := digestResponseSpans(s, nil)
+	// Only JSON-escaped text (\") needs the normalized, index-mapped pass.
+	if len(spans) == 0 && strings.Contains(s, `\"`) {
 		normalized, mapped := digestNormalizedQuotes(s)
 		spans = digestResponseSpans(normalized, mapped)
 	}
@@ -49,7 +48,11 @@ func digestResponseSpans(s string, positions []int) []digestMaskSpan {
 		}
 		start, end, ok := digestResponseValue(s, at)
 		if ok {
-			spans = append(spans, digestMaskSpan{positions[start], positions[end]})
+			if positions == nil {
+				spans = append(spans, digestMaskSpan{start, end})
+			} else {
+				spans = append(spans, digestMaskSpan{positions[start], positions[end]})
+			}
 		}
 	}
 	return spans
