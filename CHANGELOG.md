@@ -129,6 +129,9 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- An `xsd` assertion with `expr`, `config.schemaFile`, or `config.schema` is
+  a validation error: the assertion only checks well-formedness (and
+  `config.rootElement`) and would silently ignore the schema.
 - `verity version` reports the module version, commit, and commit date that
   the Go toolchain records when the binary was built without release
   `-ldflags` (for example `go install github.com/pgodlews/verity-api/cmd/verity@v0.6.0`),

@@ -497,7 +497,7 @@ selector), `op` (comparison), `value` (expected), `description`.
 | `regex`         | pattern         | —                | regex match on body |
 | `json_schema`   | file path       | —                | validate body vs JSON Schema (`config.schema` for inline) |
 | `graphql_schema`| —               | —                | response `data` matches the GraphQL selection set; `config.allowErrors` allows an `errors` array |
-| `xsd`           | —               | —                | XML well-formedness (+ optional `config.rootElement`) |
+| `xsd`           | —               | —                | XML well-formedness (+ optional `config.rootElement`); no XSD is read, so `expr`, `config.schemaFile`, and `config.schema` are validation errors |
 
 HTTP response bodies are kept up to 32 MiB. A larger body is cut at that
 size; body assertions (`jsonpath`, `xpath`, `json_schema`, `xsd`, `contains`,

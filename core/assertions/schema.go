@@ -94,15 +94,14 @@ func toSchemaBytes(v any) ([]byte, error) {
 	}
 }
 
-// xsdAssertion validates that the response is well-formed XML and, when an XSD
-// is supplied, performs a structural check (root element name + presence of
-// declared top-level elements).
+// xsdAssertion checks that the response is well-formed XML and, when
+// config.rootElement is set, that the document element has that name. It
+// does not read or apply an XSD: model.Validate rejects expr and
+// config.schemaFile on an xsd assertion so a schema is never silently ignored.
 //
 // NOTE: Full W3C XSD validation requires a CGO libxml2 binding, which conflicts
-// with the no-JVM/lean, pure-Go cross-compilation goal. This reference
-// implementation performs well-formedness and a pragmatic structural check;
-// full XSD validation is documented as a plugin extension point (see
-// docs/extending-assertions.md).
+// with the no-JVM/lean, pure-Go cross-compilation goal. Full XSD validation is
+// documented as a plugin extension point (see docs/extending-assertions.md).
 type xsdAssertion struct{}
 
 func (xsdAssertion) Type() string { return "xsd" }

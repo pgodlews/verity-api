@@ -172,6 +172,10 @@ func validateStep(st Step, authNames map[string]bool, path string) []*verr.Error
 			errs = append(errs, verr.New(verr.CodeValidation,
 				"assertion type is required").WithPath(apath))
 		}
+		if a.Type == "xsd" && (a.Expr != "" || a.Config["schemaFile"] != nil || a.Config["schema"] != nil) {
+			errs = append(errs, verr.New(verr.CodeValidation,
+				"the xsd assertion checks XML well-formedness (and config.rootElement) only; it does not read an XSD, so expr, config.schemaFile, and config.schema would be ignored").WithPath(apath))
+		}
 		if a.Op != "" && !AssertionOps[a.Op] {
 			errs = append(errs, verr.Newf(verr.CodeValidation,
 				"assertion op %q is not one of %s", a.Op, strings.Join(sortedKeys(AssertionOps), ", ")).WithPath(apath+".op"))
