@@ -100,6 +100,9 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- `verity import --out FILE` no longer overwrites an existing file unless
+  the new `--force` is given (the desktop import already refused), and a
+  failure to save the project exits 3 instead of 4.
 - A request or response body that is not valid base64 on the plugin wire is
   a `plugin_error` (host and SDK) instead of being dropped silently.
 - Plugin SDK: `ServeAuth` keeps one provider per distinct config for the
