@@ -9,10 +9,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/pgodlews/verity-api/core/fsutil"
 	"github.com/pgodlews/verity-api/core/internal/scalar"
 	"github.com/pgodlews/verity-api/core/registry"
+	"github.com/pgodlews/verity-api/core/verr"
 )
 
 // Register installs the built-in data sources.
@@ -51,6 +53,10 @@ func (csvSource) Rows(dir string, config map[string]any, inline []map[string]str
 		return nil, nil
 	}
 
+	// Excel and other tools write a UTF-8 byte-order mark; it is not part
+	// of the first column's name or value.
+	records[0][0] = strings.TrimPrefix(records[0][0], "\ufeff")
+
 	hasHeader := true
 	if h, ok := config["header"].(bool); ok {
 		hasHeader = h
@@ -59,6 +65,13 @@ func (csvSource) Rows(dir string, config map[string]any, inline []map[string]str
 	var dataRows [][]string
 	if hasHeader {
 		header = records[0]
+		seen := map[string]bool{}
+		for _, col := range header {
+			if seen[col] {
+				return nil, verr.Newf(verr.CodeConfig, "CSV feed %q has duplicate column %q", path, col)
+			}
+			seen[col] = true
+		}
 		dataRows = records[1:]
 	} else {
 		header = make([]string, len(records[0]))

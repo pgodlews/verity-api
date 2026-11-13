@@ -82,6 +82,10 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- A data feed with no rows now reports its case as `skipped` (with a `feed`
+  step explaining why) instead of running it once with literal `${column}`
+  placeholders. CSV feeds strip a UTF-8 byte-order mark (Excel exports) and
+  reject duplicate column names.
 - Assertions no longer ignore `op`: `contains` supports `contains` and the
   new `not_contains` (`not_exists` remains a deprecated alias), `regex`
   supports `matches` and the new `not_matches`, and any other op fails the

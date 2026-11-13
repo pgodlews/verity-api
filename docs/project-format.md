@@ -570,6 +570,11 @@ Rules:
 ## Data-driven feeds
 
 Repeat a case once per data row; each row's columns become variables.
+A feed that yields no rows (an empty file, or a CSV with only a header)
+reports the case as `skipped`, with a `feed` step whose `config_error`
+message says the feed produced no rows; the case's steps are not run. A CSV
+UTF-8 byte-order mark is ignored, and duplicate CSV column names are a
+`config_error`.
 
 ```yaml
 cases:
