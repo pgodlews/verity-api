@@ -85,9 +85,13 @@ func TestSecretCommandLifecycle(t *testing.T) {
 					t.Fatal(err)
 				}
 				if tc.code == exitConfig {
-					problem, ok := result["error"].(map[string]any)
-					if !ok || problem["code"] != "config_error" {
-						t.Fatal("expected structured config error")
+					// The same shape as every other command's --json error.
+					problem, ok := result["error"].(string)
+					if !ok || result["ok"] != false || result["phase"] != "secret get" || !strings.Contains(problem, "config_error") {
+						t.Fatalf("unexpected error shape: %s", out.String())
+					}
+					if !strings.Contains(out.String(), "\n  \"") {
+						t.Fatalf("output is not indented: %s", out.String())
 					}
 				}
 			}

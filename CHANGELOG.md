@@ -46,6 +46,10 @@ and distribution names below use the final public names.
 
 ### Changed
 
+- **BREAKING:** `verity secret ... --json` errors use the shared shape
+  `{"ok": false, "phase": "secret <action>", "error": "<message>"}` (the
+  error is a string, not an object) and all its JSON output is indented
+  like the other commands. (B-18)
 - **BREAKING:** `verity load` refuses a plugin-protocol step (gRPC, for
   example) whose endpoint is a host name unless `--allow-remote` is set:
   the plugin process resolves and dials the name, where the private-address
