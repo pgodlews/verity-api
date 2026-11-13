@@ -141,8 +141,13 @@ func main() { sdk.ServeAssertion(myAssertion{}) }
 Scaffold a complete, buildable, tested plugin module:
 
 ```bash
-verity plugin new <protocol|assertion|reporter|auth|datasource> <name> [--out DIR]
+verity plugin new <protocol|assertion|reporter|auth|datasource> <name> [--out DIR] [--force] [--json]
 ```
+
+`<name>` must match `^[a-z][a-z0-9_-]*$`; Go type names are camel-cased from
+it (`my-check` becomes `MyCheck`). The command refuses to write into a
+non-empty directory (exit 3) unless `--force` is given, and `--json` prints
+`{ok, type, name, dir, files}`.
 
 It generates `go.mod` (with a `replace` to your core checkout), `main.go`,
 `impl_test.go`, `plugin.json`, and `README.md`.

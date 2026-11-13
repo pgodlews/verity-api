@@ -116,6 +116,7 @@ Usage:
   verity mock <spec-or-project> [--port 0] [--host 127.0.0.1]
                         [--validate] [--delay MS] [--seed N] [--json]
   verity plugin new <protocol|assertion|reporter|auth|datasource> <name> [--out DIR]
+                             [--force] [--json]
   verity list [--json]
   verity schema [--kind project|auth]
   verity graphql schema <project.yaml> --step NAME [--suite NAME]

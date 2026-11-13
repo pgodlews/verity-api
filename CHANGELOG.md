@@ -78,6 +78,10 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- `verity plugin new` validates the plugin name (`^[a-z][a-z0-9_-]*$`, so no
+  `../` paths), generates valid Go identifiers (`my-plugin` becomes
+  `MyPlugin`, not `My-Plugin`), refuses to overwrite a non-empty directory
+  without the new `--force`, and accepts `--json`.
 - The gRPC plugin binary is `verity-grpc` everywhere: the plugin README,
   build comment, and `examples/grpc` (whose `.verity/plugins.json` now loads
   `plugins/grpc/verity-grpc`) matched neither the release archives nor
