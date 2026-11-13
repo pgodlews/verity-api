@@ -273,41 +273,55 @@ func finishRun(ctx context.Context, reg *registry.Registry, project *model.Proje
 		return failJSON(jsonStdout, exitConfig, "run", err)
 	}
 
-	// Console / JSON to stdout. Written even for a partial, cancelled run.
-	if jsonStdout {
-		writeReporter(reg, "json", result, "-")
-	} else if !quiet {
-		writeReporter(reg, "console", result, "-")
+	// Reports are written even for a partial, cancelled run. A failed stdout
+	// reporter does not change the run's exit code.
+	out := reportOutputs{JSONStdout: jsonStdout, Quiet: quiet, JUnit: junitOut, JSON: jsonOut, HTML: htmlOut, Extra: extra}
+	if _, rc := writeReports(reg, result, out); rc != exitOK {
+		return rc
 	}
-
-	// File reporters.
-	if junitOut != "" {
-		if rc := writeReporter(reg, "junit", result, junitOut); rc != exitOK {
-			return rc
-		}
-	}
-	if jsonOut != "" {
-		if rc := writeReporter(reg, "json", result, jsonOut); rc != exitOK {
-			return rc
-		}
-	}
-	if htmlOut != "" {
-		if rc := writeReporter(reg, "html", result, htmlOut); rc != exitOK {
-			return rc
-		}
-	}
-	for _, t := range extra {
-		if rc := writeReporter(reg, t.Type, result, t.File); rc != exitOK {
-			return rc
-		}
-	}
-
 	if result.Summary.Aborted {
 		fmt.Fprintln(os.Stderr, "run interrupted; partial report written")
+	}
+	return exitCodeOf(result)
+}
+
+// reportOutputs are the reporters a run (or one watch iteration) writes.
+type reportOutputs struct {
+	JSONStdout, Quiet bool
+	JUnit, JSON, HTML string
+	Extra             []reporterTarget
+}
+
+// writeReports writes the stdout reporter (JSON, or console unless quiet),
+// then every file reporter. A stdout failure does not stop the file
+// reporters; it is returned as stdoutRC. fileRC is the first file reporter
+// failure, after which no further file reporter is written.
+func writeReports(reg reporterSource, result *spi.RunResult, out reportOutputs) (stdoutRC, fileRC int) {
+	stdoutRC = exitOK
+	if out.JSONStdout {
+		stdoutRC = writeReporter(reg, "json", result, "-")
+	} else if !out.Quiet {
+		stdoutRC = writeReporter(reg, "console", result, "-")
+	}
+	files := []reporterTarget{{"junit", out.JUnit}, {"json", out.JSON}, {"html", out.HTML}}
+	files = append(files, out.Extra...)
+	for _, t := range files {
+		if t.File == "" {
+			continue
+		}
+		if rc := writeReporter(reg, t.Type, result, t.File); rc != exitOK {
+			return stdoutRC, rc
+		}
+	}
+	return stdoutRC, exitOK
+}
+
+// exitCodeOf maps a finished run to the CLI exit code: interrupted, passed
+// (skipped counts as passed), or test failure.
+func exitCodeOf(result *spi.RunResult) int {
+	if result.Summary.Aborted {
 		return exitInterrupted
 	}
-
-	// Exit code reflects outcome.
 	switch result.Summary.Status {
 	case spi.StatusPassed, spi.StatusSkipped:
 		return exitOK
@@ -334,9 +348,12 @@ func watchInterrupt(sigs <-chan os.Signal, cancel func(), done <-chan struct{}, 
 }
 
 // writeReporter resolves and runs a reporter, returning an exit code.
-func writeReporter(reg interface {
+// reporterSource looks up a reporter by type (the registry, or a test fake).
+type reporterSource interface {
 	Reporter(string) (spi.Reporter, error)
-}, typ string, result *spi.RunResult, out string) int {
+}
+
+func writeReporter(reg reporterSource, typ string, result *spi.RunResult, out string) int {
 	rep, err := reg.Reporter(typ)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "reporter %s: %v\n", typ, err)

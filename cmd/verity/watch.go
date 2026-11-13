@@ -76,7 +76,7 @@ type watchConfig struct {
 func cmdWatch(cfg watchConfig) int {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	cfg.TTY = stdoutIsTTY()
+	cfg.TTY = isTTY(os.Stdout)
 	return watchLoop(ctx, cfg)
 }
 
@@ -120,7 +120,7 @@ func watchLoop(ctx context.Context, cfg watchConfig) int {
 		if loaded != nil {
 			files = loaded
 		}
-		ensureWatches(watcher, watchDirs(files), active)
+		watchfs.EnsureWatches(watcher, watchfs.WatchDirs(files), active)
 		if result != nil && prev != nil {
 			fmt.Fprintln(cfg.deltaWriter(), formatDelta(prev, result))
 		}
@@ -199,49 +199,20 @@ func runOnce(ctx context.Context, cfg watchConfig) (code int, result *spi.RunRes
 		return failJSON(cfg.JSONStdout, exitConfig, "run", err), nil, files
 	}
 
-	code = exitCodeOf(result)
-	if cfg.JSONStdout {
-		if rc := writeReporter(reg, "json", result, "-"); rc != exitOK {
-			return rc, result, files
-		}
-	} else if !cfg.Quiet {
-		if rc := writeReporter(reg, "console", result, "-"); rc != exitOK {
-			return rc, result, files
-		}
+	out := reportOutputs{
+		JSONStdout: cfg.JSONStdout, Quiet: cfg.Quiet,
+		JUnit: cfg.JUnitOut, JSON: cfg.JSONOut, HTML: cfg.HTMLOut, Extra: cfg.Reporters,
 	}
-	if cfg.JUnitOut != "" {
-		if rc := writeReporter(reg, "junit", result, cfg.JUnitOut); rc != exitOK {
-			return rc, result, files
-		}
+	// Unlike a single run, a watch iteration reports a failed stdout
+	// reporter as its exit code (after the file reporters are written).
+	stdoutRC, fileRC := writeReports(reg, result, out)
+	if fileRC != exitOK {
+		return fileRC, result, files
 	}
-	if cfg.JSONOut != "" {
-		if rc := writeReporter(reg, "json", result, cfg.JSONOut); rc != exitOK {
-			return rc, result, files
-		}
+	if stdoutRC != exitOK {
+		return stdoutRC, result, files
 	}
-	if cfg.HTMLOut != "" {
-		if rc := writeReporter(reg, "html", result, cfg.HTMLOut); rc != exitOK {
-			return rc, result, files
-		}
-	}
-	for _, t := range cfg.Reporters {
-		if rc := writeReporter(reg, t.Type, result, t.File); rc != exitOK {
-			return rc, result, files
-		}
-	}
-	return code, result, files
-}
-
-func exitCodeOf(result *spi.RunResult) int {
-	if result.Summary.Aborted {
-		return exitInterrupted
-	}
-	switch result.Summary.Status {
-	case spi.StatusPassed, spi.StatusSkipped:
-		return exitOK
-	default:
-		return exitTestFailed
-	}
+	return exitCodeOf(result), result, files
 }
 
 func (cfg watchConfig) deltaWriter() io.Writer {
@@ -254,17 +225,9 @@ func (cfg watchConfig) deltaWriter() io.Writer {
 	return os.Stdout
 }
 
-// The watch set, ancestor handling, debounce, and event filter live in
-// core/watchfs. These wrappers keep the CLI names the watch tests call.
-
-func ensureWatches(w *fsnotify.Watcher, dirs []string, active map[string]bool) {
-	watchfs.EnsureWatches(w, dirs, active)
-}
-
-func existingAncestor(dir string) string { return watchfs.ExistingAncestor(dir) }
-
-func watchDirs(files []string) []string { return watchfs.WatchDirs(files) }
-
+// waitForSourceChange waits (through core/watchfs, which owns the watch
+// set, ancestor handling, debounce, and event filter) for a change to one
+// of files.
 func waitForSourceChange(ctx context.Context, w *fsnotify.Watcher, files []string, debounce time.Duration) error {
 	set := make(map[string]struct{}, len(files))
 	for _, f := range files {
@@ -272,18 +235,6 @@ func waitForSourceChange(ctx context.Context, w *fsnotify.Watcher, files []strin
 	}
 	_, err := watchfs.WaitForSourceChange(ctx, w, set, debounce)
 	return err
-}
-
-func pushDebounce(deadline, eventAt time.Time, d time.Duration) time.Time {
-	return watchfs.PushDebounce(deadline, eventAt, d)
-}
-
-func debounceFired(deadline, now time.Time) bool {
-	return watchfs.DebounceFired(deadline, now)
-}
-
-func eventTriggers(files map[string]struct{}, name string, op fsnotify.Op) bool {
-	return watchfs.EventTriggers(files, name, op)
 }
 
 func absPath(path string) string {
@@ -298,14 +249,6 @@ func absPath(path string) string {
 // cursor. Callers use it only when stdout is a TTY.
 func clearScreen(w io.Writer) {
 	_, _ = io.WriteString(w, "\033[2J\033[H")
-}
-
-func stdoutIsTTY() bool {
-	fi, err := os.Stdout.Stat()
-	if err != nil {
-		return false
-	}
-	return fi.Mode()&os.ModeCharDevice != 0
 }
 
 // formatDelta is the one-line comparison of two runs, keyed by suite, case
