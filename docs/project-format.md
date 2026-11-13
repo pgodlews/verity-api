@@ -77,6 +77,11 @@ Select at run time with `verity run project.yaml --env staging`. Override or
 add variables with `--var KEY=VALUE` (repeatable). Variables interpolate as
 `${NAME}` anywhere in request config and auth config.
 
+Case names must be unique within a suite: the name identifies the case for
+`--case`, watch mode, desktop saves, and run events, so a duplicate is a
+`validation_error` at `suites[i].cases[j].name`. Importers rename duplicates
+to `name (2)`, `name (3)`, ….
+
 ### Setup and teardown hooks
 
 Each hook step is reported as its own `setup:NAME` / `teardown:NAME` case

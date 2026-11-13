@@ -120,11 +120,19 @@ func (p *Project) validate(requireSuites bool) []*verr.Error {
 			errs = append(errs, verr.New(verr.CodeValidation,
 				"suite must declare at least one case").WithPath(spath+".cases"))
 		}
+		// The case name is its identity for --case, watch deltas, desktop
+		// saves, and run events, so it must be unique within the suite.
+		caseNames := map[string]int{}
 		for ci, c := range s.Cases {
 			cpath := fmt.Sprintf("%s.cases[%d]", spath, ci)
 			if c.Name == "" {
 				errs = append(errs, verr.New(verr.CodeValidation,
 					"case name is required").WithPath(cpath))
+			} else if first, dup := caseNames[c.Name]; dup {
+				errs = append(errs, verr.Newf(verr.CodeValidation,
+					"duplicate case name %q in suite %q (first at %s.cases[%d])", c.Name, s.Name, spath, first).WithPath(cpath+".name"))
+			} else {
+				caseNames[c.Name] = ci
 			}
 			errs = append(errs, validateAuthRef(c.Auth, authNames, cpath+".auth")...)
 			if c.Feed != nil {

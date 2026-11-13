@@ -95,7 +95,7 @@ func ImportPostman(path string, envPaths ...string) (*Result, error) {
 			imp.warn(fmt.Sprintf("%s: folder has no requests; skipped", it.Name))
 			continue
 		}
-		project.Suites = append(project.Suites, model.Suite{Name: uniqueName(suiteNames, it.Name), Cases: cases})
+		project.Suites = append(project.Suites, model.Suite{Name: uniqueName(suiteNames, it.Name), Cases: uniqueCaseNames(cases)})
 	}
 	if len(rootReqs) > 0 {
 		c := imp.buildCase(name, nil, rootReqs, rootScope)
@@ -1033,6 +1033,16 @@ func mustJSON(s string) json.RawMessage {
 }
 
 func boolPtr(b bool) *bool { return &b }
+
+// uniqueCaseNames renames duplicate case names within a suite to "name (2)"
+// and so on: a case name is its identity, and duplicates fail validation.
+func uniqueCaseNames(cases []model.TestCase) []model.TestCase {
+	used := map[string]int{}
+	for i := range cases {
+		cases[i].Name = uniqueName(used, cases[i].Name)
+	}
+	return cases
+}
 
 // uniqueName returns base, or base (n) when base was already used.
 func uniqueName(used map[string]int, base string) string {
