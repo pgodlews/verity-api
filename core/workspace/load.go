@@ -99,7 +99,7 @@ func LoadTargets(ctx context.Context, opts LoadOptions, sessions *OAuthSessions,
 		return nil, err
 	}
 	if verrs := p.Validate(); len(verrs) > 0 {
-		return nil, verr.Wrap(verr.CodeValidation, verrs[0], "project validation failed")
+		return nil, validationFailure(verrs)
 	}
 	reg := bootstrap.Default()
 	mgr, perr := plugin.LoadForProject(ctx, reg, p.SourceDir, "", trust)
@@ -157,7 +157,7 @@ func runLoad(ctx context.Context, opts LoadOptions, sessions *OAuthSessions, tru
 		return nil, err
 	}
 	if verrs := p.Validate(); len(verrs) > 0 {
-		return nil, verr.Wrap(verr.CodeValidation, verrs[0], "project validation failed")
+		return nil, validationFailure(verrs)
 	}
 	reg := bootstrap.Default()
 	mgr, perr := plugin.LoadForProject(ctx, reg, p.SourceDir, "", trust)

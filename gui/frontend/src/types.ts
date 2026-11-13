@@ -130,10 +130,18 @@ export interface Catalog {
   dataSources: string[];
 }
 
+export interface ValidationIssue {
+  code: string;
+  message: string;
+  path?: string;
+}
+
 export interface ValidateResult {
   ok: boolean;
   project: string;
   errors: string[];
+  /** The same problems with their code and project path. */
+  issues?: ValidationIssue[];
 }
 
 // ---- Project model (core/model) ----
