@@ -3,7 +3,6 @@ package importers
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
@@ -49,9 +48,9 @@ var httpMethods = map[string]bool{
 // Verity project with one suite containing a case per operation. Each step is a
 // REST request template with a status assertion as a starting point.
 func ImportOpenAPI(path string) (*Result, error) {
-	data, err := os.ReadFile(path)
+	data, err := readImportFile(path, "OpenAPI spec", importMaxBytes)
 	if err != nil {
-		return nil, verr.Wrap(verr.CodeImport, err, "read OpenAPI spec")
+		return nil, err
 	}
 	doc, err := decodeOpenAPI(data, path)
 	if err != nil {
