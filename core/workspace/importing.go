@@ -35,24 +35,10 @@ type ImportSaveRequest struct {
 	Overwrite bool     `json:"overwrite"`
 }
 
-func runImport(kind, spec string, envs []string) (*importers.Result, error) {
-	switch kind {
-	case "openapi", "rest":
-		return importers.ImportOpenAPI(spec)
-	case "wsdl", "soap":
-		return importers.ImportWSDL(spec)
-	case "postman":
-		return importers.ImportPostman(spec, envs...)
-	case "soapui":
-		return importers.ImportSoapUI(spec)
-	}
-	return nil, verr.Newf(verr.CodeImport, "unknown import type %q (want openapi|wsdl|postman|soapui)", kind)
-}
-
 // Preview converts a spec (mirrors `verity import`) and returns the YAML,
 // the importer's warnings and counts, without writing anything.
 func Preview(kind, spec string, envs []string) (*ImportPreview, error) {
-	res, err := runImport(kind, spec, envs)
+	res, err := importers.Import(kind, spec, envs...)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +68,7 @@ func Save(req ImportSaveRequest) (string, error) {
 	if _, err := os.Stat(out); err == nil && !req.Overwrite {
 		return "", verr.Newf(verr.CodeConfig, "%s already exists", out)
 	}
-	res, err := runImport(req.Kind, req.Spec, req.Envs)
+	res, err := importers.Import(req.Kind, req.Spec, req.Envs...)
 	if err != nil {
 		return "", err
 	}
