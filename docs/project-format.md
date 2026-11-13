@@ -476,8 +476,13 @@ selector), `op` (comparison), `value` (expected), `description`.
 | `graphql_schema`| —               | —                | response `data` matches the GraphQL selection set; `config.allowErrors` allows an `errors` array |
 | `xsd`           | —               | —                | XML well-formedness (+ optional `config.rootElement`) |
 
-Operators: `eq`, `ne`, `lt`, `lte`, `gt`, `gte`, `contains`, `matches`,
-`exists`, `not_exists`.
+Operators: `eq`, `ne`, `lt`, `lte`, `gt`, `gte`, `contains`, `not_contains`,
+`matches`, `not_matches`, `exists`, `not_exists`. Any other `op` is a
+validation error. The `contains` assertion accepts only `contains` (default)
+and `not_contains` (`not_exists` still works as a deprecated alias); `regex`
+accepts only `matches` (default) and `not_matches`. Another op fails the
+assertion instead of being ignored. A transfer's `from` must be one of
+`jsonpath`, `xpath`, `header`, `status`, `body`, `regex`.
 
 `eq` and `ne` compare numerically only when at least one side is a number (a
 JSON/YAML number, the status code, or `response_time`) and the other side

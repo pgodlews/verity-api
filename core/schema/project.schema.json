@@ -143,7 +143,7 @@
         "type": { "type": "string", "examples": ["status", "response_time", "jsonpath", "xpath", "json_schema", "xsd", "contains", "regex", "header", "graphql_schema"] },
         "description": { "type": "string" },
         "expr": { "type": "string" },
-        "op": { "type": "string", "enum": ["eq", "ne", "lt", "lte", "gt", "gte", "contains", "matches", "exists", "not_exists"] },
+        "op": { "type": "string", "enum": ["eq", "ne", "lt", "lte", "gt", "gte", "contains", "not_contains", "matches", "not_matches", "exists", "not_exists"] },
         "value": {},
         "config": { "type": "object", "additionalProperties": true }
       }

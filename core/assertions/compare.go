@@ -14,8 +14,8 @@ import (
 )
 
 // compare evaluates op against actual/expected and returns pass + message.
-// Supported ops: eq, ne, lt, lte, gt, gte, contains, matches, exists,
-// not_exists.
+// Supported ops: eq, ne, lt, lte, gt, gte, contains, not_contains, matches,
+// not_matches, exists, not_exists.
 //
 // eq/ne compare numerically only when at least one side is a real number
 // (a JSON or YAML number, not a string) and the other side parses as one;
@@ -66,10 +66,15 @@ func compare(op string, actual, expected any) (bool, string) {
 		}
 	case "contains":
 		return strings.Contains(as, es), fmt.Sprintf("expected %q to contain %q", as, es)
-	case "matches":
+	case "not_contains":
+		return !strings.Contains(as, es), fmt.Sprintf("expected %q not to contain %q", as, es)
+	case "matches", "not_matches":
 		re, err := regexp.Compile(es)
 		if err != nil {
 			return false, fmt.Sprintf("invalid regex %q: %v", es, err)
+		}
+		if op == "not_matches" {
+			return !re.MatchString(as), fmt.Sprintf("expected %q not to match /%s/", as, es)
 		}
 		return re.MatchString(as), fmt.Sprintf("expected %q to match /%s/", as, es)
 	}

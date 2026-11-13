@@ -164,6 +164,10 @@ func validateStep(st Step, authNames map[string]bool, path string) []*verr.Error
 			errs = append(errs, verr.New(verr.CodeValidation,
 				"assertion type is required").WithPath(apath))
 		}
+		if a.Op != "" && !AssertionOps[a.Op] {
+			errs = append(errs, verr.Newf(verr.CodeValidation,
+				"assertion op %q is not one of %s", a.Op, strings.Join(sortedKeys(AssertionOps), ", ")).WithPath(apath+".op"))
+		}
 	}
 	for ti, t := range st.Transfers {
 		tpath := fmt.Sprintf("%s.transfers[%d]", path, ti)
@@ -174,6 +178,9 @@ func validateStep(st Step, authNames map[string]bool, path string) []*verr.Error
 		if t.From == "" {
 			errs = append(errs, verr.New(verr.CodeValidation,
 				"transfer 'from' is required").WithPath(tpath))
+		} else if !TransferSources[t.From] {
+			errs = append(errs, verr.Newf(verr.CodeValidation,
+				"transfer 'from' %q is not one of %s", t.From, strings.Join(sortedKeys(TransferSources), ", ")).WithPath(tpath+".from"))
 		}
 		if t.Scope != "" && t.Scope != TransferScopeCase && t.Scope != TransferScopeRun {
 			errs = append(errs, verr.New(verr.CodeValidation,
