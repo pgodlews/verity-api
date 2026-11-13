@@ -90,6 +90,15 @@ suites:
 
 ## Provider configs
 
+Auth config values are resolved once per run, before any step runs, from
+environment variables, `--var` values, `${env:NAME}`, and secrets. A value
+that a step captures (a login token) is not available there: a config that
+still contains a `${...}` reference after resolution fails the step with
+`auth_error` naming the auth definition and the reference, instead of
+sending the reference text. To send a captured token, set the header in the
+step (`Authorization: "Bearer ${token}"`). The `hmac` provider's own
+`message` placeholders (`${method}`, `${path}`, …) are exempt.
+
 See `verity schema --kind auth` for the full JSON Schema. Summary:
 
 ### `none`

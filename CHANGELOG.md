@@ -74,6 +74,10 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- An auth config that still contains a `${...}` reference after resolution
+  (for example a bearer `token: ${accessToken}` captured by a login step)
+  now fails the step with `auth_error` naming the auth definition and the
+  reference, instead of sending `Authorization: Bearer ${accessToken}`.
 - Header, query, and cookie values added by an auth plugin are now
   registered for redaction, and plugin stderr (previously discarded) is
   shown on the host's stderr as `[plugin NAME] ...` lines, redacted with the

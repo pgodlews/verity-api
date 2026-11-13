@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"sort"
+	"strings"
 	"sync"
 
 	"github.com/pgodlews/verity-api/core/fsutil"
@@ -11,6 +13,7 @@ import (
 	"github.com/pgodlews/verity-api/core/registry"
 	"github.com/pgodlews/verity-api/core/secrets"
 	"github.com/pgodlews/verity-api/core/spi"
+	"github.com/pgodlews/verity-api/core/verr"
 )
 
 // Chain is an ordered, resolved set of AuthProviders to apply to a request.
@@ -242,6 +245,14 @@ func (r *Resolver) provider(name string) (spi.AuthProvider, error) {
 	if err != nil {
 		return nil, fmt.Errorf("interpolate auth %q config: %w", name, err)
 	}
+	// Auth config resolves once, before any step runs, from environment
+	// variables, --var, and secrets. A reference that is still there (for
+	// example a token a login step captures) would be sent literally.
+	if key, ref, ok := unresolvedRef(def.Type, cfg); ok {
+		return nil, verr.Newf(verr.CodeAuth,
+			"auth %q: config %q references ${%s}, which is not defined when auth is resolved (environment variables, --var, ${env:NAME}, and secrets are; values captured by steps are not)",
+			name, key, ref).WithDetail("auth", name).WithDetail("reference", ref)
+	}
 	cfg["__dir"] = r.dir
 	cfg[fsutil.AllowExternalKey] = r.allowExternal
 	prov, err := factory(cfg, r.red)
@@ -251,4 +262,70 @@ func (r *Resolver) provider(name string) (spi.AuthProvider, error) {
 	r.attachTransport(prov)
 	r.cache[name] = prov
 	return prov, nil
+}
+
+// hmacTemplateRefs are the placeholders the hmac provider fills in its own
+// "message" template after project interpolation.
+var hmacTemplateRefs = map[string]bool{
+	"method": true, "path": true, "query": true, "body": true, "timestamp": true, "nonce": true,
+}
+
+// unresolvedRef finds a ${...} reference left in an interpolated auth config
+// and returns the top-level key and the reference text.
+func unresolvedRef(typ string, cfg map[string]any) (key, ref string, found bool) {
+	keys := make([]string, 0, len(cfg))
+	for k := range cfg {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		allowed := func(string) bool { return false }
+		if typ == "hmac" && k == "message" {
+			allowed = func(name string) bool { return hmacTemplateRefs[name] }
+		}
+		if r, ok := findRef(cfg[k], allowed); ok {
+			return k, r, true
+		}
+	}
+	return "", "", false
+}
+
+func findRef(v any, allowed func(string) bool) (string, bool) {
+	switch t := v.(type) {
+	case string:
+		rest := t
+		for {
+			i := strings.Index(rest, "${")
+			if i < 0 {
+				return "", false
+			}
+			j := strings.IndexByte(rest[i:], '}')
+			if j < 0 {
+				return "", false
+			}
+			name := strings.TrimSpace(rest[i+2 : i+j])
+			if !allowed(name) {
+				return name, true
+			}
+			rest = rest[i+j+1:]
+		}
+	case map[string]any:
+		keys := make([]string, 0, len(t))
+		for k := range t {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			if r, ok := findRef(t[k], allowed); ok {
+				return r, true
+			}
+		}
+	case []any:
+		for _, e := range t {
+			if r, ok := findRef(e, allowed); ok {
+				return r, true
+			}
+		}
+	}
+	return "", false
 }
