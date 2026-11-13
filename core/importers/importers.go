@@ -7,7 +7,36 @@
 // cross-compilable.
 package importers
 
-import "github.com/pgodlews/verity-api/core/model"
+import (
+	"github.com/pgodlews/verity-api/core/model"
+	"github.com/pgodlews/verity-api/core/verr"
+)
+
+// Import runs the importer for kind: openapi (alias rest), wsdl (alias soap),
+// postman, or soapui. envs are Postman environment files; other kinds take
+// none. An unknown kind is an import_error; IsKind checks one up front.
+func Import(kind, spec string, envs ...string) (*Result, error) {
+	switch kind {
+	case "openapi", "rest":
+		return ImportOpenAPI(spec)
+	case "wsdl", "soap":
+		return ImportWSDL(spec)
+	case "postman":
+		return ImportPostman(spec, envs...)
+	case "soapui":
+		return ImportSoapUI(spec)
+	}
+	return nil, verr.Newf(verr.CodeImport, "unknown import type %q (want openapi|wsdl|postman|soapui)", kind)
+}
+
+// IsKind reports whether Import accepts kind.
+func IsKind(kind string) bool {
+	switch kind {
+	case "openapi", "rest", "wsdl", "soap", "postman", "soapui":
+		return true
+	}
+	return false
+}
 
 // Result is the output of an import: a generated project plus any non-fatal
 // warnings (e.g. unsupported constructs that were skipped).

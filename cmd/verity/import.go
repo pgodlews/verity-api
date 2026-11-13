@@ -32,20 +32,11 @@ func cmdImport(args []string) int {
 		return exitUsage
 	}
 
-	var res *importers.Result
-	switch kind {
-	case "openapi", "rest":
-		res, err = importers.ImportOpenAPI(spec)
-	case "wsdl", "soap":
-		res, err = importers.ImportWSDL(spec)
-	case "postman":
-		res, err = importers.ImportPostman(spec, extra...)
-	case "soapui":
-		res, err = importers.ImportSoapUI(spec)
-	default:
+	if !importers.IsKind(kind) {
 		fmt.Fprintf(os.Stderr, "import: unknown type %q (want openapi|wsdl|postman|soapui; soap is an alias of wsdl)\n", kind)
 		return exitUsage
 	}
+	res, err := importers.Import(kind, spec, extra...)
 	if err != nil {
 		return failJSON(*jsonOut, exitConfig, "import", err)
 	}
