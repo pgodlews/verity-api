@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/pgodlews/verity-api/core/fsutil"
+	"github.com/pgodlews/verity-api/core/verr"
 )
 
 // ExternalProvider resolves an external secret by key. Implementations might
@@ -45,7 +46,7 @@ func resolveExternalSecret(spec string) (string, bool, error) {
 	p, ok := extProviders[provider]
 	extMu.RUnlock()
 	if !ok {
-		return "", false, fmt.Errorf("unknown secret provider %q", provider)
+		return "", false, verr.Newf(verr.CodeConfig, "unknown secret provider %q", provider)
 	}
 	return p.Resolve(key)
 }
@@ -82,7 +83,7 @@ func readSecretFile(dir, path string, allowExternal bool) (string, bool, error) 
 		if os.IsNotExist(err) {
 			return "", false, nil
 		}
-		return "", false, fmt.Errorf("read secret file %q: %w", path, err)
+		return "", false, verr.Context(verr.CodeConfig, err, fmt.Sprintf("read secret file %q", path))
 	}
 	return strings.TrimSpace(string(b)), true, nil
 }

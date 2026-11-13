@@ -100,6 +100,22 @@ func Wrap(code Code, cause error, msg string) *Error {
 	return &Error{Code: code, Message: msg, wrapped: cause}
 }
 
+// Context adds prefix to an error's message. A *Error cause keeps its code,
+// path, and details (the most specific classification wins); any other cause
+// gets code. The cause stays reachable through errors.Unwrap either way.
+func Context(code Code, cause error, prefix string) *Error {
+	if cause == nil {
+		return New(code, prefix)
+	}
+	if inner, ok := As(cause); ok {
+		cp := *inner
+		cp.Message = prefix + ": " + inner.Message
+		cp.wrapped = cause
+		return &cp
+	}
+	return &Error{Code: code, Message: prefix + ": " + cause.Error(), wrapped: cause}
+}
+
 // WithPath returns a copy of the error annotated with a project path.
 func (e *Error) WithPath(path string) *Error {
 	cp := *e

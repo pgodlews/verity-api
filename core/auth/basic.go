@@ -14,13 +14,13 @@ package auth
 import (
 	"context"
 	"encoding/base64"
-	"fmt"
 	"net/http"
 
 	"github.com/pgodlews/verity-api/core/internal/scalar"
 	"github.com/pgodlews/verity-api/core/registry"
 	"github.com/pgodlews/verity-api/core/secrets"
 	"github.com/pgodlews/verity-api/core/spi"
+	"github.com/pgodlews/verity-api/core/verr"
 )
 
 // Register installs all built-in auth providers into the registry.
@@ -65,7 +65,7 @@ func newBasic(config map[string]any, red *secrets.Redactor) (spi.AuthProvider, e
 		password: strConfig(config, "password"),
 	}
 	if p.username == "" {
-		return nil, fmt.Errorf("basic auth requires 'username'")
+		return nil, verr.New(verr.CodeConfig, "basic auth requires 'username'")
 	}
 	red.Add(p.password)
 	// The base64 credential is also secret material.
@@ -91,7 +91,7 @@ type bearerProvider struct {
 func newBearer(config map[string]any, red *secrets.Redactor) (spi.AuthProvider, error) {
 	tok := strConfig(config, "token")
 	if tok == "" {
-		return nil, fmt.Errorf("bearer auth requires 'token'")
+		return nil, verr.New(verr.CodeConfig, "bearer auth requires 'token'")
 	}
 	red.Add(tok)
 	return &bearerProvider{token: tok}, nil
@@ -120,10 +120,10 @@ func newAPIKey(config map[string]any, red *secrets.Redactor) (spi.AuthProvider, 
 		placement: strConfig(config, "in"),
 	}
 	if p.name == "" {
-		return nil, fmt.Errorf("apikey auth requires 'name'")
+		return nil, verr.New(verr.CodeConfig, "apikey auth requires 'name'")
 	}
 	if p.value == "" {
-		return nil, fmt.Errorf("apikey auth requires 'value'")
+		return nil, verr.New(verr.CodeConfig, "apikey auth requires 'value'")
 	}
 	if p.placement == "" {
 		p.placement = "header"
@@ -131,7 +131,7 @@ func newAPIKey(config map[string]any, red *secrets.Redactor) (spi.AuthProvider, 
 	switch p.placement {
 	case "header", "query", "cookie":
 	default:
-		return nil, fmt.Errorf("apikey 'in' must be header|query|cookie, got %q", p.placement)
+		return nil, verr.Newf(verr.CodeConfig, "apikey 'in' must be header|query|cookie, got %q", p.placement)
 	}
 	red.Add(p.value)
 	return p, nil

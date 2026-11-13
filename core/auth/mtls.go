@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"strings"
 
 	"github.com/pgodlews/verity-api/core/fsutil"
@@ -35,20 +34,20 @@ func newMTLS(config map[string]any, red *secrets.Redactor) (spi.AuthProvider, er
 
 	var err error
 	if p.certPEM, err = pemFromConfig(config, "certPEM", "certFile", dir); err != nil {
-		return nil, fmt.Errorf("mtls cert: %w", err)
+		return nil, verr.Context(verr.CodeConfig, err, "mtls cert")
 	}
 	if p.keyPEM, err = pemFromConfig(config, "keyPEM", "keyFile", dir); err != nil {
-		return nil, fmt.Errorf("mtls key: %w", err)
+		return nil, verr.Context(verr.CodeConfig, err, "mtls key")
 	}
 	if p.caPEM, err = pemFromConfig(config, "caPEM", "caFile", dir); err != nil {
-		return nil, fmt.Errorf("mtls ca: %w", err)
+		return nil, verr.Context(verr.CodeConfig, err, "mtls ca")
 	}
 	if len(p.certPEM) == 0 || len(p.keyPEM) == 0 {
-		return nil, fmt.Errorf("mtls requires a client cert and key (certPEM/certFile + keyPEM/keyFile)")
+		return nil, verr.New(verr.CodeConfig, "mtls requires a client cert and key (certPEM/certFile + keyPEM/keyFile)")
 	}
 	// Validate the keypair early so misconfig fails fast with a clear error.
 	if _, err := tls.X509KeyPair(p.certPEM, p.keyPEM); err != nil {
-		return nil, fmt.Errorf("mtls invalid cert/key pair: %w", err)
+		return nil, verr.Context(verr.CodeConfig, err, "mtls invalid cert/key pair")
 	}
 	// The private key is highly sensitive; ensure it is redacted everywhere.
 	red.Add(string(p.keyPEM))
