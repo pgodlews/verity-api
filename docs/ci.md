@@ -139,13 +139,15 @@ A multi-stage `Dockerfile` produces a tiny image containing only the static
 
 ```bash
 docker build -t verity/verity .
-docker run --rm -v "$PWD:/work" -w /work \
+docker run --rm -v "$PWD:/work" -w /work --user "$(id -u):$(id -g)" \
   -e API_TOKEN="$API_TOKEN" \
   verity/verity run project.yaml --env staging --junit junit.xml
 ```
 
 The image is based on `scratch` + CA certificates, so it is a few MB and has no
-shell or extra surface area.
+shell or extra surface area. It runs as user 65534 by default; `--user` with
+your own uid and gid lets it write reports into the bind-mounted directory,
+which that user cannot write to otherwise.
 
 ## GitLab CI
 

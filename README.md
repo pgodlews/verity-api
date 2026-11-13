@@ -63,8 +63,13 @@ go install github.com/pgodlews/verity-api/cmd/verity@latest
 The container image supports Linux amd64 and arm64:
 
 ```bash
-docker run --rm -v "$PWD:/work" -w /work ghcr.io/pgodlews/verity:latest run project.yaml
+docker run --rm -v "$PWD:/work" -w /work --user "$(id -u):$(id -g)" \
+  ghcr.io/pgodlews/verity:latest run project.yaml
 ```
+
+The image runs as an unprivileged user (65534). Pass `--user "$(id -u):$(id -g)"`
+as above so reports such as `--junit reports/junit.xml` can be written into
+the bind-mounted directory.
 
 Pre-releases use their explicit version tag; they do not update Homebrew or
 `:latest`. For source builds, see [CONTRIBUTING.md](CONTRIBUTING.md) and the
