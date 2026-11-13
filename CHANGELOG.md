@@ -103,6 +103,8 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- OAuth2: an invalid `refreshSkewSeconds` (not an integer, negative, or
+  over a day) is a `config_error` instead of being ignored silently.
 - mTLS: an unknown `minVersion`/`maxVersion` (or a minimum above the
   maximum) is a `config_error` instead of silently using Go's default.
 - `${fn:randomHex:N}` is limited to N <= 4096; a larger N is a
