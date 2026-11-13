@@ -39,12 +39,12 @@ func (c *Chain) Names() []string {
 func (c *Chain) Apply(ctx context.Context, req *spi.Request) error {
 	for _, p := range c.Transport {
 		if err := p.Apply(ctx, req); err != nil {
-			return fmt.Errorf("transport auth %q: %w", p.Type(), err)
+			return verr.Context(verr.CodeAuth, err, fmt.Sprintf("transport auth %q", p.Type()))
 		}
 	}
 	for _, p := range c.Message {
 		if err := p.Apply(ctx, req); err != nil {
-			return fmt.Errorf("message auth %q: %w", p.Type(), err)
+			return verr.Context(verr.CodeAuth, err, fmt.Sprintf("message auth %q", p.Type()))
 		}
 	}
 	return nil
@@ -226,7 +226,7 @@ func (r *Resolver) provider(name string) (spi.AuthProvider, error) {
 	}
 	def, ok := r.project.AuthByName(name)
 	if !ok {
-		return nil, fmt.Errorf("auth definition %q not found", name)
+		return nil, verr.Newf(verr.CodeNotFound, "auth definition %q not found", name)
 	}
 	if session := r.sessions[name]; session != nil && def.Type == "oauth2" && strConfig(def.Config, "grant") == "authorization_code" {
 		prov := session.Provider(r.red)
@@ -243,7 +243,7 @@ func (r *Resolver) provider(name string) (spi.AuthProvider, error) {
 	cfg, err := r.interp.InterpolateMap(def.Config, false)
 	r.red.AddAll(r.interp.SecretValues())
 	if err != nil {
-		return nil, fmt.Errorf("interpolate auth %q config: %w", name, err)
+		return nil, verr.Context(verr.CodeConfig, err, fmt.Sprintf("interpolate auth %q config", name))
 	}
 	// Auth config resolves once, before any step runs, from environment
 	// variables, --var, and secrets. A reference that is still there (for
@@ -257,7 +257,7 @@ func (r *Resolver) provider(name string) (spi.AuthProvider, error) {
 	cfg[fsutil.AllowExternalKey] = r.allowExternal
 	prov, err := factory(cfg, r.red)
 	if err != nil {
-		return nil, fmt.Errorf("build auth %q (%s): %w", name, def.Type, err)
+		return nil, verr.Context(verr.CodeConfig, err, fmt.Sprintf("build auth %q (%s)", name, def.Type))
 	}
 	r.attachTransport(prov)
 	r.cache[name] = prov

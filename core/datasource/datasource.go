@@ -39,7 +39,7 @@ func (csvSource) Rows(dir string, config map[string]any, inline []map[string]str
 	}
 	f, err := os.Open(full)
 	if err != nil {
-		return nil, fmt.Errorf("open CSV feed %q: %w", path, err)
+		return nil, verr.Context(verr.CodeConfig, err, fmt.Sprintf("open CSV feed %q", path))
 	}
 	defer f.Close()
 
@@ -47,7 +47,7 @@ func (csvSource) Rows(dir string, config map[string]any, inline []map[string]str
 	reader.TrimLeadingSpace = true
 	records, err := reader.ReadAll()
 	if err != nil {
-		return nil, fmt.Errorf("read CSV feed %q: %w", path, err)
+		return nil, verr.Context(verr.CodeConfig, err, fmt.Sprintf("read CSV feed %q", path))
 	}
 	if len(records) == 0 {
 		return nil, nil
@@ -109,13 +109,13 @@ func (jsonSource) Rows(dir string, config map[string]any, inline []map[string]st
 	}
 	data, err := os.ReadFile(full)
 	if err != nil {
-		return nil, fmt.Errorf("read JSON feed %q: %w", path, err)
+		return nil, verr.Context(verr.CodeConfig, err, fmt.Sprintf("read JSON feed %q", path))
 	}
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.UseNumber()
 	var rows []map[string]any
 	if err := dec.Decode(&rows); err != nil {
-		return nil, fmt.Errorf("parse JSON feed %q (expected array of objects): %w", path, err)
+		return nil, verr.Context(verr.CodeConfig, err, fmt.Sprintf("parse JSON feed %q (expected array of objects)", path))
 	}
 	out := make([]map[string]string, 0, len(rows))
 	for _, r := range rows {

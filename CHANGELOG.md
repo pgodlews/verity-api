@@ -138,6 +138,12 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- Project loading, auth configuration, data feeds, and secret files return
+  structured errors with codes (`validation_error` for unparsable or
+  invalid project files, `config_error` for unreadable files and bad auth or
+  feed settings, `not_found` for an unknown environment or auth definition,
+  `auth_error` when applying auth fails) instead of uncoded errors, so JSON
+  output and the desktop app can classify them. Messages are unchanged.
 - `verity hooks install` for a second project in the same repository adds it
   to the pre-commit hook instead of replacing the first project, and
   `hooks uninstall` removes only that project. Hook paths are resolved

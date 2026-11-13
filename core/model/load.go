@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/pgodlews/verity-api/core/verr"
 )
 
 // Load reads a project from a YAML or JSON file, recursively merging any
@@ -21,7 +23,7 @@ import (
 func Load(path string) (*Project, error) {
 	abs, err := filepath.Abs(path)
 	if err != nil {
-		return nil, fmt.Errorf("resolve path %q: %w", path, err)
+		return nil, verr.Context(verr.CodeConfig, err, fmt.Sprintf("resolve path %q", path))
 	}
 	visited := map[string]bool{}
 	p, err := loadRecursive(abs, visited, []string{abs})
@@ -47,13 +49,13 @@ func loadRecursive(path string, visited map[string]bool, chain []string) (*Proje
 		}
 		absInc, err := filepath.Abs(incPath)
 		if err != nil {
-			return nil, fmt.Errorf("resolve include path %q: %w", inc, err)
+			return nil, verr.Context(verr.CodeConfig, err, fmt.Sprintf("resolve include path %q", inc))
 		}
 
 		// Check for cycle in the current inclusion chain
 		for _, prev := range chain {
 			if prev == absInc {
-				return nil, fmt.Errorf("cyclical include detected: %s -> %s", strings.Join(chain, " -> "), absInc)
+				return nil, verr.Newf(verr.CodeValidation, "cyclical include detected: %s -> %s", strings.Join(chain, " -> "), absInc)
 			}
 		}
 
@@ -64,7 +66,7 @@ func loadRecursive(path string, visited map[string]bool, chain []string) (*Proje
 
 		frag, err := loadRecursive(absInc, visited, append(chain, absInc))
 		if err != nil {
-			return nil, fmt.Errorf("include %q: %w", inc, err)
+			return nil, verr.Context(verr.CodeConfig, err, fmt.Sprintf("include %q", inc))
 		}
 		mergeFragment(p, frag)
 	}
@@ -76,7 +78,7 @@ func loadRecursive(path string, visited map[string]bool, chain []string) (*Proje
 func loadFile(path string) (*Project, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("read %q: %w", path, err)
+		return nil, verr.Context(verr.CodeConfig, err, fmt.Sprintf("read %q", path))
 	}
 	return Decode(data, path)
 }
@@ -89,14 +91,14 @@ func Decode(data []byte, ext string) (*Project, error) {
 		dec := json.NewDecoder(bytes.NewReader(data))
 		dec.UseNumber()
 		if err := dec.Decode(&p); err != nil {
-			return nil, fmt.Errorf("parse JSON: %w", err)
+			return nil, verr.Context(verr.CodeValidation, err, "parse JSON")
 		}
 		var extra any
 		if err := dec.Decode(&extra); err != io.EOF {
 			if err == nil {
-				return nil, fmt.Errorf("parse JSON: multiple values")
+				return nil, verr.New(verr.CodeValidation, "parse JSON: multiple values")
 			}
-			return nil, fmt.Errorf("parse JSON: %w", err)
+			return nil, verr.Context(verr.CodeValidation, err, "parse JSON")
 		}
 		// Reject keys the model does not define (a typo such as
 		// "asertions" would otherwise be dropped silently).
@@ -110,7 +112,7 @@ func Decode(data []byte, ext string) (*Project, error) {
 		}
 	} else {
 		if err := decodeYAMLProject(data, &p); err != nil {
-			return nil, fmt.Errorf("parse YAML: %w", err)
+			return nil, verr.Context(verr.CodeValidation, err, "parse YAML")
 		}
 	}
 	return &p, nil
@@ -271,7 +273,7 @@ func (p *Project) SelectEnvironment(name string) (Environment, error) {
 				return e, nil
 			}
 		}
-		return Environment{}, fmt.Errorf("environment %q not found", name)
+		return Environment{}, verr.Newf(verr.CodeNotFound, "environment %q not found", name)
 	}
 	for _, e := range p.Environments {
 		if e.Default {
