@@ -4,10 +4,12 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"strings"
 
 	"github.com/pgodlews/verity-api/core/fsutil"
 	"github.com/pgodlews/verity-api/core/secrets"
 	"github.com/pgodlews/verity-api/core/spi"
+	"github.com/pgodlews/verity-api/core/verr"
 )
 
 // mtlsProvider is a transport-level provider contributing a client certificate,
@@ -51,8 +53,15 @@ func newMTLS(config map[string]any, red *secrets.Redactor) (spi.AuthProvider, er
 	// The private key is highly sensitive; ensure it is redacted everywhere.
 	red.Add(string(p.keyPEM))
 
-	p.minVer = tlsVersion(strConfig(config, "minVersion"))
-	p.maxVer = tlsVersion(strConfig(config, "maxVersion"))
+	if p.minVer, err = parseTLSVersion(config, "minVersion"); err != nil {
+		return nil, err
+	}
+	if p.maxVer, err = parseTLSVersion(config, "maxVersion"); err != nil {
+		return nil, err
+	}
+	if p.minVer != 0 && p.maxVer != 0 && p.minVer > p.maxVer {
+		return nil, verr.New(verr.CodeConfig, "mtls minVersion is higher than maxVersion")
+	}
 	if v, ok := config["insecureSkipVerify"].(bool); ok {
 		p.insecure = v
 	}
@@ -87,6 +96,20 @@ func pemFromConfig(config map[string]any, inlineKey, fileKey, dir string) ([]byt
 }
 
 // tlsVersion maps a friendly version string to a tls.Version constant.
+// parseTLSVersion reads an optional TLS version field. Empty means the Go
+// default; an unknown value is a config_error instead of silently becoming
+// the default.
+func parseTLSVersion(config map[string]any, key string) (uint16, error) {
+	s := strings.TrimSpace(strConfig(config, key))
+	if s == "" {
+		return 0, nil
+	}
+	if v := tlsVersion(s); v != 0 {
+		return v, nil
+	}
+	return 0, verr.Newf(verr.CodeConfig, "mtls %s %q is not one of 1.0, 1.1, 1.2, 1.3", key, s)
+}
+
 func tlsVersion(s string) uint16 {
 	switch s {
 	case "1.0", "tls1.0", "TLS1.0":

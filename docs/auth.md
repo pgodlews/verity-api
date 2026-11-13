@@ -164,6 +164,8 @@ config:
   maxVersion: "1.3"
   # insecureSkipVerify: true     # test-only; strongly discouraged
 ```
+`minVersion`/`maxVersion` accept `1.0`–`1.3` (also `tls1.2`/`TLS1.2`);
+any other value, or a minimum above the maximum, is a `config_error`.
 File paths resolve relative to the project directory and must stay inside it
 (after resolving symlinks) unless the run uses `--allow-external-files`. The
 keypair is validated at load time so misconfiguration fails fast.
