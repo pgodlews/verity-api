@@ -484,11 +484,19 @@ transfers:
   - name: orderId         # variable name
     from: jsonpath        # jsonpath | xpath | header | status | body | regex
     expr: "$.id"
-    default: ""           # used when extraction yields nothing
+    default: "none"       # optional: used when extraction yields nothing
     scope: case           # case (default) | run
 ```
 
 Then reference `${orderId}` in a subsequent step.
+
+A transfer whose `jsonpath`, `xpath`, `header`, or `regex` source matches
+nothing fails the step (a failed `transfer` result) unless it has a
+non-empty `default`; an empty or omitted `default` means the value is
+required. A source that matches an empty value captures `""` (or the default,
+when one is set). JSON numbers are captured exactly as written in the
+response, so a 64-bit id such as `9007199254740993` is not rounded; an object
+or array is captured as compact JSON.
 
 By default a captured value is visible to the later steps of the same case
 only. With `scope: run` it is also visible to every case that **starts after
