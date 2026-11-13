@@ -211,6 +211,7 @@ func (e *execContext) doAttempt(ctx context.Context, scope runScope, resolver *s
 		Suite:       scope.suite.Auth,
 		Case:        scope.tcase.Auth,
 		Step:        step.Auth,
+		Vars:        resolver,
 	})
 	if err != nil {
 		res.Status = spi.StatusError

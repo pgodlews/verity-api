@@ -90,13 +90,25 @@ suites:
 
 ## Provider configs
 
-Auth config values are resolved once per run, before any step runs, from
-environment variables, `--var` values, `${env:NAME}`, and secrets. A value
-that a step captures (a login token) is not available there: a config that
-still contains a `${...}` reference after resolution fails the step with
+Auth config values are resolved from environment variables, `--var`
+values, `${env:NAME}`, and secrets once per run. A config that references
+anything else, such as a token a login step captures, is resolved for each
+step with that case's variables instead, so an earlier step's capture is
+usable:
+
+```yaml
+auth:
+  - name: api
+    type: bearer
+    config: { token: "${accessToken}" }   # captured by the login step
+```
+
+Such providers are cached by the auth name and a hash of the resolved
+config: steps that resolve to the same config share one provider (and its
+OAuth token cache), while cases with different captured tokens never do.
+A reference that is still undefined when the step runs fails the step with
 `auth_error` naming the auth definition and the reference, instead of
-sending the reference text. To send a captured token, set the header in the
-step (`Authorization: "Bearer ${token}"`). The `hmac` provider's own
+sending the reference text. The `hmac` provider's own
 `message` placeholders (`${method}`, `${path}`, …) are exempt.
 
 See `verity schema --kind auth` for the full JSON Schema. Summary:

@@ -2,6 +2,9 @@ package auth
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"sort"
@@ -76,6 +79,10 @@ type Resolver struct {
 	mu       sync.Mutex
 	cache    map[string]spi.AuthProvider
 	sessions map[string]*OAuthSession
+	// perCase records auth names whose config references values that only
+	// a case knows (a token a login step captured). Their providers are
+	// cached by name plus a hash of the resolved config, never by name.
+	perCase map[string]bool
 	// httpTransport, when set, is installed on providers that dial their own
 	// HTTP connections (OAuth2 token requests).
 	httpTransport http.RoundTripper
@@ -126,6 +133,7 @@ func NewResolver(reg *registry.Registry, project *model.Project, red *secrets.Re
 	return &Resolver{
 		reg: reg, project: project, red: red, interp: interp, dir: dir,
 		cache: map[string]spi.AuthProvider{}, sessions: sessions, allowExternal: allowExternal,
+		perCase: map[string]bool{},
 	}
 }
 
@@ -136,6 +144,10 @@ type ScopeRefs struct {
 	Suite       *model.AuthRef
 	Case        *model.AuthRef
 	Step        *model.AuthRef
+	// Vars resolves auth config references that the run-level variables
+	// (environment, --var, secrets) leave open, such as a token captured by
+	// an earlier step of the case. Nil means only run-level variables.
+	Vars *secrets.Resolver
 }
 
 // Resolve computes the effective ordered list of auth names for the given
@@ -148,7 +160,7 @@ type ScopeRefs struct {
 // effectiveNames.
 func (r *Resolver) Resolve(ctx context.Context, scopes ScopeRefs) (*Chain, error) {
 	names := effectiveNames(scopes)
-	return r.build(ctx, names)
+	return r.build(ctx, names, scopes.Vars)
 }
 
 // effectiveNames computes the ordered, de-duplicated list of auth def names in
@@ -199,10 +211,10 @@ func dedupe(in []string) []string {
 }
 
 // build instantiates providers for the named auth defs and orders them by layer.
-func (r *Resolver) build(_ context.Context, names []string) (*Chain, error) {
+func (r *Resolver) build(_ context.Context, names []string, vars *secrets.Resolver) (*Chain, error) {
 	chain := &Chain{names: append([]string{}, names...)}
 	for _, name := range names {
-		prov, err := r.provider(name)
+		prov, err := r.provider(name, vars)
 		if err != nil {
 			return nil, err
 		}
@@ -217,7 +229,7 @@ func (r *Resolver) build(_ context.Context, names []string) (*Chain, error) {
 }
 
 // provider instantiates (or returns a cached) provider for an auth def name.
-func (r *Resolver) provider(name string) (spi.AuthProvider, error) {
+func (r *Resolver) provider(name string, vars *secrets.Resolver) (spi.AuthProvider, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -240,19 +252,67 @@ func (r *Resolver) provider(name string) (spi.AuthProvider, error) {
 	}
 	// Interpolate config values (resolving ${env:...} secrets at run time) and
 	// inject the project dir for file-based credentials.
+	if r.perCase[name] {
+		return r.caseProvider(name, def, factory, vars)
+	}
 	cfg, err := r.interp.InterpolateMap(def.Config, false)
 	r.red.AddAll(r.interp.SecretValues())
 	if err != nil {
 		return nil, verr.Context(verr.CodeConfig, err, fmt.Sprintf("interpolate auth %q config", name))
 	}
-	// Auth config resolves once, before any step runs, from environment
-	// variables, --var, and secrets. A reference that is still there (for
-	// example a token a login step captures) would be sent literally.
+	// Run-level variables leave a reference open (for example a token a
+	// login step captures): resolve this auth per case instead.
+	if _, _, ok := unresolvedRef(def.Type, cfg); ok {
+		r.perCase[name] = true
+		return r.caseProvider(name, def, factory, vars)
+	}
+	return r.finish(name, name, def, factory, cfg)
+}
+
+// caseProvider resolves def's config with the case's variables and returns
+// the provider for that resolved config. Providers are cached by name plus
+// a hash of the resolved config, so two cases with different captured
+// tokens never share one, while steps that resolve to the same config do
+// (an OAuth token cache stays shared). The hash input is never logged.
+func (r *Resolver) caseProvider(name string, def model.AuthDef, factory spi.AuthFactory, vars *secrets.Resolver) (spi.AuthProvider, error) {
+	interp := vars
+	if interp == nil {
+		interp = r.interp
+	}
+	cfg, err := interp.InterpolateMap(def.Config, false)
+	r.red.AddAll(interp.SecretValues())
+	if err != nil {
+		return nil, verr.Context(verr.CodeConfig, err, fmt.Sprintf("interpolate auth %q config", name))
+	}
 	if key, ref, ok := unresolvedRef(def.Type, cfg); ok {
 		return nil, verr.Newf(verr.CodeAuth,
-			"auth %q: config %q references ${%s}, which is not defined when auth is resolved (environment variables, --var, ${env:NAME}, and secrets are; values captured by steps are not)",
+			"auth %q: config %q references ${%s}, which is not defined when this step runs (environment variables, --var, ${env:NAME}, secrets, and values captured by earlier steps of the case are)",
 			name, key, ref).WithDetail("auth", name).WithDetail("reference", ref)
 	}
+	key, err := configKey(name, cfg)
+	if err != nil {
+		return nil, verr.Wrap(verr.CodeInternal, err, fmt.Sprintf("auth %q config", name))
+	}
+	if p, ok := r.cache[key]; ok {
+		return p, nil
+	}
+	return r.finish(name, key, def, factory, cfg)
+}
+
+// configKey is the cache key for a per-case provider: the auth name and a
+// SHA-256 of the resolved config. The config holds secrets; only the hash
+// is kept.
+func configKey(name string, cfg map[string]any) (string, error) {
+	b, err := json.Marshal(cfg) // map keys are sorted, so equal configs hash equally
+	if err != nil {
+		return "", err
+	}
+	sum := sha256.Sum256(b)
+	return name + "\x00" + hex.EncodeToString(sum[:]), nil
+}
+
+// finish builds the provider for an interpolated config and caches it.
+func (r *Resolver) finish(name, key string, def model.AuthDef, factory spi.AuthFactory, cfg map[string]any) (spi.AuthProvider, error) {
 	cfg["__dir"] = r.dir
 	cfg[fsutil.AllowExternalKey] = r.allowExternal
 	prov, err := factory(cfg, r.red)
@@ -260,7 +320,7 @@ func (r *Resolver) provider(name string) (spi.AuthProvider, error) {
 		return nil, verr.Context(verr.CodeConfig, err, fmt.Sprintf("build auth %q (%s)", name, def.Type))
 	}
 	r.attachTransport(prov)
-	r.cache[name] = prov
+	r.cache[key] = prov
 	return prov, nil
 }
 

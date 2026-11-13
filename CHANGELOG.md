@@ -25,6 +25,10 @@ and distribution names below use the final public names.
 
 ### Added
 
+- Auth configs can reference values captured by earlier steps of the case
+  (`token: "${accessToken}"` after a login step). They are resolved per
+  case and their providers cached by auth name plus a hash of the resolved
+  config, so cases with different tokens never share a provider. (S-8)
 - `verity validate` warns (`no_assertions`, with the step's path) about
   steps that have no assertions: they pass on any response, including an
   HTTP 500. Warnings do not change the exit code.
