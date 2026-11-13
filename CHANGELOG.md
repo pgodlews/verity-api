@@ -88,6 +88,9 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- Steps of one setup or teardown hook share a variable scope, so a token a
+  setup step captures reaches the next setup step; before, each hook step ran
+  with a fresh resolver and case-scoped captures were lost.
 - YAML projects keep exact JSON number literals in setup and teardown step
   `json`/`variables` and in mock `json` bodies, as they already did for case
   steps.

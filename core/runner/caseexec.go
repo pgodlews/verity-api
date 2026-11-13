@@ -214,6 +214,7 @@ func (x *CaseExec) RunSetups(ctx context.Context) []SetupResult {
 			continue
 		}
 		seen[b.Suite] = true
+		hookVars := x.e.hookResolver(b.Suite)
 		for i := range b.Suite.Setup.Steps {
 			name := "setup:" + b.Suite.Setup.Name
 			step := b.Suite.Setup.Steps[i]
@@ -221,7 +222,7 @@ func (x *CaseExec) RunSetups(ctx context.Context) []SetupResult {
 			if ctx.Err() != nil {
 				cr = x.e.abortedHook(b.Suite.Name, name, step)
 			} else {
-				cr = x.e.runHookCase(ctx, b.Suite, name, step)
+				cr = x.e.runHookCase(ctx, b.Suite, name, step, hookVars)
 			}
 			out = append(out, SetupResult{Suite: b.Suite.Name, Result: cr})
 		}
