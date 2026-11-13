@@ -103,6 +103,8 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- `${fn:randomHex:N}` is limited to N <= 4096; a larger N is a
+  `config_error` instead of an unbounded allocation.
 - `verity` usage lists the `run` flags `--json-stdout`, `--quiet`,
   `--timeout`, and `--follow-redirects`, and `fmt --staged`/`--json`; the
   package comment no longer claims every command supports `--json`.

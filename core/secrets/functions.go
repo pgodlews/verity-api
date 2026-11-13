@@ -99,13 +99,17 @@ func (r *Resolver) randomInt(args []string) (string, error) {
 	return n.Add(n, big.NewInt(min)).String(), nil
 }
 
+// maxRandomHex bounds ${fn:randomHex:N} so a project cannot make the runner
+// allocate gigabytes for one value.
+const maxRandomHex = 4096
+
 func (r *Resolver) randomHex(args []string) (string, error) {
 	if len(args) != 1 {
 		return "", verr.New(verr.CodeConfig, "randomHex expects exactly one N argument")
 	}
 	n, err := strconv.Atoi(args[0])
-	if err != nil || n <= 0 {
-		return "", verr.Newf(verr.CodeConfig, "invalid randomHex length %q; want a positive integer", args[0])
+	if err != nil || n <= 0 || n > maxRandomHex {
+		return "", verr.Newf(verr.CodeConfig, "invalid randomHex length %q; want a positive integer no larger than %d", args[0], maxRandomHex)
 	}
 	b := make([]byte, n/2+n%2)
 	if _, err := io.ReadFull(r.random(), b); err != nil {

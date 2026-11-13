@@ -153,7 +153,7 @@ recently known values.
 | `${fn:isoTimestamp}` | Current UTC time in RFC 3339 format with millisecond precision |
 | `${fn:randomInt}` | Random integer from 0 through 1000 |
 | `${fn:randomInt:MIN:MAX}` | Random integer in the inclusive range `MIN`–`MAX` |
-| `${fn:randomHex:N}` | `N` lowercase hexadecimal characters (`N` must be positive) |
+| `${fn:randomHex:N}` | `N` lowercase hexadecimal characters (`N` from 1 to 4096) |
 
 **Never commit plaintext secrets.** Validation warns when a credential field
 looks like a hard-coded secret (JWT/long token/PEM). The desktop request
