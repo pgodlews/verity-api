@@ -77,6 +77,15 @@ Select at run time with `verity run project.yaml --env staging`. Override or
 add variables with `--var KEY=VALUE` (repeatable). Variables interpolate as
 `${NAME}` anywhere in request config and auth config.
 
+### Setup and teardown hooks
+
+Each hook step is reported as its own `setup:NAME` / `teardown:NAME` case
+result. All steps of one hook run in one variable scope (environment,
+run-scoped captures, suite `vars`, `--var`), so a value one setup step
+captures with a transfer is visible to the next setup step. Setup and
+teardown are separate scopes: share a setup capture with the suite's cases
+or its teardown through `scope: run`.
+
 ### Variable precedence
 
 When the same name is defined at more than one scope, later entries in this

@@ -303,6 +303,7 @@ func (e *execContext) runSuite(ctx context.Context, suite *model.Suite) spi.Suit
 
 	// Setup hook (sequential, before cases).
 	if suite.Setup != nil {
+		hookVars := e.hookResolver(suite)
 		for i := range suite.Setup.Steps {
 			name := "setup:" + suite.Setup.Name
 			step := suite.Setup.Steps[i]
@@ -314,7 +315,7 @@ func (e *execContext) runSuite(ctx context.Context, suite *model.Suite) spi.Suit
 				sr.Cases = append(sr.Cases, e.skippedCase(suite.Name, name, -1))
 				continue
 			}
-			cr := e.runHookCase(ctx, suite, name, step)
+			cr := e.runHookCase(ctx, suite, name, step, hookVars)
 			sr.Cases = append(sr.Cases, cr)
 			e.noteBail(cr.Status)
 		}
@@ -395,6 +396,7 @@ func (e *execContext) runSuite(ctx context.Context, suite *model.Suite) spi.Suit
 			}
 			return grace
 		}
+		teardownVars := e.hookResolver(suite)
 		for i := range suite.Teardown.Steps {
 			name := "teardown:" + suite.Teardown.Name
 			step := suite.Teardown.Steps[i]
@@ -406,7 +408,7 @@ func (e *execContext) runSuite(ctx context.Context, suite *model.Suite) spi.Suit
 				}
 				continue
 			}
-			cr := e.runHookCase(teardownCtx(), suite, name, step)
+			cr := e.runHookCase(teardownCtx(), suite, name, step, teardownVars)
 			sr.Cases = append(sr.Cases, cr)
 			e.noteBail(cr.Status)
 		}
@@ -534,13 +536,18 @@ func (e *execContext) noteCaseBail(results []spi.CaseResult) {
 }
 
 // runHookCase wraps a single hook step as a one-step case for reporting.
-func (e *execContext) runHookCase(ctx context.Context, suite *model.Suite, name string, step model.Step) spi.CaseResult {
+// runHookCase runs one setup/teardown step as its own one-step case result.
+// resolver is shared by every step of the hook (see hookResolver), so a
+// value one hook step captures is visible to the next.
+func (e *execContext) runHookCase(ctx context.Context, suite *model.Suite, name string, step model.Step, resolver *secrets.Resolver) spi.CaseResult {
 	c := &model.TestCase{Name: name, Steps: []model.Step{step}}
-	results := e.runCase(ctx, suite, c)
-	if len(results) > 0 {
-		return results[0]
-	}
-	return e.skippedCase(suite.Name, name, -1)
+	return e.runCaseIteration(ctx, suite, c, nil, -1, stepOpts{}, resolver)
+}
+
+// hookResolver is the variable scope for one run of a suite hook:
+// environment < run-scoped captures so far < suite < CLI overrides.
+func (e *execContext) hookResolver(suite *model.Suite) *secrets.Resolver {
+	return e.newResolver(mergeVars(e.baseVars, e.runVarsSnapshot(), suite.Vars, e.opts.ExtraVars))
 }
 
 // runCase executes a case, expanding data-driven feeds into multiple iterations.
