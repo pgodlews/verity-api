@@ -13,8 +13,31 @@
 // that run. Unary and all three streaming kinds are supported.
 package main
 
-import "github.com/pgodlews/verity-api/core/plugin/sdk"
+import (
+	"fmt"
+	"io"
+	"os"
+
+	"github.com/pgodlews/verity-api/core/plugin/sdk"
+)
+
+// Build metadata, set by scripts/release.sh with -ldflags -X.
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "--version" {
+		printVersion(os.Stdout)
+		return
+	}
 	sdk.ServeProtocol(grpcProtocol{})
+}
+
+// printVersion writes the build metadata. The host never passes --version;
+// it is for people checking which plugin binary they installed.
+func printVersion(w io.Writer) {
+	fmt.Fprintf(w, "verity-grpc %s (commit %s, built %s)\n", version, commit, date)
 }
