@@ -50,6 +50,10 @@ and distribution names below use the final public names.
 - The gRPC plugin reuses one connection per target and transport settings,
   parses each descriptor set once, and caches reflection results, instead
   of dialing and reflecting for every step. (E-6)
+- The internal `verity gui-call` command (the desktop frontend's browser dev
+  bridge) is no longer in release builds. Build the CLI with
+  `go build -tags devbridge -o verity ./cmd/verity` for `npm run dev`; see
+  `gui/README.md`. (D-9)
 - **BREAKING:** the composite action's `vars` input takes one `KEY=VALUE`
   per line (values may contain spaces); several space-separated pairs on one
   line are now a single value. Inputs reach the script through environment

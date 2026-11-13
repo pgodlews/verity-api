@@ -64,6 +64,11 @@ jobs:
           done
       - name: Test (core + CLI, race detector)
         run: go test -race ./...
+      - name: Test the CLI with the GUI dev bridge (devbridge tag)
+        run: |
+          go vet -tags devbridge ./cmd/verity
+          go run honnef.co/go/tools/cmd/staticcheck@v0.8.2 -tags devbridge ./cmd/verity
+          go test -tags devbridge ./cmd/verity
       - name: Build CLI
         run: go build -o verity ./cmd/verity
       - name: Test the example plugin (own module)

@@ -5,8 +5,9 @@
 // so the browser sees real, already-redacted data and the same behaviour.
 //
 // Dev-only: the plugin is applied by `vite serve`, never included in builds.
-// The CLI binary is $VERITY_BIN, else ../../verity (go build -o verity
-// ./cmd/verity at the repo root), else `verity` on PATH.
+// The CLI binary is $VERITY_BIN, else ../../verity, else `verity` on PATH.
+// It must be built with the dev bridge, which release builds leave out:
+// go build -tags devbridge -o verity ./cmd/verity (at the repo root).
 
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";

@@ -1,3 +1,5 @@
+//go:build devbridge
+
 package main
 
 import (
@@ -19,7 +21,10 @@ import (
 // (gui/frontend/vite.bridge.ts): it calls one desktop-app method by name with
 // a JSON array of arguments on stdin and prints {"ok":true,"value":…} or
 // {"ok":false,"error":"…"}. The desktop app calls the same core/workspace
-// functions directly, so both behave the same. Not part of the public CLI.
+// functions directly, so both behave the same. Not part of the public CLI:
+// it is only built with -tags devbridge (see gui/README.md).
+func init() { devCommands["gui-call"] = cmdGUICall }
+
 func cmdGUICall(args []string) int {
 	if len(args) != 1 {
 		fmt.Fprintln(os.Stderr, "gui-call: usage: verity gui-call <Method> < args.json")

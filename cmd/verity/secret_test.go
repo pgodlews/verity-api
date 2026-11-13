@@ -165,7 +165,8 @@ func TestSecretSetReadErrorDoesNotLeak(t *testing.T) {
 	}
 }
 
-// Exercise dispatch and the browser dev bridge against go-keyring's mock.
+// Exercise secret dispatch against go-keyring's mock. The browser dev
+// bridge half is TestDevBridgeKeychain (build tag devbridge).
 func TestSecretDispatchAndDevBridge(t *testing.T) {
 	keyring.MockInit()
 	for _, tc := range []struct {
@@ -176,11 +177,6 @@ func TestSecretDispatchAndDevBridge(t *testing.T) {
 		{[]string{"secret", "set", "DISPATCH_TOKEN", "--json"}, "test-sensitive-value", true},
 		{[]string{"secret", "get", "DISPATCH_TOKEN", "--json"}, "", true},
 		{[]string{"secret", "rm", "DISPATCH_TOKEN", "--json"}, "", true},
-		{[]string{"gui-call", "StoreKeychainSecret"}, `["project/BRIDGE_TOKEN","test-sensitive-value"]`, true},
-		{[]string{"gui-call", "StoreKeychainSecret"}, `["bad:name","test-sensitive-value"]`, false},
-		{[]string{"gui-call", "KeychainSecretExists"}, `["project/BRIDGE_TOKEN"]`, true},
-		{[]string{"gui-call", "KeychainSecretExists"}, `["MISSING_BRIDGE_TOKEN"]`, true},
-		{[]string{"gui-call", "KeychainSecretExists"}, `["bad:name"]`, false},
 	} {
 		code, output := secretCLIOutput(t, tc.args, tc.input)
 		// gui-call reports operation errors in its envelope and always exits 0.
@@ -203,9 +199,6 @@ func TestSecretDispatchAndDevBridge(t *testing.T) {
 				t.Fatal("existence binding did not return the expected boolean")
 			}
 		}
-	}
-	if value, err := keyring.Get("verity", "project/BRIDGE_TOKEN"); err != nil || value != "test-sensitive-value" {
-		t.Fatal("browser bridge did not store the mock credential")
 	}
 }
 
