@@ -111,6 +111,8 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- `verity load` treats IPv6 unique-local addresses (`fc00::/7`) as private
+  targets, like RFC 1918 IPv4, instead of requiring `--allow-remote` for them.
 - Project loading, auth configuration, data feeds, and secret files return
   structured errors with codes (`validation_error` for unparsable or
   invalid project files, `config_error` for unreadable files and bad auth or
