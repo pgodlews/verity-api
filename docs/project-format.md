@@ -453,6 +453,13 @@ selector), `op` (comparison), `value` (expected), `description`.
 Operators: `eq`, `ne`, `lt`, `lte`, `gt`, `gte`, `contains`, `matches`,
 `exists`, `not_exists`.
 
+`eq` and `ne` compare numerically only when at least one side is a number (a
+JSON/YAML number, the status code, or `response_time`) and the other side
+parses as one; two strings compare as text, so `"1.10"` is not `eq` `"1.1"`
+and `"007"` is not `eq` `"7"`. `lt`, `lte`, `gt`, and `gte` also accept
+numeric strings. Numbers compare exactly: response JSON keeps integers beyond
+2^53 intact, so `9007199254740993` is not `eq` `9007199254740992`.
+
 ```yaml
 assertions:
   - type: status

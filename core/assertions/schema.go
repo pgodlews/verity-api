@@ -11,16 +11,14 @@ import (
 	"github.com/antchfx/xmlquery"
 	jsonschema "github.com/santhosh-tekuri/jsonschema/v5"
 
+	"github.com/pgodlews/verity-api/core/internal/jsonnum"
 	"github.com/pgodlews/verity-api/core/spi"
 )
 
-// parseJSON unmarshals body into a generic value for JSONPath/schema use.
+// parseJSON decodes body into a generic value for JSONPath/schema use. Numbers
+// that float64 would change stay json.Number so they compare exactly.
 func parseJSON(body []byte) (any, error) {
-	var v any
-	if err := json.Unmarshal(body, &v); err != nil {
-		return nil, err
-	}
-	return v, nil
+	return jsonnum.Decode(body)
 }
 
 // jsonSchemaAssertion validates the JSON body against a JSON Schema. The schema

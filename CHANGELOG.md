@@ -57,6 +57,12 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- Assertion `eq`/`ne` no longer turn two strings into floats (`"1.10"` was
+  equal to `"1.1"`, `"007"` to `"7"`), and numbers compare exactly instead of
+  through float64, so large JSON integers such as `9007199254740993` are no
+  longer equal to their rounded neighbour. A string compared with a real
+  number still compares numerically. This can turn previously passing
+  string-to-string checks into failures.
 - A `null` configuration value (for example `token:` with no value) no longer
   becomes the text `<nil>`: auth fields count as missing (`bearer auth
   requires 'token'`), null headers are omitted, null SOAP parameters are empty,
