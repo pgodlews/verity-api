@@ -6,6 +6,7 @@ core `verity` binary does not link grpc-go.
 
 ```bash
 go build -o verity-grpc .
+./verity-grpc --version   # release builds print their version, commit, and date
 ```
 
 Register it as protocol `grpc` (this replaces the core stub for the run).

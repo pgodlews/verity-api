@@ -47,6 +47,8 @@ and distribution names below use the final public names.
 
 ### Changed
 
+- `verity-grpc --version` prints the plugin's version, commit, and build
+  date; release archives now stamp them like the CLI.
 - Release workflow: a test job must pass before anything is built; the
   container image (and `:latest`) is pushed only after the GitHub release
   exists; each job gets only the token permissions it needs; a re-run

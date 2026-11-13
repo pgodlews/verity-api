@@ -58,7 +58,7 @@ for t in "${targets[@]}"; do
   name="verity-grpc_${version}_${os}_${arch}"
   mkdir -p "$work/$name"
   echo "building $name"
-  (cd plugins/grpc && CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -trimpath -ldflags "-s -w" \
+  (cd plugins/grpc && CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -trimpath -ldflags "$ldflags" \
     -o "$work/$name/verity-grpc$ext" .)
   cp plugins/grpc/README.md "$work/$name/"
   archive "$name" "$os"
