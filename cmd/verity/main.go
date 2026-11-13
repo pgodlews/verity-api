@@ -20,9 +20,10 @@
 //	verity secret               manage OS keychain items
 //	verity version              print version info
 //
-// Every command supports --json for structured, machine-consumable output, and
-// returns correct exit codes for CI (non-zero on validation/assertion/transport
-// failure).
+// Most commands accept --json for structured, machine-consumable output
+// (run and load take --json FILE for a report and run has --json-stdout;
+// schema prints JSON already), and every command returns correct exit codes
+// for CI (non-zero on validation/assertion/transport failure).
 package main
 
 import (
@@ -89,10 +90,12 @@ func usage() {
 
 Usage:
   verity run <project.yaml> [--env NAME] [--junit FILE] [--json FILE]
-                             [--html FILE] [--parallel N] [--var k=v ...]
+                             [--html FILE] [--json-stdout] [--quiet]
+                             [--parallel N] [--timeout 30s] [--var k=v ...]
                              [--suite GLOB ...] [--case GLOB ...] [--until-step N]
                              [--env-file FILE ...] [--env-file-override] [--bail]
                              [--watch] [--allow-external-files]
+                             [--follow-redirects=false]
                              [--plugins FILE | --trust-plugins]
                              [--reporter TYPE=FILE ...]
   verity load <project.yaml> [--env NAME] [--suite GLOB ...] [--case GLOB ...]
@@ -103,7 +106,7 @@ Usage:
                              [--json FILE] [--allow-remote]
                              [--plugins FILE | --trust-plugins]
   verity validate <project.yaml> [--env NAME] [--json]
-  verity fmt [--check] [project.yaml ...]
+  verity fmt [--check [--staged]] [--json] [project.yaml ...]
   verity init [--force] [dir]
   verity hooks install [--force] [--fmt] [project.yaml]
   verity hooks uninstall [project.yaml]
