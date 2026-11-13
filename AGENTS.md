@@ -26,7 +26,7 @@ Core keeps a gRPC stub until the first-party plugin is loaded. A proposal in
 
 ## Build and checks
 
-Use Go 1.26+, Git, and Node.js 20.19+ (20.x) or 22.12+ with npm. Desktop builds
+Use Go 1.26+, Git, and Node.js 22.12+ with npm. Desktop builds
 also need Wails v2 and the platform webview dependencies; see [gui/README.md](gui/README.md).
 Run commands from the repository root. There are **four Go modules**; root
 `go test ./...` does not test the nested modules.

@@ -53,7 +53,7 @@ jobs:
           cache: true
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
       - name: Install WebKitGTK
         run: |
           sudo apt-get update -qq
@@ -85,7 +85,7 @@ jobs:
           cache: true
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
       - name: Build desktop app
         run: |
           go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
@@ -111,7 +111,7 @@ jobs:
           cache: true
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
       - name: Build desktop app
         run: |
           go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
