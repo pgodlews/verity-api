@@ -69,13 +69,13 @@ func (a *authProxy) Layer() spi.AuthLayer {
 func (a *authProxy) Apply(_ context.Context, req *spi.Request) error {
 	res, err := a.client.call(MethodApply, map[string]any{
 		"config":  a.config,
-		"request": encodeRequest(req),
+		"request": EncodeRequest(req),
 	})
 	if err != nil {
 		return err
 	}
 	// The plugin returns the mutated request; merge headers/query/cookies back.
-	mutated, derr := decodeRequest(res["request"])
+	mutated, derr := DecodeRequest(res["request"])
 	if derr != nil {
 		return derr
 	}
