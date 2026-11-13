@@ -3,54 +3,32 @@ package runner
 import "github.com/pgodlews/verity-api/core/spi"
 
 // rollupSteps computes a case status from its step statuses.
-// error beats failed, failed beats aborted, and a mix of passes with an
-// aborted step is aborted (the case did not finish). All-skipped stays skipped.
 func rollupSteps(steps []spi.StepResult) spi.Status {
-	if len(steps) == 0 {
-		return spi.StatusSkipped
-	}
-	status := spi.StatusPassed
-	allSkipped := true
-	sawAborted := false
-	for _, s := range steps {
-		if s.Status != spi.StatusSkipped {
-			allSkipped = false
-		}
-		switch s.Status {
-		case spi.StatusError:
-			return spi.StatusError
-		case spi.StatusFailed:
-			status = spi.StatusFailed
-		case spi.StatusAborted:
-			sawAborted = true
-		}
-	}
-	if allSkipped {
-		return spi.StatusSkipped
-	}
-	if status == spi.StatusPassed && sawAborted {
-		return spi.StatusAborted
-	}
-	return status
+	return rollup(len(steps), func(i int) spi.Status { return steps[i].Status })
 }
 
 // rollupCases computes a suite status from its case statuses.
 func rollupCases(cases []spi.CaseResult) spi.Status {
-	if len(cases) == 0 {
-		return spi.StatusSkipped
-	}
-	status := spi.StatusPassed
+	return rollup(len(cases), func(i int) spi.Status { return cases[i].Status })
+}
+
+// rollup combines n child statuses: error beats failed, failed beats
+// aborted, and a mix of passes with an aborted child is aborted (the parent
+// did not finish). No children, or all skipped, is skipped.
+func rollup(n int, status func(int) spi.Status) spi.Status {
+	out := spi.StatusPassed
 	allSkipped := true
 	sawAborted := false
-	for _, c := range cases {
-		if c.Status != spi.StatusSkipped {
+	for i := 0; i < n; i++ {
+		s := status(i)
+		if s != spi.StatusSkipped {
 			allSkipped = false
 		}
-		switch c.Status {
+		switch s {
 		case spi.StatusError:
 			return spi.StatusError
 		case spi.StatusFailed:
-			status = spi.StatusFailed
+			out = spi.StatusFailed
 		case spi.StatusAborted:
 			sawAborted = true
 		}
@@ -58,10 +36,10 @@ func rollupCases(cases []spi.CaseResult) spi.Status {
 	if allSkipped {
 		return spi.StatusSkipped
 	}
-	if status == spi.StatusPassed && sawAborted {
+	if out == spi.StatusPassed && sawAborted {
 		return spi.StatusAborted
 	}
-	return status
+	return out
 }
 
 // summarize aggregates counts and the overall status across the run.
