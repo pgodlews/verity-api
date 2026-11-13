@@ -163,6 +163,8 @@ type RequestCapture struct {
 	// Cookies are the request cookies (from the step and auth), redacted.
 	Cookies map[string]string `json:"cookies,omitempty"`
 	Body    string            `json:"body,omitempty"`
+	// BodyTruncated is true when Body was cut at the capture limit (1 MiB).
+	BodyTruncated bool `json:"bodyTruncated,omitempty"`
 }
 
 // ResponseCapture is a redacted snapshot of the response.
@@ -171,7 +173,10 @@ type ResponseCapture struct {
 	Status     string            `json:"status,omitempty"`
 	Headers    map[string]string `json:"headers,omitempty"`
 	Body       string            `json:"body,omitempty"`
-	DurationMS int64             `json:"durationMs"`
+	// BodyTruncated is true when Body was cut at the capture limit (1 MiB);
+	// assertions saw the full body.
+	BodyTruncated bool  `json:"bodyTruncated,omitempty"`
+	DurationMS    int64 `json:"durationMs"`
 }
 
 // ErrorInfo is a serialized structured error (mirrors verr.Error fields).

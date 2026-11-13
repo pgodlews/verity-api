@@ -111,6 +111,10 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- Request and response bodies in run results, reports, and the desktop app
+  are capped at 1 MiB with a truncation note and a new `bodyTruncated` flag
+  (additive); assertions and transfers still use the full body. Before, every
+  report held and redacted bodies of up to 32 MiB per step.
 - `json_schema` assertions compile each schema once (cached by location and
   content) instead of on every evaluation, and GraphQL schema files already
   in the cache are not read from disk again.

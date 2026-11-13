@@ -499,7 +499,9 @@ selector), `op` (comparison), `value` (expected), `description`.
 | `graphql_schema`| —               | —                | response `data` matches the GraphQL selection set; `config.allowErrors` allows an `errors` array |
 | `xsd`           | —               | —                | XML well-formedness (+ optional `config.rootElement`); no XSD is read, so `expr`, `config.schemaFile`, and `config.schema` are validation errors |
 
-HTTP response bodies are kept up to 32 MiB. A larger body is cut at that
+Request and response captures in results and reports keep the first 1 MiB of
+a body (`bodyTruncated` marks a cut one); assertions and transfers see the
+whole body. HTTP response bodies are kept up to 32 MiB. A larger body is cut at that
 size; body assertions (`jsonpath`, `xpath`, `json_schema`, `xsd`, `contains`,
 `regex`, `graphql_schema`) then fail with a "truncated" message instead of
 checking a partial body, while `status`, `header`, and `response_time` still

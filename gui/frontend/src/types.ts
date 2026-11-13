@@ -68,6 +68,8 @@ export interface ResponseCapture {
   status?: string;
   headers?: Record<string, string>;
   body?: string;
+  /** The body was cut at the 1 MiB capture limit. */
+  bodyTruncated?: boolean;
   durationMs: number;
 }
 
