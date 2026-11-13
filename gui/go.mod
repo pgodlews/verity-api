@@ -1,6 +1,8 @@
 module github.com/pgodlews/verity-api/gui
 
-go 1.26
+go 1.26.0
+
+toolchain go1.26.11
 
 // The GUI is a thin Wails shell over the same core library used by the CLI.
 // All protocol/auth/test/reporting logic lives in core; this module only adds
@@ -46,10 +48,10 @@ require (
 	github.com/wailsapp/go-webview2 v1.0.22 // indirect
 	github.com/wailsapp/mimetype v1.4.1 // indirect
 	github.com/zalando/go-keyring v0.2.8 // indirect
-	golang.org/x/crypto v0.33.0 // indirect
-	golang.org/x/net v0.35.0 // indirect
-	golang.org/x/sys v0.30.0 // indirect
-	golang.org/x/text v0.22.0 // indirect
+	golang.org/x/crypto v0.59.0 // indirect
+	golang.org/x/net v0.62.0 // indirect
+	golang.org/x/sys v0.50.0 // indirect
+	golang.org/x/text v0.44.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 

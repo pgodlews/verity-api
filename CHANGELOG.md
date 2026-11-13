@@ -10,6 +10,17 @@ and distribution names below use the final public names.
 
 ## [Unreleased]
 
+### Security
+
+- Build with a patched Go standard library and dependencies: every module
+  now declares `toolchain go1.26.11` (the `go` command fetches it when an
+  older 1.26 patch is installed), and `golang.org/x/net` (v0.62.0),
+  `x/crypto`, `x/sys`, and `x/text` are bumped and aligned across the root,
+  desktop, and plugin modules. `govulncheck` reported reachable `net/http`,
+  `crypto/tls`, `crypto/x509`, `html/template`, `mime/multipart`, `net/url`,
+  and `x/net` issues before; it now reports none reachable. Dependabot keeps
+  the Go modules, npm packages, and GitHub Actions up to date.
+
 ### Added
 
 - `verity run --reporter TYPE=FILE` (repeatable, also with `--watch`) writes

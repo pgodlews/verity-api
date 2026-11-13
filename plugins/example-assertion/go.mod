@@ -1,6 +1,8 @@
 module github.com/pgodlews/verity-api/plugins/example-assertion
 
-go 1.26
+go 1.26.0
+
+toolchain go1.26.11
 
 require github.com/pgodlews/verity-api v0.0.0
 
