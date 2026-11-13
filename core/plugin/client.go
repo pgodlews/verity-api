@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -22,16 +24,28 @@ type Client struct {
 	stdout  *bufio.Reader
 	hs      Handshake
 	Timeout time.Duration
+	stderr  *stderrWriter
 
 	mu     sync.Mutex
 	dead   bool
 	nextID int
 }
 
+// hostStderr is where plugin stderr lines go; tests replace it.
+var hostStderr io.Writer = os.Stderr
+
 // Launch starts the plugin binary at path with the given args and completes the
-// VPP handshake. The returned Client must be closed with Close.
+// VPP handshake. The returned Client must be closed with Close. The plugin's
+// stderr reaches the host's stderr line by line, prefixed with
+// "[plugin NAME] " and redacted (structural patterns only; plugins loaded
+// through a Manager use the Manager's redactor).
 func Launch(ctx context.Context, path string, args ...string) (*Client, error) {
+	return launch(ctx, path, args, newStderrWriter(hostStderr, filepath.Base(path), newRedactorRef()))
+}
+
+func launch(ctx context.Context, path string, args []string, stderr *stderrWriter) (*Client, error) {
 	cmd := exec.CommandContext(ctx, path, args...)
+	cmd.Stderr = stderr
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, verr.Wrap(verr.CodePlugin, err, "open plugin stdin")
@@ -40,12 +54,11 @@ func Launch(ctx context.Context, path string, args ...string) (*Client, error) {
 	if err != nil {
 		return nil, verr.Wrap(verr.CodePlugin, err, "open plugin stdout")
 	}
-	// Plugin stderr is left attached to the host's stderr by default for logs.
 	if err := cmd.Start(); err != nil {
 		return nil, verr.Wrap(verr.CodePlugin, err, "start plugin "+path)
 	}
 
-	c := &Client{cmd: cmd, stdin: stdin, stdout: bufio.NewReader(stdout), Timeout: 30 * time.Second}
+	c := &Client{cmd: cmd, stdin: stdin, stdout: bufio.NewReader(stdout), Timeout: 30 * time.Second, stderr: stderr}
 
 	// Read the handshake line (with a timeout so a bad binary can't hang us).
 	hsCh := make(chan error, 1)
@@ -199,6 +212,9 @@ func (c *Client) Close() error {
 			_ = c.cmd.Process.Kill()
 			return fmt.Errorf("plugin did not exit; killed")
 		case err := <-done:
+			if c.stderr != nil {
+				c.stderr.Flush()
+			}
 			return err
 		}
 	}

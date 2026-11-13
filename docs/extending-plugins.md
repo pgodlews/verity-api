@@ -43,7 +43,12 @@ host                                   plugin process
 - Each subsequent line from the host is a `Request`; the plugin replies with one
   `Response` line (matching `id`).
 - The host serializes calls (one in flight at a time per plugin process).
-- Plugin **stderr** is passed through to the host's stderr for logging.
+- Plugin **stderr** reaches the host's stderr line by line, prefixed with
+  `[plugin NAME] ` and passed through the run's redactor, so logs and panics
+  are visible but known secrets are masked.
+- Header, query, and cookie values an **auth** plugin adds or changes are
+  registered with the run's redactor, so they are masked in captures,
+  reports, and errors like built-in credentials.
 - On shutdown the host sends `host.shutdown`, closes stdin, and waits (then
   kills after a timeout).
 

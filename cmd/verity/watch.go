@@ -26,6 +26,7 @@ import (
 	"github.com/pgodlews/verity-api/core/model"
 	"github.com/pgodlews/verity-api/core/plugin"
 	"github.com/pgodlews/verity-api/core/runner"
+	"github.com/pgodlews/verity-api/core/secrets"
 	"github.com/pgodlews/verity-api/core/spi"
 	"github.com/pgodlews/verity-api/core/watchfs"
 )
@@ -174,8 +175,11 @@ func runOnce(ctx context.Context, cfg watchConfig) (code int, result *spi.RunRes
 		return failJSON(cfg.JSONStdout, exitConfig, "plugins", perr), nil, files
 	}
 	defer mgr.Close()
+	red := secrets.NewRedactor()
+	mgr.SetRedactor(red)
 
 	result, err = runner.New(reg).Run(ctx, project, runner.Options{
+		Redactor:           red,
 		Environment:        cfg.Env,
 		Parallel:           cfg.Parallel,
 		Timeout:            cfg.Timeout,

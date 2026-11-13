@@ -188,8 +188,12 @@ func cmdRun(args []string) int {
 		return failJSON(*jsonStdout, exitConfig, "plugins", perr)
 	}
 	defer mgr.Close()
+	// Plugin stderr is redacted with the run's redactor.
+	red := secrets.NewRedactor()
+	mgr.SetRedactor(red)
 
 	return finishRun(ctx, reg, project, runner.Options{
+		Redactor:           red,
 		Environment:        common.env,
 		Parallel:           *parallel,
 		Timeout:            common.timeout,

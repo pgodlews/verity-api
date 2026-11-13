@@ -81,9 +81,19 @@ func (a *authProxy) Apply(_ context.Context, req *spi.Request) error {
 	if derr != nil {
 		return derr
 	}
+	// Every value the plugin added or changed is credential material as far
+	// as the host knows, so register it before it can reach a capture,
+	// report, or error.
 	for k, vs := range mutated.Headers {
+		old := map[string]bool{}
+		for _, v := range req.Headers.Values(k) {
+			old[v] = true
+		}
 		req.Headers.Del(k)
 		for _, v := range vs {
+			if !old[v] {
+				a.addSecret(v)
+			}
 			req.Headers.Add(k, v)
 		}
 	}
@@ -91,13 +101,25 @@ func (a *authProxy) Apply(_ context.Context, req *spi.Request) error {
 		if req.Query == nil {
 			req.Query = map[string]string{}
 		}
+		if prev, ok := req.Query[k]; !ok || prev != v {
+			a.addSecret(v)
+		}
 		req.Query[k] = v
 	}
 	for k, v := range mutated.Cookies {
 		if req.Cookies == nil {
 			req.Cookies = map[string]string{}
 		}
+		if prev, ok := req.Cookies[k]; !ok || prev != v {
+			a.addSecret(v)
+		}
 		req.Cookies[k] = v
 	}
 	return nil
+}
+
+func (a *authProxy) addSecret(v string) {
+	if a.red != nil {
+		a.red.Add(v)
+	}
 }

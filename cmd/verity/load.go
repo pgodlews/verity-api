@@ -111,6 +111,7 @@ func cmdLoad(args []string) int {
 		return exitConfig
 	}
 	defer mgr.Close()
+	mgr.SetRedactor(red)
 
 	opts := load.Options{
 		Redactor:        red,
