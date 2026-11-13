@@ -145,9 +145,6 @@ func TestKeychainNames(t *testing.T) {
 			t.Errorf("Delete accepted invalid name %q", name)
 		}
 	}
-	if names, err := store.List(); err == nil || len(names) != 0 {
-		t.Fatal("portable listing must report unsupported, not an empty store")
-	}
 }
 
 // Without an OS backend linked in (plugin binaries), resolution fails as an

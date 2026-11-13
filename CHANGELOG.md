@@ -36,6 +36,9 @@ and distribution names below use the final public names.
 
 ### Changed
 
+- Removed `verity secret list`: the portable keychain backend cannot list
+  names, so the command could only ever fail. `verity secret list` is now a
+  usage error (exit 2).
 - **BREAKING:** a plugin can no longer silently replace a built-in or
   already-loaded extension type (for example `rest`, `bearer`, `json`); add
   `"override": true` to its plugins entry to allow it. The first-party gRPC

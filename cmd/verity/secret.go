@@ -26,7 +26,7 @@ func cmdSecret(args []string) int {
 
 func secretCommand(args []string, in io.Reader, out, stderr io.Writer, store *secrets.Keychain) int {
 	if len(args) == 0 {
-		fmt.Fprintln(stderr, "usage: verity secret <set|get|rm> NAME [--json] | secret list [--json]; set reads stdin, get requires --reveal to print the value")
+		fmt.Fprintln(stderr, "usage: verity secret <set|get|rm> NAME [--json]; set reads stdin, get requires --reveal to print the value")
 		return exitUsage
 	}
 	action := args[0]
@@ -39,16 +39,12 @@ func secretCommand(args []string, in io.Reader, out, stderr io.Writer, store *se
 	if err != nil {
 		return exitUsage
 	}
-	if action != "set" && action != "get" && action != "rm" && action != "list" {
-		fmt.Fprintln(stderr, "secret: expected set, get, rm, or list")
+	if action != "set" && action != "get" && action != "rm" {
+		fmt.Fprintln(stderr, "secret: expected set, get, or rm")
 		return exitUsage
 	}
-	want := 1
-	if action == "list" {
-		want = 0
-	}
-	if len(pos) != want || (*reveal && action != "get") || (*force && action != "set") {
-		fmt.Fprintln(stderr, "secret: expected one NAME for set/get/rm, no names for list; --reveal is for get only and --force is for set only; values must come from stdin")
+	if len(pos) != 1 || (*reveal && action != "get") || (*force && action != "set") {
+		fmt.Fprintln(stderr, "secret: expected one NAME; --reveal is for get only and --force is for set only; values must come from stdin")
 		return exitUsage
 	}
 	reply := func(value any) {
@@ -61,20 +57,6 @@ func secretCommand(args []string, in io.Reader, out, stderr io.Writer, store *se
 			fmt.Fprintln(stderr, err)
 		}
 		return exitConfig
-	}
-	if action == "list" {
-		names, err := store.List()
-		if err != nil {
-			return fail(err)
-		}
-		if *jsonOut {
-			reply(map[string]any{"ok": true, "names": names})
-		} else {
-			for _, name := range names {
-				fmt.Fprintln(out, name)
-			}
-		}
-		return exitOK
 	}
 	name := pos[0]
 	if err := secrets.ValidateKeychainName(name); err != nil {

@@ -63,7 +63,6 @@ func TestSecretCommandLifecycle(t *testing.T) {
 		{[]string{"get", "project/TOKEN", "--reveal", "--json"}, "", exitOK, true},
 		{[]string{"get", "project/TOKEN"}, "", exitOK, false},
 		{[]string{"get", "project/TOKEN", "--reveal"}, "", exitOK, true},
-		{[]string{"list", "--json"}, "", exitConfig, false},
 		{[]string{"rm", "project/TOKEN", "--json"}, "", exitOK, false},
 		{[]string{"get", "project/TOKEN", "--json"}, "", exitConfig, false},
 		{[]string{"rm", "project/TOKEN"}, "", exitConfig, false},
@@ -98,7 +97,7 @@ func TestSecretCommandLifecycle(t *testing.T) {
 
 func TestSecretCommandRejectsUsageAndBadInput(t *testing.T) {
 	fake := &cliKeychain{items: map[string]string{}}
-	for _, args := range [][]string{nil, {"set"}, {"set", "TOKEN", "value"}, {"list", "TOKEN"}, {"rm", "TOKEN", "--reveal"}, {"get", "TOKEN", "--force"}, {"unknown"}} {
+	for _, args := range [][]string{nil, {"set"}, {"set", "TOKEN", "value"}, {"list"}, {"list", "TOKEN"}, {"rm", "TOKEN", "--reveal"}, {"get", "TOKEN", "--force"}, {"unknown"}} {
 		if code := secretCommand(args, strings.NewReader("value"), io.Discard, io.Discard, &secrets.Keychain{Backend: fake}); code != exitUsage {
 			t.Errorf("%v: exit %d, want usage error", args, code)
 		}
