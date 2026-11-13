@@ -80,9 +80,12 @@ type Options struct {
 	OnEvent func(spi.RunEvent)
 }
 
-// teardownTimeout is the budget for teardown of a suite that already started.
-// It is a fresh context so a cancelled run still gets to clean up.
-const teardownTimeout = 10 * time.Second
+// teardownTimeout is the grace budget for teardown of a suite that already
+// started when the run has been cancelled. It is a fresh context so a
+// cancelled run still gets to clean up. A run that was not cancelled runs
+// teardown under the run context, with the usual step timeouts. It is a
+// variable so tests can shorten it.
+var teardownTimeout = 10 * time.Second
 
 // matchName reports whether name matches any pattern (exact or glob). An
 // empty pattern list matches everything.
@@ -292,8 +295,8 @@ func (e *execContext) runSuite(ctx context.Context, suite *model.Suite) spi.Suit
 	sr := spi.SuiteResult{Name: suite.Name}
 	// A suite reached only after bail tripped never started, so its hooks are
 	// skipped. A suite that did start still runs teardown after a case trips
-	// bail, as cleanup of work already done. Teardown uses a short fresh
-	// context so a cancelled run does not skip that cleanup.
+	// bail, as cleanup of work already done. After cancellation teardown uses a
+	// short fresh context so a cancelled run does not skip that cleanup.
 	suiteStarted := !e.bailTripped()
 
 	// Setup hook (sequential, before cases).
@@ -372,14 +375,23 @@ func (e *execContext) runSuite(ctx context.Context, suite *model.Suite) spi.Suit
 		sr.Cases = append(sr.Cases, crs...)
 	}
 
-	// Teardown hook (sequential, after cases). A suite that started gets a
-	// fresh 10s context so cancellation does not skip cleanup.
+	// Teardown hook (sequential, after cases). Steps run under the run
+	// context while it is live, so --timeout, timeoutMs, and retries apply
+	// and Ctrl-C interrupts them. Once the run is cancelled, a suite that
+	// started gets one detached teardownTimeout grace context for its
+	// remaining teardown steps so cancellation does not skip cleanup.
 	if suite.Teardown != nil {
-		tctx := ctx
-		if suiteStarted {
-			var cancel context.CancelFunc
-			tctx, cancel = context.WithTimeout(context.Background(), teardownTimeout)
-			defer cancel()
+		var grace context.Context
+		var cancelGrace context.CancelFunc = func() {}
+		defer func() { cancelGrace() }()
+		teardownCtx := func() context.Context {
+			if ctx.Err() == nil {
+				return ctx
+			}
+			if grace == nil {
+				grace, cancelGrace = context.WithTimeout(context.WithoutCancel(ctx), teardownTimeout)
+			}
+			return grace
 		}
 		for i := range suite.Teardown.Steps {
 			name := "teardown:" + suite.Teardown.Name
@@ -392,7 +404,7 @@ func (e *execContext) runSuite(ctx context.Context, suite *model.Suite) spi.Suit
 				}
 				continue
 			}
-			cr := e.runHookCase(tctx, suite, name, step)
+			cr := e.runHookCase(teardownCtx(), suite, name, step)
 			sr.Cases = append(sr.Cases, cr)
 			e.noteBail(cr.Status)
 		}

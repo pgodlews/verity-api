@@ -52,7 +52,10 @@ verity run project.yaml \
   never started are reported as `aborted`, in project order, and
   `summary.aborted` is true. Setup of a suite that never started does not run.
   Teardown of a suite that did start still runs, with a fresh 10 second
-  budget, so cleanup is not skipped. Every reporter that was requested
+  budget shared by its remaining teardown steps, so cleanup is not skipped. A
+  cancel that arrives during a teardown step interrupts that step. Without a
+  cancel, teardown steps use the normal `--timeout`/`timeoutMs` limits.
+  Every reporter that was requested
   (console, `--json-stdout`, `--junit`, `--json`, `--html`) is still written.
   The process then exits `5`. A second SIGINT or SIGTERM exits immediately,
   without waiting for those reporters.
