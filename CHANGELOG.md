@@ -36,6 +36,10 @@ and distribution names below use the final public names.
 
 ### Changed
 
+- **BREAKING:** a plugin can no longer silently replace a built-in or
+  already-loaded extension type (for example `rest`, `bearer`, `json`); add
+  `"override": true` to its plugins entry to allow it. The first-party gRPC
+  plugin still replaces the core gRPC stub without the flag.
 - **BREAKING:** duplicate case names within a suite are a validation error.
   The name is the case's identity, so a desktop save could overwrite the
   wrong case and `--case`, watch deltas, and run events were ambiguous.

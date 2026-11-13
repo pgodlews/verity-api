@@ -163,7 +163,8 @@ path you pass with `--plugins path.json`:
     { "name": "example-assertion",
       "path": "/abs/path/to/plugins/example-assertion/example-assertion",
       "args": [],
-      "enabled": true }
+      "enabled": true,
+      "override": false }
   ]
 }
 ```
@@ -175,6 +176,12 @@ verity run project.yaml --trust-plugins
 # or name the file explicitly
 verity run project.yaml --plugins .verity/plugins.json
 ```
+
+A plugin may not replace an extension type that is already registered (a
+built-in such as `rest`, `bearer`, or `json`, or an earlier plugin) unless its
+entry sets `"override": true`; otherwise loading fails with `plugin_error`.
+The core gRPC stub is the exception: `plugins/grpc` replaces it without the
+flag.
 
 ### Trusting project plugins
 

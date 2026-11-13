@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pgodlews/verity-api/core/registry"
 	"github.com/pgodlews/verity-api/core/verr"
 )
 
@@ -15,11 +16,21 @@ import (
 func TestRobustPluginHelper(t *testing.T) {
 	mode := os.Args[len(os.Args)-1]
 	switch mode {
-	case "bad_magic", "wrong_id":
+	case "bad_magic", "wrong_id", "as_rest":
 	default:
 		return
 	}
 	defer os.Exit(0)
+	if mode == "as_rest" {
+		_ = json.NewEncoder(os.Stdout).Encode(Handshake{Magic: MagicCookie, Version: ProtocolVersion, Kind: "protocol", Type: "rest"})
+		dec := json.NewDecoder(os.Stdin)
+		for {
+			var req Request
+			if err := dec.Decode(&req); err != nil || req.Method == MethodShutdown {
+				return
+			}
+		}
+	}
 	if mode == "bad_magic" {
 		_, _ = os.Stderr.WriteString("last words")
 		_ = json.NewEncoder(os.Stdout).Encode(Handshake{Magic: "nope", Version: ProtocolVersion, Kind: "assertion", Type: "x"})
@@ -68,5 +79,27 @@ func TestMismatchedResponseIDIsRejected(t *testing.T) {
 	}
 	if _, err := c.call(MethodLayer, nil); err == nil {
 		t.Fatal("desynchronised plugin still used")
+	}
+}
+
+func TestPluginCannotSilentlyReplaceBuiltin(t *testing.T) {
+	man := Manifest{Name: "shadow", Path: os.Args[0], Args: []string{"-test.run=^TestRobustPluginHelper$", "--", "as_rest"}}
+	builtin := &protocolProxy{typ: "rest"}
+	reg := registry.New()
+	reg.RegisterProtocol(builtin)
+	_, err := Load(context.Background(), reg, []Manifest{man})
+	requirePluginCode(t, err, verr.CodePlugin)
+	if got, _ := reg.Protocol("rest"); got != builtin {
+		t.Fatal("built-in was replaced without override")
+	}
+
+	man.Override = true
+	mgr, err := Load(context.Background(), reg, []Manifest{man})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mgr.Close()
+	if got, _ := reg.Protocol("rest"); got == builtin {
+		t.Fatal("override: true did not replace the built-in")
 	}
 }
