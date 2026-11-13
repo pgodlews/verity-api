@@ -32,6 +32,12 @@ and distribution names below use the final public names.
 
 ### Changed
 
+- **BREAKING:** a property transfer whose `jsonpath`, `xpath`, `header`, or
+  `regex` source matches nothing now fails the step unless it has a non-empty
+  `default`. Previously it captured an empty string and later steps silently
+  sent empty values. Captured JSON numbers keep their exact text (a 64-bit id
+  `9007199254740993` was captured as `9007199254740992`), and objects or
+  arrays are captured as compact JSON instead of Go formatting.
 - **BREAKING:** a project's own `.verity/plugins.json` no longer runs
   automatically. `verity run`, `run --watch`, and `verity load` exit 3 with a
   `config_error` naming the file, without starting any plugin, unless you pass
