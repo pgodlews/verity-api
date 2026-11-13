@@ -3,7 +3,6 @@ package importers
 import (
 	"encoding/xml"
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
@@ -67,9 +66,9 @@ type wsdlPortTypeOp struct {
 // SOAP suite. One case per operation is created, each with a SOAP request
 // template (auto-generated envelope) and a status assertion.
 func ImportWSDL(path string) (*Result, error) {
-	data, err := os.ReadFile(path)
+	data, err := readImportFile(path, "WSDL", importMaxBytes)
 	if err != nil {
-		return nil, verr.Wrap(verr.CodeImport, err, "read WSDL")
+		return nil, err
 	}
 	var def wsdlDefinitions
 	if err := xml.Unmarshal(data, &def); err != nil {

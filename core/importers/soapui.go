@@ -104,19 +104,31 @@ func ImportSoapUI(path string) (*Result, error) {
 }
 
 func readSoapUI(path string) ([]byte, error) {
-	fi, err := os.Stat(path)
+	return readImportFile(path, "SoapUI project", soapuiMaxBytes)
+}
+
+// importMaxBytes is the largest OpenAPI, WSDL, or Postman file an importer
+// reads, so a huge local file cannot exhaust memory in the CLI or the GUI
+// preview. It is a variable so tests can lower it.
+var importMaxBytes int64 = 50 << 20
+
+// readImportFile reads at most max bytes of path; a larger file is an
+// import_error. The limit is enforced while reading, not only from Stat.
+func readImportFile(path, what string, max int64) ([]byte, error) {
+	f, err := os.Open(path)
 	if err != nil {
-		return nil, verr.Wrap(verr.CodeImport, err, "read SoapUI project")
+		return nil, verr.Wrap(verr.CodeImport, err, "read "+what)
 	}
-	if fi.Size() > soapuiMaxBytes {
-		return nil, verr.Newf(verr.CodeImport, "SoapUI project is %d bytes, over the %d byte limit", fi.Size(), soapuiMaxBytes)
+	defer f.Close()
+	if fi, err := f.Stat(); err == nil && fi.Size() > max {
+		return nil, verr.Newf(verr.CodeImport, "%s is %d bytes, over the %d byte limit", what, fi.Size(), max)
 	}
-	data, err := os.ReadFile(path)
+	data, err := io.ReadAll(io.LimitReader(f, max+1))
 	if err != nil {
-		return nil, verr.Wrap(verr.CodeImport, err, "read SoapUI project")
+		return nil, verr.Wrap(verr.CodeImport, err, "read "+what)
 	}
-	if int64(len(data)) > soapuiMaxBytes {
-		return nil, verr.Newf(verr.CodeImport, "SoapUI project is %d bytes, over the %d byte limit", len(data), soapuiMaxBytes)
+	if int64(len(data)) > max {
+		return nil, verr.Newf(verr.CodeImport, "%s is over the %d byte limit", what, max)
 	}
 	return data, nil
 }

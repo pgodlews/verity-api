@@ -111,6 +111,9 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- OpenAPI, WSDL, and Postman imports (collections and environments) refuse
+  input over 50 MiB with an `import_error`, as SoapUI imports already did,
+  so a huge file cannot exhaust memory in the CLI or the desktop preview.
 - The desktop footer lists the protocols the app actually supports (from the
   extension catalog, including gRPC) instead of a fixed "REST · SOAP ·
   GraphQL".

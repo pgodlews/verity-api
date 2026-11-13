@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -114,9 +113,9 @@ func ImportPostman(path string, envPaths ...string) (*Result, error) {
 }
 
 func readPostmanCollection(path string) (*pmCollection, error) {
-	data, err := os.ReadFile(path)
+	data, err := readImportFile(path, "Postman collection", importMaxBytes)
 	if err != nil {
-		return nil, verr.Wrap(verr.CodeImport, err, "read Postman collection")
+		return nil, err
 	}
 	var probe map[string]json.RawMessage
 	if err := json.Unmarshal(data, &probe); err != nil {
@@ -143,9 +142,9 @@ func readPostmanCollection(path string) (*pmCollection, error) {
 }
 
 func (imp *pmImporter) readEnvironment(path string, colVars map[string]string) (model.Environment, error) {
-	data, err := os.ReadFile(path)
+	data, err := readImportFile(path, "Postman environment", importMaxBytes)
 	if err != nil {
-		return model.Environment{}, verr.Wrap(verr.CodeImport, err, "read Postman environment")
+		return model.Environment{}, err
 	}
 	var probe map[string]json.RawMessage
 	if json.Unmarshal(data, &probe) == nil && probe["environment"] != nil && probe["values"] == nil {
