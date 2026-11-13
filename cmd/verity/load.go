@@ -78,7 +78,7 @@ func cmdLoad(args []string) int {
 		return failJSON(false, exitConfig, "env-file", err)
 	}
 
-	project, err := model.Load(pos[0])
+	project, err := model.LoadWith(pos[0], model.LoadOptions{AllowExternalFiles: common.allowExternal})
 	if err != nil {
 		fmt.Fprintf(stderr, "load: %v\n", err)
 		return exitConfig
@@ -114,21 +114,22 @@ func cmdLoad(args []string) int {
 	mgr.SetRedactor(red)
 
 	opts := load.Options{
-		Redactor:        red,
-		Environment:     common.env,
-		ExtraVars:       common.vars,
-		Suites:          common.suites,
-		Cases:           common.cases,
-		VUs:             *vus,
-		Iterations:      *iterations,
-		Duration:        *duration,
-		RampUp:          *ramp,
-		Think:           *think,
-		Thresholds:      thresholds,
-		MaxErrorRate:    maxRate,
-		AllowRemote:     *allowRemote,
-		FollowRedirects: true,
-		Timeout:         common.timeout,
+		Redactor:           red,
+		Environment:        common.env,
+		ExtraVars:          common.vars,
+		Suites:             common.suites,
+		Cases:              common.cases,
+		VUs:                *vus,
+		Iterations:         *iterations,
+		Duration:           *duration,
+		RampUp:             *ramp,
+		Think:              *think,
+		Thresholds:         thresholds,
+		MaxErrorRate:       maxRate,
+		AllowRemote:        *allowRemote,
+		FollowRedirects:    true,
+		Timeout:            common.timeout,
+		AllowExternalFiles: common.allowExternal,
 		BeforeStart: func(hosts []string) {
 			fmt.Fprintln(stderr, load.FormatStart(hosts, *vus, *iterations, *duration, *ramp))
 			if *allowRemote {

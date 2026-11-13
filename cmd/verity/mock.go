@@ -21,6 +21,7 @@ func cmdMock(args []string) int {
 	delay := fs.Int("delay", 0, "milliseconds to wait before each response")
 	seed := fs.Int64("seed", 0, "seed for generated sample values")
 	jsonOut := fs.Bool("json", false, "print the listen URL as JSON")
+	allowExternal := fs.Bool("allow-external-files", false, allowExternalUsage)
 	fs.SetOutput(os.Stderr)
 	pos, err := parsePermuted(fs, args)
 	if err != nil {
@@ -44,6 +45,8 @@ func cmdMock(args []string) int {
 		Validate: *validate,
 		Delay:    time.Duration(*delay) * time.Millisecond,
 		Seed:     *seed,
+
+		AllowExternalFiles: *allowExternal,
 	})
 	if err != nil {
 		return failJSON(*jsonOut, exitConfig, "mock", err)

@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/pgodlews/verity-api/core/fsutil"
 	"github.com/pgodlews/verity-api/core/verr"
 )
 
@@ -20,13 +21,29 @@ import (
 // the merged project references.
 //
 // Load performs structural decoding only; call Validate for semantic checks.
+//
+// Included fragments must lie inside the project directory (the directory
+// of the root file); LoadWith with AllowExternalFiles lifts that.
 func Load(path string) (*Project, error) {
+	return LoadWith(path, LoadOptions{})
+}
+
+// LoadOptions changes how Load reads a project.
+type LoadOptions struct {
+	// AllowExternalFiles lets include read fragments outside the project
+	// directory (--allow-external-files; trusted projects only).
+	AllowExternalFiles bool
+}
+
+// LoadWith is Load with options.
+func LoadWith(path string, opts LoadOptions) (*Project, error) {
 	abs, err := filepath.Abs(path)
 	if err != nil {
 		return nil, verr.Context(verr.CodeConfig, err, fmt.Sprintf("resolve path %q", path))
 	}
 	visited := map[string]bool{}
-	p, err := loadRecursive(abs, visited, []string{abs})
+	l := loader{root: filepath.Dir(abs), allowExternal: opts.AllowExternalFiles}
+	p, err := l.loadRecursive(abs, visited, []string{abs})
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +51,12 @@ func Load(path string) (*Project, error) {
 	return p, nil
 }
 
-func loadRecursive(path string, visited map[string]bool, chain []string) (*Project, error) {
+type loader struct {
+	root          string
+	allowExternal bool
+}
+
+func (l loader) loadRecursive(path string, visited map[string]bool, chain []string) (*Project, error) {
 	p, err := loadFile(path)
 	if err != nil {
 		return nil, err
@@ -51,6 +73,9 @@ func loadRecursive(path string, visited map[string]bool, chain []string) (*Proje
 		if err != nil {
 			return nil, verr.Context(verr.CodeConfig, err, fmt.Sprintf("resolve include path %q", inc))
 		}
+		if _, err := fsutil.ResolveInside(l.root, absInc, l.allowExternal, "include"); err != nil {
+			return nil, err
+		}
 
 		// Check for cycle in the current inclusion chain
 		for _, prev := range chain {
@@ -64,7 +89,7 @@ func loadRecursive(path string, visited map[string]bool, chain []string) (*Proje
 			continue
 		}
 
-		frag, err := loadRecursive(absInc, visited, append(chain, absInc))
+		frag, err := l.loadRecursive(absInc, visited, append(chain, absInc))
 		if err != nil {
 			return nil, verr.Context(verr.CodeConfig, err, fmt.Sprintf("include %q", inc))
 		}

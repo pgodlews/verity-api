@@ -21,6 +21,12 @@ import (
 // is set.
 const AllowExternalKey = "__allowExternalFiles"
 
+// OutsideProjectDetail is the verr detail key set (to true) on errors for a
+// file outside the project directory, so callers can recognize them.
+const OutsideProjectDetail = "outsideProject"
+
+const externalHint = "reading it needs trust: run the CLI with --allow-external-files if this project is trusted (the desktop app does not read files outside the project directory)"
+
 // ResolveInside resolves path for reading. A relative path is joined to dir.
 // Unless allowExternal is true, the result must lie inside dir, both
 // lexically and after resolving symlinks; otherwise a config_error that names
@@ -41,13 +47,13 @@ func ResolveInside(dir, path string, allowExternal bool, what string) (string, e
 	}
 	outside := func() error {
 		return verr.Newf(verr.CodeConfig,
-			"%s %q is outside the project directory; run with --allow-external-files if this project is trusted", what, path).
-			WithDetail("path", path)
+			"%s %q is outside the project directory; %s", what, path, externalHint).
+			WithDetail("path", path).WithDetail(OutsideProjectDetail, true)
 	}
 	if dir == "" {
 		return "", verr.Newf(verr.CodeConfig,
-			"%s %q cannot be checked against an unknown project directory; run with --allow-external-files if this project is trusted", what, path).
-			WithDetail("path", path)
+			"%s %q cannot be checked against an unknown project directory; %s", what, path, externalHint).
+			WithDetail("path", path).WithDetail(OutsideProjectDetail, true)
 	}
 	root, err := filepath.Abs(dir)
 	if err != nil {

@@ -17,6 +17,7 @@ func cmdFmt(args []string) int {
 	check := fs.Bool("check", false, "list files that would change without writing them")
 	staged := fs.Bool("staged", false, "with --check: check the git index (what the next commit records), not the working tree")
 	jsonOut := fs.Bool("json", false, "emit structured JSON status")
+	allowExternal := fs.Bool("allow-external-files", false, allowExternalUsage)
 	fs.SetOutput(os.Stderr)
 	pos, err := parsePermuted(fs, args)
 	if err != nil {
@@ -37,7 +38,7 @@ func cmdFmt(args []string) int {
 	seen := map[string]bool{}
 	changed := []string{}
 	for _, root := range pos {
-		files, err := workspace.ProjectFiles(root)
+		files, err := workspace.ProjectFilesWith(root, *allowExternal)
 		if err != nil {
 			return failJSON(*jsonOut, exitConfig, "fmt", err)
 		}

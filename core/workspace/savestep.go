@@ -172,17 +172,30 @@ func hashStepIn(data []byte, file, suite, kase string, index int) (string, bool,
 }
 
 // ProjectFiles lists a project and its included fragments, depth-first. Feed
-// and upload files are deliberately excluded.
+// and upload files are deliberately excluded. Includes must lie inside the
+// project directory, as model.Load requires.
 func ProjectFiles(path string) ([]string, error) {
+	return ProjectFilesWith(path, false)
+}
+
+// ProjectFilesWith is ProjectFiles; allowExternal lets includes lie outside
+// the project directory (--allow-external-files).
+func ProjectFilesWith(path string, allowExternal bool) ([]string, error) {
 	root, err := filepath.Abs(path)
 	if err != nil {
 		return nil, err
 	}
-	return projectFiles(root)
+	return listProjectFiles(root, allowExternal)
 }
 
 // projectFiles lists the root file followed by its includes, depth-first.
+// The desktop app and dev bridge never read outside the project directory.
 func projectFiles(root string) ([]string, error) {
+	return listProjectFiles(root, false)
+}
+
+func listProjectFiles(root string, allowExternal bool) ([]string, error) {
+	dir := filepath.Dir(root)
 	var out []string
 	seen := map[string]bool{}
 	var walk func(string) error
@@ -203,6 +216,9 @@ func projectFiles(root string) ([]string, error) {
 		for _, inc := range p.Include {
 			if !filepath.IsAbs(inc) {
 				inc = filepath.Join(filepath.Dir(f), inc)
+			}
+			if _, err := fsutil.ResolveInside(dir, inc, allowExternal, "include"); err != nil {
+				return err
 			}
 			if err := walk(filepath.Clean(inc)); err != nil {
 				return err

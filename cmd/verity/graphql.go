@@ -58,6 +58,7 @@ func cmdGraphQLSchema(args []string) int {
 	caseName := fs.String("case", "", "case name, when the step name is not unique")
 	envName := fs.String("env", "", "environment used to resolve the step URL")
 	outPath := fs.String("out", "", "write the SDL to this file")
+	allowExternal := fs.Bool("allow-external-files", false, allowExternalUsage)
 	jsonOut := fs.Bool("json", false, "emit structured JSON")
 	fs.SetOutput(os.Stderr)
 	pos, err := parsePermuted(fs, args)
@@ -68,7 +69,7 @@ func cmdGraphQLSchema(args []string) int {
 		fmt.Fprintln(os.Stderr, "graphql schema: usage: verity graphql schema <project> --step NAME [--out FILE]")
 		return exitUsage
 	}
-	project, err := model.Load(pos[0])
+	project, err := model.LoadWith(pos[0], model.LoadOptions{AllowExternalFiles: *allowExternal})
 	if err != nil {
 		return failJSON(*jsonOut, exitConfig, "load", err)
 	}

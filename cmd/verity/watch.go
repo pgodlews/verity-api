@@ -152,7 +152,7 @@ func watchLoop(ctx context.Context, cfg watchConfig) int {
 // so watch can retry when the user fixes the file. Reporter paths are
 // overwritten on every successful run.
 func runOnce(ctx context.Context, cfg watchConfig) (code int, result *spi.RunResult, files []string) {
-	project, err := model.Load(cfg.ProjectPath)
+	project, err := model.LoadWith(cfg.ProjectPath, model.LoadOptions{AllowExternalFiles: cfg.AllowExternalFiles})
 	if err != nil {
 		return failJSON(cfg.JSONStdout, exitConfig, "load", err), nil, nil
 	}
