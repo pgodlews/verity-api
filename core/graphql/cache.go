@@ -64,17 +64,21 @@ func Resolve(project, suite, step *model.GraphQLSchema) *model.GraphQLSchema {
 // LoadFile reads and parses an SDL file inside dir. The parsed schema is
 // cached by its resolved path.
 func (c *Cache) LoadFile(dir, path string) (*ast.Schema, string, error) {
+	// Check the cache by the confined path before reading the file, so a
+	// cached schema is not read from disk again.
+	if c != nil {
+		if abs, err := confinedPath(dir, path); err == nil {
+			c.mu.Lock()
+			hit, ok := c.files[abs]
+			c.mu.Unlock()
+			if ok {
+				return hit.schema, hit.sdl, nil
+			}
+		}
+	}
 	abs, body, err := OpenConfined(dir, path)
 	if err != nil {
 		return nil, "", err
-	}
-	if c != nil {
-		c.mu.Lock()
-		if hit, ok := c.files[abs]; ok {
-			c.mu.Unlock()
-			return hit.schema, hit.sdl, nil
-		}
-		c.mu.Unlock()
 	}
 	schema, err := ParseSDL(string(body), abs)
 	if err != nil {

@@ -2,10 +2,12 @@ package assertions
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/antchfx/xmlquery"
 	jsonschema "github.com/santhosh-tekuri/jsonschema/v5"
@@ -29,8 +31,8 @@ type jsonSchemaAssertion struct{}
 
 func (jsonSchemaAssertion) Type() string { return "json_schema" }
 func (a jsonSchemaAssertion) Evaluate(_ context.Context, actx *spi.AssertionContext, spec spi.AssertionSpec) (*spi.AssertionResult, error) {
-	compiler := jsonschema.NewCompiler()
 	var schemaURL string
+	var schemaRaw []byte
 
 	switch {
 	case spec.Config["schema"] != nil:
@@ -40,9 +42,7 @@ func (a jsonSchemaAssertion) Evaluate(_ context.Context, actx *spi.AssertionCont
 			return result(a.Type(), spec.Description, false, "invalid inline schema: "+err.Error(), nil, nil), nil
 		}
 		schemaURL = "inline://schema.json"
-		if err := compiler.AddResource(schemaURL, strings.NewReader(string(raw))); err != nil {
-			return result(a.Type(), spec.Description, false, "add schema: "+err.Error(), nil, nil), nil
-		}
+		schemaRaw = raw
 	default:
 		path := spec.Expr
 		if path == "" {
@@ -65,14 +65,12 @@ func (a jsonSchemaAssertion) Evaluate(_ context.Context, actx *spi.AssertionCont
 			return result(a.Type(), spec.Description, false, "read schema file: "+err.Error(), nil, nil), nil
 		}
 		schemaURL = "file://" + path
-		if err := compiler.AddResource(schemaURL, strings.NewReader(string(raw))); err != nil {
-			return result(a.Type(), spec.Description, false, "add schema: "+err.Error(), nil, nil), nil
-		}
+		schemaRaw = raw
 	}
 
-	sch, err := compiler.Compile(schemaURL)
+	sch, stage, err := compiledSchema(schemaURL, schemaRaw)
 	if err != nil {
-		return result(a.Type(), spec.Description, false, "compile schema: "+err.Error(), nil, nil), nil
+		return result(a.Type(), spec.Description, false, stage+": "+err.Error(), nil, nil), nil
 	}
 	doc, err := parseJSON(actx.Response.Body)
 	if err != nil {
@@ -83,6 +81,49 @@ func (a jsonSchemaAssertion) Evaluate(_ context.Context, actx *spi.AssertionCont
 			actx.Redactor.Redact("schema validation failed: "+err.Error()), "valid against schema", "invalid"), nil
 	}
 	return result(a.Type(), spec.Description, true, "response is valid against JSON Schema", "valid", "valid"), nil
+}
+
+// schemaCache holds compiled JSON Schemas keyed by URL and content hash, so a
+// schema is compiled once per run rather than on every evaluation (once per
+// request under load). An edited schema file has a new hash.
+var schemaCache = struct {
+	sync.Mutex
+	items map[[32]byte]*jsonschema.Schema
+}{items: map[[32]byte]*jsonschema.Schema{}}
+
+// maxCachedSchemas bounds the cache; it is cleared when full.
+const maxCachedSchemas = 256
+
+// compiledSchema compiles raw at url, or returns the cached compilation. The
+// stage names the failing step ("add schema" or "compile schema").
+func compiledSchema(url string, raw []byte) (*jsonschema.Schema, string, error) {
+	h := sha256.New()
+	h.Write([]byte(url))
+	h.Write([]byte{0})
+	h.Write(raw)
+	var key [32]byte
+	copy(key[:], h.Sum(nil))
+	schemaCache.Lock()
+	sch, ok := schemaCache.items[key]
+	schemaCache.Unlock()
+	if ok {
+		return sch, "", nil
+	}
+	compiler := jsonschema.NewCompiler()
+	if err := compiler.AddResource(url, strings.NewReader(string(raw))); err != nil {
+		return nil, "add schema", err
+	}
+	sch, err := compiler.Compile(url)
+	if err != nil {
+		return nil, "compile schema", err
+	}
+	schemaCache.Lock()
+	if len(schemaCache.items) >= maxCachedSchemas {
+		schemaCache.items = map[[32]byte]*jsonschema.Schema{}
+	}
+	schemaCache.items[key] = sch
+	schemaCache.Unlock()
+	return sch, "", nil
 }
 
 func toSchemaBytes(v any) ([]byte, error) {

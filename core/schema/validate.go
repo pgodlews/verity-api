@@ -6,9 +6,23 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 
 	jsonschema "github.com/santhosh-tekuri/jsonschema/v5"
 )
+
+// projectSchemaCompiled compiles the embedded project schema once.
+var projectSchemaCompiled = sync.OnceValues(func() (*jsonschema.Schema, error) {
+	compiler := jsonschema.NewCompiler()
+	if err := compiler.AddResource("project.json", strings.NewReader(projectSchema)); err != nil {
+		return nil, fmt.Errorf("load schema: %w", err)
+	}
+	sch, err := compiler.Compile("project.json")
+	if err != nil {
+		return nil, fmt.Errorf("compile schema: %w", err)
+	}
+	return sch, nil
+})
 
 // ValidateProjectBytes validates raw project bytes (JSON) against the published
 // project JSON Schema. It returns a slice of human-readable problems (empty when
@@ -18,13 +32,9 @@ import (
 // check catches structural/shape errors and is the same check editors and AI
 // agents perform against the published $schema.
 func ValidateProjectBytes(projectJSON []byte) ([]string, error) {
-	compiler := jsonschema.NewCompiler()
-	if err := compiler.AddResource("project.json", strings.NewReader(projectSchema)); err != nil {
-		return nil, fmt.Errorf("load schema: %w", err)
-	}
-	sch, err := compiler.Compile("project.json")
+	sch, err := projectSchemaCompiled()
 	if err != nil {
-		return nil, fmt.Errorf("compile schema: %w", err)
+		return nil, err
 	}
 	dec := json.NewDecoder(bytes.NewReader(projectJSON))
 	dec.UseNumber()
