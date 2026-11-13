@@ -7,11 +7,12 @@ import (
 	"encoding/json"
 	"flag"
 	"log"
+	"net"
 	"net/http"
 )
 
 func main() {
-	addr := flag.String("addr", "127.0.0.1:8099", "listen address")
+	addr := flag.String("addr", "127.0.0.1:8099", "listen address (port 0 picks a free port)")
 	flag.Parse()
 
 	mux := http.NewServeMux()
@@ -43,6 +44,11 @@ func main() {
 			`</soap:Envelope>`))
 	})
 
-	log.Printf("mockserver listening on %s", *addr)
-	log.Fatal(http.ListenAndServe(*addr, mux))
+	ln, err := net.Listen("tcp", *addr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// Print the bound address so callers using port 0 can find it.
+	log.Printf("mockserver listening on %s", ln.Addr())
+	log.Fatal(http.Serve(ln, mux))
 }

@@ -47,8 +47,11 @@ not cover them. Check the GUI backend and frontend with:
 On Windows also run the GUI's patched WebView2 dependency tests:
 
 ```bash
-(cd gui/third_party/go-webview2 && go test ./pkg/edge -run '^TestFocus')
+(cd gui/third_party/go-webview2 && go test ./...)
 ```
+
+CI also runs `staticcheck` and `govulncheck` (see the CI workflow for the
+pinned versions), the race detector for the gRPC plugin, and a macOS job.
 
 This local dependency is separate from the four application/plugin modules; see
 [its provenance and patch notes](gui/third_party/go-webview2/VERITY.md).
