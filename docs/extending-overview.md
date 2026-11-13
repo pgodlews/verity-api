@@ -42,7 +42,7 @@ keeps the base binary lean. See `docs/extending-plugins.md`.
 ```bash
 verity plugin new assertion my-check      # scaffold a buildable plugin
 cd my-check && go mod tidy && go build -o my-check .
-# register in .verity/plugins.json, then: verity run project.yaml
+# register in .verity/plugins.json, then: verity run project.yaml --trust-plugins
 ```
 
 ## Design contract (why this is AI-agent friendly)

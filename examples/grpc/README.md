@@ -18,7 +18,7 @@ then run:
 
 ```bash
 plugins/grpc/internal/testserver/testserver -listen "$SOCK"
-GRPC_TARGET="unix://${SOCK}" verity run examples/grpc/project.yaml
+GRPC_TARGET="unix://${SOCK}" verity run examples/grpc/project.yaml --trust-plugins
 ```
 
 `API_TOKEN` is sent as request metadata (`${env:API_TOKEN}`) and is redacted

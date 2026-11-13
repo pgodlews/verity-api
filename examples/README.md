@@ -36,7 +36,7 @@ verity run examples/rest-httpbin/project.yaml --var BASE_URL="$BASE_URL"
 ## `grpc/`
 
 A unary gRPC project. Build `plugins/grpc` first; `.verity/plugins.json` loads
-it. Set `GRPC_TARGET` to the server. See `examples/grpc/README.md`.
+it when run with `--trust-plugins`. Set `GRPC_TARGET` to the server. See `examples/grpc/README.md`.
 
 ## `specs/`
 

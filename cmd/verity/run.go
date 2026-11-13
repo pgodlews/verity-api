@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -45,6 +44,7 @@ type commonRunFlags struct {
 	env             string
 	timeout         time.Duration
 	pluginsFile     string
+	trustPlugins    bool
 	envFileOverride bool
 	vars            varFlags
 	suites          listFlags
@@ -66,13 +66,23 @@ func bindCommonRunFlags(fs *flag.FlagSet) *commonRunFlags {
 		c.timeout = timeout
 		return nil
 	})
-	fs.StringVar(&c.pluginsFile, "plugins", "", "path to a plugins config file (default: <project-dir>/.verity/plugins.json if present)")
+	fs.StringVar(&c.pluginsFile, "plugins", "", "path to a plugins config file (default: <project-dir>/.verity/plugins.json if present and trusted)")
+	fs.BoolVar(&c.trustPlugins, "trust-plugins", false, "run the plugins listed in <project-dir>/.verity/plugins.json (or set VERITY_TRUST_PLUGINS=1)")
 	fs.BoolVar(&c.envFileOverride, "env-file-override", false, "let --env-file values replace variables already set in the environment")
 	fs.Var(c.vars, "var", "variable override key=value (repeatable)")
 	fs.Var(&c.suites, "suite", "only run suites matching this name or glob (repeatable)")
 	fs.Var(&c.cases, "case", "only run cases matching this name or glob (repeatable)")
 	fs.Var(&c.envFiles, "env-file", "dotenv file to load before the run (repeatable; later files win)")
 	return c
+}
+
+// pluginTrust decides whether an auto-discovered project plugins file may run:
+// --trust-plugins, or VERITY_TRUST_PLUGINS=1 for CI.
+func pluginTrust(trustFlag bool) plugin.TrustFunc {
+	if trustFlag {
+		return plugin.TrustAlways
+	}
+	return plugin.TrustFromEnv
 }
 
 func (c *commonRunFlags) applyEnvFiles() error {
@@ -125,6 +135,7 @@ func cmdRun(args []string) int {
 			Quiet:              *quiet,
 			FollowRedirects:    *followRedir,
 			PluginsFile:        common.pluginsFile,
+			TrustPlugins:       common.trustPlugins,
 			UntilStep:          *untilStep,
 			Bail:               *bail,
 			AllowExternalFiles: *allowExternal,
@@ -167,25 +178,16 @@ func cmdRun(args []string) int {
 	defer signal.Stop(sigs)
 	go watchInterrupt(sigs, cancel, done, os.Exit)
 
-	// Load external plugins (opt-in, off the hot path): explicit --plugins file
-	// or an auto-discovered .verity/plugins.json next to the project.
-	pluginsPath := common.pluginsFile
-	if pluginsPath == "" {
-		auto := filepath.Join(project.SourceDir, ".verity", "plugins.json")
-		if _, statErr := os.Stat(auto); statErr == nil {
-			pluginsPath = auto
+	// Load external plugins (opt-in, off the hot path): an explicit --plugins
+	// file, or a trusted .verity/plugins.json next to the project.
+	mgr, perr := plugin.LoadForProject(ctx, reg, project.SourceDir, common.pluginsFile, pluginTrust(common.trustPlugins))
+	if perr != nil {
+		if ctx.Err() != nil {
+			return exitInterrupted
 		}
+		return failJSON(*jsonStdout, exitConfig, "plugins", perr)
 	}
-	if pluginsPath != "" {
-		mgr, perr := plugin.LoadFile(ctx, reg, pluginsPath)
-		if perr != nil {
-			if ctx.Err() != nil {
-				return exitInterrupted
-			}
-			return failJSON(*jsonStdout, exitConfig, "plugins", perr)
-		}
-		defer mgr.Close()
-	}
+	defer mgr.Close()
 
 	return finishRun(ctx, reg, project, runner.Options{
 		Environment:        common.env,

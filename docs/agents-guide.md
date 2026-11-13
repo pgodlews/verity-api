@@ -248,8 +248,9 @@ declared, including a mocks-only file that has no suites. See `docs/mocks.md`.
 - Add a protocol/assertion/reporter/auth/datasource as an **out-of-process
   plugin** (no host recompile): `verity plugin new <type> <name>`. This
   scaffolds a buildable module with stubs, a test, a manifest, and a README.
-- Register plugins via `<project-dir>/.verity/plugins.json` or
-  `verity run --plugins path.json`.
+- Register plugins via `<project-dir>/.verity/plugins.json` (run it with
+  `--trust-plugins` or `VERITY_TRUST_PLUGINS=1`; otherwise the run exits 3
+  with `config_error`) or `verity run --plugins path.json`.
 - The plugin wire protocol (VPP/1) is documented in `docs/extending-plugins.md`.
 
 ## Two-layer auth model (for correct auth authoring)

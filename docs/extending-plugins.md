@@ -144,8 +144,8 @@ It generates `go.mod` (with a `replace` to your core checkout), `main.go`,
 
 ## Registering plugins with a host
 
-Create a plugins config (auto-discovered at `<project-dir>/.verity/plugins.json`,
-or pass `--plugins path.json`):
+Create a plugins config, either at `<project-dir>/.verity/plugins.json` or at a
+path you pass with `--plugins path.json`:
 
 ```json
 {
@@ -158,11 +158,33 @@ or pass `--plugins path.json`):
 }
 ```
 
-Then run normally:
+Then run with the plugins trusted:
 
 ```bash
-verity run project.yaml
+verity run project.yaml --trust-plugins
+# or name the file explicitly
+verity run project.yaml --plugins .verity/plugins.json
 ```
+
+### Trusting project plugins
+
+A plugin is a program that runs with your permissions, so a project's own
+`.verity/plugins.json` is never executed just because the project was opened
+or run. `verity run`, `run --watch`, and `verity load` refuse such a project
+with a `config_error` (exit 3) that names the file, and start no plugin,
+unless one of these is true:
+
+- `--plugins FILE` names the plugins file explicitly;
+- `--trust-plugins` is passed; or
+- the environment sets `VERITY_TRUST_PLUGINS=1` (for CI).
+
+The desktop app asks once before running, load testing, or checking load
+targets of a project with a `.verity/plugins.json`. The question names the
+file and the programs it would start. A "Yes" is remembered outside the
+project, in the user configuration directory (`verity/trusted-plugins.json`),
+for that absolute file path, content hash (SHA-256), and set of resolved
+plugin paths. Changing, moving, or copying the file asks again. The browser
+development bridge follows `VERITY_TRUST_PLUGINS`.
 
 The host launches each enabled plugin, validates the handshake, and registers a
 proxy in the registry. From the runner's perspective, the plugin's extension is

@@ -10,6 +10,8 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` planned
 
 ## 0. Current implementation (including unreleased work)
 
+- [x] Require consent before running a project's `.verity/plugins.json`
+      (`--trust-plugins`, `VERITY_TRUST_PLUGINS=1`, or a remembered desktop approval).
 - [x] Run Windows Git subprocesses with hidden consoles and retain graceful cancellation.
 - [x] Recover from Windows WebView2 focus failures without exiting; guard focus during startup/shutdown.
 - [x] Correct Windows file URLs and make Git/workspace regression fixtures portable across platforms.

@@ -2,9 +2,7 @@ package plugin
 
 import (
 	"context"
-	"encoding/json"
 	"os"
-	"path/filepath"
 
 	"github.com/pgodlews/verity-api/core/registry"
 	"github.com/pgodlews/verity-api/core/secrets"
@@ -38,7 +36,9 @@ type Manager struct {
 }
 
 // LoadFile reads a plugins config file and loads every enabled plugin into the
-// registry, returning a Manager that must be Closed when the host exits.
+// registry, returning a Manager that must be Closed when the host exits. It
+// does not ask for trust: use it only for a file the user named explicitly.
+// Auto-discovered project plugins go through LoadForProject.
 func LoadFile(ctx context.Context, reg *registry.Registry, path string) (*Manager, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -47,19 +47,11 @@ func LoadFile(ctx context.Context, reg *registry.Registry, path string) (*Manage
 		}
 		return nil, verr.Wrap(verr.CodePlugin, err, "read plugins file")
 	}
-	var pf PluginsFile
-	if err := json.Unmarshal(data, &pf); err != nil {
-		return nil, verr.Wrap(verr.CodePlugin, err, "parse plugins file")
+	manifests, err := parsePluginsFile(path, data)
+	if err != nil {
+		return nil, err
 	}
-	// Resolve relative plugin paths against the plugins file's directory so a
-	// project's .verity/plugins.json can reference binaries portably.
-	baseDir := filepath.Dir(path)
-	for i := range pf.Plugins {
-		if p := pf.Plugins[i].Path; p != "" && !filepath.IsAbs(p) {
-			pf.Plugins[i].Path = filepath.Join(baseDir, p)
-		}
-	}
-	return Load(ctx, reg, pf.Plugins)
+	return Load(ctx, reg, manifests)
 }
 
 // Load launches the given plugin manifests and registers them. Disabled

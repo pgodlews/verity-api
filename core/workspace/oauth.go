@@ -157,7 +157,7 @@ func (s *OAuthSessions) OAuthStatus(req OAuthRequest) (bool, error) {
 
 // Run executes a workspace run with sessions belonging to this desktop process.
 func (s *OAuthSessions) Run(ctx context.Context, opts RunOptions) (*spi.RunResult, error) {
-	return run(ctx, opts, s, nil)
+	return run(ctx, opts, s, nil, nil)
 }
 
 func (s *OAuthSessions) forRun(p *model.Project, opts RunOptions) (map[string]*auth.OAuthSession, error) {

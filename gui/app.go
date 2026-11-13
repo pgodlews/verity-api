@@ -11,6 +11,7 @@ import (
 	"github.com/pgodlews/verity-api/core/graphql"
 	"github.com/pgodlews/verity-api/core/load"
 	"github.com/pgodlews/verity-api/core/model"
+	"github.com/pgodlews/verity-api/core/plugin"
 	"github.com/pgodlews/verity-api/core/registry"
 	"github.com/pgodlews/verity-api/core/secrets"
 	_ "github.com/pgodlews/verity-api/core/secrets/oskeychain" // OS credential store for ${secret:keychain:...}
@@ -32,6 +33,7 @@ type App struct {
 	sessions   workspace.OAuthSessions
 	keychain   secrets.Keychain
 	onLoadLive func(load.LiveStats)
+	plugins    *pluginTrust
 
 	mu          sync.Mutex
 	watchCancel context.CancelFunc
@@ -41,7 +43,19 @@ type App struct {
 
 // NewApp constructs the app.
 func NewApp() *App {
-	return &App{suppress: watchfs.NewSuppress()}
+	a := &App{suppress: watchfs.NewSuppress()}
+	a.plugins = &pluginTrust{store: &plugin.TrustStore{Path: trustStorePath()}, confirm: a.confirmPlugins}
+	a.runs.TrustPlugins = a.trustPlugins
+	return a
+}
+
+// trustPlugins decides whether a project's .verity/plugins.json may run. An
+// App built without NewApp refuses every project plugins file.
+func (a *App) trustPlugins(fp plugin.Fingerprint) (bool, error) {
+	if a.plugins == nil {
+		return false, nil
+	}
+	return a.plugins.trust(fp)
 }
 
 // startup is called by Wails when the app launches.
@@ -119,7 +133,7 @@ func (a *App) CancelLoad() {
 // LoadTargets resolves the target hosts for the selected suites, cases, and
 // environment and reports any non-private targets without sending traffic.
 func (a *App) LoadTargets(opts workspace.LoadOptions) (*load.TargetReport, error) {
-	return workspace.LoadTargets(a.context(), opts, &a.sessions)
+	return workspace.LoadTargets(a.context(), opts, &a.sessions, a.trustPlugins)
 }
 
 // SaveLoadReport writes a load report JSON file to disk. When req.Out is

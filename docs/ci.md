@@ -126,7 +126,7 @@ required test services before invoking it.
 | `parallel` | `1`: maximum concurrent cases per suite. |
 | `junit`, `json`, `html` | Empty: optional report file paths. |
 | `vars` | Empty: space-separated `KEY=VALUE` overrides; pass secrets through job environment variables. |
-| `plugins` | Empty: optional plugins configuration path. |
+| `plugins` | Empty: optional plugins configuration path; naming the file trusts it. |
 | `go-version` | `1.26`: Go toolchain used to build the CLI. |
 
 ## Docker
@@ -197,6 +197,12 @@ iterations at the deadline; in-flight requests finish.
   rewriting the checkout. It checks included fragments too; see `docs/git.md`.
 - Use `verity list --json` in a setup step to assert required plugins are
   present.
+- A project's own `.verity/plugins.json` runs only when trusted: pass
+  `--plugins .verity/plugins.json` or `--trust-plugins`, or set
+  `VERITY_TRUST_PLUGINS=1` in the job. Without one of these, `run` and `load`
+  exit `3` with a `config_error` naming the file and start no plugin. Trust
+  only repositories whose plugin binaries you control; pull-request jobs from
+  forks should not set it. See [the plugin guide](extending-plugins.md#trusting-project-plugins).
 - Pin parallelism to your runner's resources with `--parallel`.
 - Use `--bail` when a long suite should stop spending runners after the first
   real failure. Reports still list the cases that did not run.
