@@ -5,7 +5,7 @@ import { applyGraphQLTemplate, effectiveGraphQLSchema } from "../lib/graphqlInse
 import { Check, Plus, Close, Save } from "../icons";
 import { credentialSaveLine, findingCountsByTab, findingsWhere, secretEnvVars, type SecretPlace, type SecretTarget } from "../lib/stepSecrets";
 import { authConfigRows } from "../lib/authFields";
-import { asMap, effectiveAuth, locate, method, methodClass, resolvePreview } from "../lib/workspace";
+import { asMap, effectiveAuth, locate, method, methodClass, resolvePreview, withOptionalMap } from "../lib/workspace";
 import type { BodyMode, Draft, StepLocation } from "../lib/workspace";
 import type { Assertion, ProjectInfo, SecretFinding, StepResult, StepRetry, Transfer } from "../types";
 import { MapEditor, SecretBanners, Tabs, TextEditor, ValueEditor, VariablePreview } from "./Editors";
@@ -45,6 +45,9 @@ export function RequestEditor({ info, environment, at, draft, onChange, tab, onT
   const refs = effectiveAuth([env?.auth, suite?.auth, testCase?.auth, step.auth]);
   const assertions = step.assertions ?? [], transfers = step.transfers ?? [];
   const changeRequest = (patch: Record<string, unknown>) => onChange({ ...draft, step: { ...step, request: { ...req, ...patch } } });
+  // Headers and query parameters are optional maps: removing the last entry
+  // drops the field rather than leaving an empty map in the step.
+  const changeRequestMap = (key: string, map: Record<string, unknown>) => onChange({ ...draft, step: { ...step, request: withOptionalMap(req, key, map) } });
   const updateAssertion = (index: number, patch: Partial<Assertion>) => onChange({ ...draft, step: { ...step, assertions: assertions.map((a, i) => i === index ? { ...a, ...patch } : a) } });
   const updateTransfer = (index: number, patch: Partial<Transfer>) => onChange({ ...draft, step: { ...step, transfers: transfers.map((t, i) => i === index ? { ...t, ...patch } : t) } });
   // Empty or zero clears a setting so the step falls back to the run default.
@@ -105,8 +108,8 @@ export function RequestEditor({ info, environment, at, draft, onChange, tab, onT
     <Tabs label="Request sections" tabs={tabs} selected={tab} onSelect={onTab} />
     <div className="pane-content" role="tabpanel" aria-label={tabs.find(t => t.id === tab)?.label}>
       <fieldset className="editor-fields" disabled={busy}>
-        {tab === "params" && (step.protocol === "rest" ? <MapEditor label="Query parameters" value={req.query} secrets={secretEnvVars(findings, "query")} onStoreSecret={storeRow("query")} onChange={query => changeRequest({ query })} /> : <p className="empty">{step.protocol === "graphql" ? "Edit the GraphQL query and variables in Body." : "Query parameters can be included in the request URL."}</p>)}
-        {tab === "headers" && <MapEditor label="Headers" value={req.headers} secrets={secretEnvVars(findings, "header")} onStoreSecret={storeRow("header")} onChange={headers => changeRequest({ headers })} />}
+        {tab === "params" && (step.protocol === "rest" ? <MapEditor label="Query parameters" value={req.query} secrets={secretEnvVars(findings, "query")} onStoreSecret={storeRow("query")} onChange={query => changeRequestMap("query", query)} /> : <p className="empty">{step.protocol === "graphql" ? "Edit the GraphQL query and variables in Body." : "Query parameters can be included in the request URL."}</p>)}
+        {tab === "headers" && <MapEditor label="Headers" value={req.headers} secrets={secretEnvVars(findings, "header")} onStoreSecret={storeRow("header")} onChange={headers => changeRequestMap("headers", headers)} />}
         {tab === "body" && <>
           {step.protocol === "rest" && <>
             <div className="body-toolbar"><div className="body-modes" role="group" aria-label="Body type">
@@ -219,7 +222,7 @@ export function RequestEditor({ info, environment, at, draft, onChange, tab, onT
           {result?.attempts && result.attempts > 1 && <p className="muted">Last send took {result.attempts} attempts.</p>}
         </div>}
         {tab === "vars" && <div className="editor-stack">
-          <MapEditor label="Step variables" value={step.vars} secrets={secretEnvVars(findings, "var")} onStoreSecret={storeRow("var")} onChange={vars => onChange({ ...draft, step: { ...step, vars: Object.fromEntries(Object.entries(vars).map(([key, value]) => [key, String(value)])) } })} />
+          <MapEditor label="Step variables" value={step.vars} secrets={secretEnvVars(findings, "var")} onStoreSecret={storeRow("var")} onChange={vars => onChange({ ...draft, step: withOptionalMap(step, "vars", Object.fromEntries(Object.entries(vars).map(([key, value]) => [key, String(value)]))) })} />
           <p className="muted">Step variables override case, suite, and environment variables. Secret references stay unresolved.</p>
           <h3 className="label">Available variables</h3>
           <table className="kv"><tbody>{Object.entries(vars).map(([name, value]) => <tr key={name}><th className="mono">{name}</th><td className="mono"><VariablePreview text={value} /></td></tr>)}</tbody></table>

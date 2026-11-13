@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "node --test src/lib/workspace.test.mjs src/lib/stepSecrets.test.mjs src/lib/git.test.mjs src/lib/gitops.test.mjs src/lib/graphqlInsert.test.mjs src/lib/authFields.test.mjs src/lib/protocols.test.mjs src/views/parts/env.test.mjs src/views/parts/load.test.mjs src/views/parts/load-interactions.test.mjs vite.bridge.test.mjs"
+    "test": "node --test src/lib/workspace.test.mjs src/lib/stepSecrets.test.mjs src/lib/git.test.mjs src/lib/gitops.test.mjs src/lib/graphqlInsert.test.mjs src/lib/authFields.test.mjs src/lib/protocols.test.mjs src/lib/optionalMap.test.mjs src/views/parts/env.test.mjs src/views/parts/load.test.mjs src/views/parts/load-interactions.test.mjs vite.bridge.test.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
