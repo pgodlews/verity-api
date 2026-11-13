@@ -407,19 +407,6 @@ func MergeAbort(ctx context.Context, projectPath string, before func()) (string,
 	return text, nil
 }
 
-// Conflicted lists unmerged paths relative to the project directory.
-func Conflicted(ctx context.Context, projectPath string) ([]string, error) {
-	root, err := repoRootOf(projectPath)
-	if err != nil {
-		return nil, err
-	}
-	files, err := vcs.ConflictedFiles(ctx, root)
-	if err != nil {
-		return nil, gitErr(err)
-	}
-	return relPaths(projectPath, root, files), nil
-}
-
 // FileURL is a file URL for a path inside the work tree, relative to the
 // project directory. The desktop app opens it with the system handler.
 func FileURL(projectPath, rel string) (string, error) {
