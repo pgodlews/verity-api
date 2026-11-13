@@ -111,6 +111,10 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- Long runs and load tests with `hmac` or `aws_sigv4` auth no longer grow the
+  redactor with every request: signatures are registered for their attempt
+  only, new secrets are inserted into the redactor's ordered list instead of
+  re-sorting it, and Digest auth keeps at most 256 nonces.
 - Desktop request editor: adding and then removing the last header, query
   parameter, or step variable no longer leaves the request marked unsaved,
   and saving no longer writes an empty `headers: {}` (or `query: {}`,

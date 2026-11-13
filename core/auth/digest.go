@@ -23,6 +23,9 @@ type digestChallenge struct {
 	nc                                   uint32
 }
 
+// maxDigestNonces bounds the remembered nonce history per provider.
+const maxDigestNonces = 256
+
 type digestNonceKey struct {
 	origin, realm, nonce, algorithm string
 }
@@ -33,6 +36,8 @@ type digestProvider struct {
 	mu                            sync.Mutex
 	challenges                    map[string]*digestChallenge
 	nonces                        map[digestNonceKey]*digestChallenge
+	// nonceOrder lists nonces oldest first so the map can be bounded.
+	nonceOrder []digestNonceKey
 }
 
 func newDigest(config map[string]any, red *secrets.Redactor) (spi.AuthProvider, error) {
@@ -150,6 +155,16 @@ func (p *digestProvider) RespondChallenge(ctx context.Context, req *http.Request
 	key := digestNonceKey{origin, chosen.realm, chosen.nonce, chosen.algorithm}
 	if previous := p.nonces[key]; previous != nil {
 		chosen.nc = previous.nc
+	}
+	if _, known := p.nonces[key]; !known {
+		p.nonceOrder = append(p.nonceOrder, key)
+		// Keep the nonce counts of recent nonces (a server may return to
+		// an earlier nonce, whose count must continue) but bound the
+		// history so a long run does not keep every nonce ever issued.
+		for len(p.nonceOrder) > maxDigestNonces {
+			delete(p.nonces, p.nonceOrder[0])
+			p.nonceOrder = p.nonceOrder[1:]
+		}
 	}
 	p.nonces[key] = chosen
 	p.challenges[origin] = chosen

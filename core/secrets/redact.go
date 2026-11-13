@@ -82,6 +82,23 @@ func orderedLiterals(literals map[string]struct{}) []string {
 	return ordered
 }
 
+// insertOrdered returns a new slice with lit inserted at its sorted position
+// (longest first, then lexicographic). It copies rather than shifting in
+// place, because Redact may still be reading the previous slice.
+func insertOrdered(ordered []string, lit string) []string {
+	i := sort.Search(len(ordered), func(i int) bool {
+		o := ordered[i]
+		if len(o) != len(lit) {
+			return len(o) < len(lit)
+		}
+		return o >= lit
+	})
+	out := make([]string, 0, len(ordered)+1)
+	out = append(out, ordered[:i]...)
+	out = append(out, lit)
+	return append(out, ordered[i:]...)
+}
+
 // AddAll registers many secret literals at once.
 func (r *Redactor) AddAll(secrets []string) {
 	for _, s := range secrets {
