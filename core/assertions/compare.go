@@ -4,17 +4,24 @@
 package assertions
 
 import (
-	"encoding/json"
 	"fmt"
+	"math/big"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/pgodlews/verity-api/core/internal/jsonnum"
 )
 
 // compare evaluates op against actual/expected and returns pass + message.
 // Supported ops: eq, ne, lt, lte, gt, gte, contains, matches, exists,
-// not_exists. Numeric comparisons are attempted when both sides parse as
-// numbers; otherwise string comparison is used.
+// not_exists.
+//
+// eq/ne compare numerically only when at least one side is a real number
+// (a JSON or YAML number, not a string) and the other side parses as one;
+// two strings compare as text, so "1.10" ne "1.1" and "007" ne "7". The
+// ordering ops parse numeric strings too. Numeric comparison is exact (no
+// float64 rounding), so 9007199254740993 ne 9007199254740992.
 func compare(op string, actual, expected any) (bool, string) {
 	if op == "" {
 		op = "eq"
@@ -31,29 +38,31 @@ func compare(op string, actual, expected any) (bool, string) {
 
 	switch op {
 	case "eq":
-		if af, ef, ok := toFloats(actual, expected); ok {
-			return af == ef, fmt.Sprintf("expected %v == %v", actual, expected)
+		if ar, er, ok := equalityRats(actual, expected); ok {
+			return ar.Cmp(er) == 0, fmt.Sprintf("expected %s == %s", as, es)
 		}
 		return as == es, fmt.Sprintf("expected %q == %q", as, es)
 	case "ne":
-		if af, ef, ok := toFloats(actual, expected); ok {
-			return af != ef, fmt.Sprintf("expected %v != %v", actual, expected)
+		if ar, er, ok := equalityRats(actual, expected); ok {
+			return ar.Cmp(er) != 0, fmt.Sprintf("expected %s != %s", as, es)
 		}
 		return as != es, fmt.Sprintf("expected %q != %q", as, es)
 	case "lt", "lte", "gt", "gte":
-		af, ef, ok := toFloats(actual, expected)
-		if !ok {
+		ar, ok1 := jsonnum.Rat(actual)
+		er, ok2 := jsonnum.Rat(expected)
+		if !ok1 || !ok2 {
 			return false, fmt.Sprintf("op %q requires numeric values, got %q and %q", op, as, es)
 		}
+		c := ar.Cmp(er)
 		switch op {
 		case "lt":
-			return af < ef, fmt.Sprintf("expected %v < %v", af, ef)
+			return c < 0, fmt.Sprintf("expected %s < %s", as, es)
 		case "lte":
-			return af <= ef, fmt.Sprintf("expected %v <= %v", af, ef)
+			return c <= 0, fmt.Sprintf("expected %s <= %s", as, es)
 		case "gt":
-			return af > ef, fmt.Sprintf("expected %v > %v", af, ef)
+			return c > 0, fmt.Sprintf("expected %s > %s", as, es)
 		case "gte":
-			return af >= ef, fmt.Sprintf("expected %v >= %v", af, ef)
+			return c >= 0, fmt.Sprintf("expected %s >= %s", as, es)
 		}
 	case "contains":
 		return strings.Contains(as, es), fmt.Sprintf("expected %q to contain %q", as, es)
@@ -65,6 +74,17 @@ func compare(op string, actual, expected any) (bool, string) {
 		return re.MatchString(as), fmt.Sprintf("expected %q to match /%s/", as, es)
 	}
 	return false, fmt.Sprintf("unknown operator %q", op)
+}
+
+// equalityRats returns both sides as exact numbers when eq/ne should compare
+// numerically: at least one side is a number and both convert.
+func equalityRats(a, b any) (*big.Rat, *big.Rat, bool) {
+	if !jsonnum.IsNumber(a) && !jsonnum.IsNumber(b) {
+		return nil, nil, false
+	}
+	ar, ok1 := jsonnum.Rat(a)
+	br, ok2 := jsonnum.Rat(b)
+	return ar, br, ok1 && ok2
 }
 
 func toString(v any) string {
@@ -86,33 +106,5 @@ func toString(v any) string {
 		return strconv.FormatBool(t)
 	default:
 		return fmt.Sprintf("%v", t)
-	}
-}
-
-func toFloats(a, b any) (float64, float64, bool) {
-	af, ok1 := toFloat(a)
-	bf, ok2 := toFloat(b)
-	return af, bf, ok1 && ok2
-}
-
-func toFloat(v any) (float64, bool) {
-	switch t := v.(type) {
-	case float64:
-		return t, true
-	case float32:
-		return float64(t), true
-	case int:
-		return float64(t), true
-	case int64:
-		return float64(t), true
-	case json.Number:
-		// JSON projects decode numbers with UseNumber to keep them exact.
-		f, err := t.Float64()
-		return f, err == nil
-	case string:
-		f, err := strconv.ParseFloat(strings.TrimSpace(t), 64)
-		return f, err == nil
-	default:
-		return 0, false
 	}
 }

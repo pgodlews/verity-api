@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/pgodlews/verity-api/core/graphql"
+	"github.com/pgodlews/verity-api/core/internal/jsonnum"
 	"github.com/pgodlews/verity-api/core/secrets"
 	"github.com/pgodlews/verity-api/core/spi"
 )
@@ -55,7 +56,7 @@ func TestCompareOperatorsAndConversions(t *testing.T) {
 	if got := toString(map[string]int{"id": 1}); got != "map[id:1]" {
 		t.Fatalf("toString(map) = %q", got)
 	}
-	if _, ok := toFloat(true); ok {
+	if _, ok := jsonnum.Rat(true); ok {
 		t.Fatal("boolean converted to a number")
 	}
 }
