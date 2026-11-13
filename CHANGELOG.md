@@ -78,6 +78,10 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- The gRPC plugin binary is `verity-grpc` everywhere: the plugin README,
+  build comment, and `examples/grpc` (whose `.verity/plugins.json` now loads
+  `plugins/grpc/verity-grpc`) matched neither the release archives nor
+  `AGENTS.md`. Built plugin and fixture binaries are git-ignored.
 - `verity run` reuses one keep-alive HTTP transport for steps without a TLS
   config instead of building a new transport for every attempt, so
   `response_time` no longer includes a fresh TCP/TLS handshake per step and

@@ -19,8 +19,10 @@ reports/
 coverage.out
 
 # Plugin build outputs (the source stays; built binaries don't)
-plugins/*/example-assertion
 plugins/example-assertion/example-assertion
+plugins/grpc/verity-grpc
+plugins/grpc/grpc
+plugins/grpc/internal/testserver/testserver
 
 # OS
 .DS_Store
