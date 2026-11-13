@@ -24,11 +24,34 @@ func (p *Project) Save(path string) error {
 	return os.WriteFile(path, data, 0o644)
 }
 
+// MarshalJSONIndent is json.MarshalIndent with two-space indentation but
+// without HTML escaping, so "<", ">", and "&" in SOAP/XML bodies and URLs
+// are written as themselves rather than \u003c, \u003e, and \u0026.
+func MarshalJSONIndent(v any) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(v); err != nil {
+		return nil, err
+	}
+	return bytes.TrimSuffix(buf.Bytes(), []byte("\n")), nil
+}
+
+// marshalJSONString encodes one JSON string without HTML escaping.
+func marshalJSONString(s string) []byte {
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	_ = enc.Encode(s)
+	return bytes.TrimSuffix(buf.Bytes(), []byte("\n"))
+}
+
 // Marshal serializes the project, choosing JSON for .json paths and YAML
 // otherwise.
 func (p *Project) Marshal(ext string) ([]byte, error) {
 	if strings.HasSuffix(strings.ToLower(ext), ".json") {
-		return json.MarshalIndent(p, "", "  ")
+		return MarshalJSONIndent(p)
 	}
 	data, err := json.Marshal(p)
 	if err != nil {

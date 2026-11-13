@@ -295,7 +295,7 @@ func editEnvironmentsJSON(data []byte, req SaveEnvironmentRequest, createHere bo
 	if !changed {
 		return nil, found, nil
 	}
-	encoded, err := json.MarshalIndent(&p, "", "  ")
+	encoded, err := model.MarshalJSONIndent(&p)
 	if err != nil {
 		return nil, false, fmt.Errorf("encode: %w", err)
 	}
