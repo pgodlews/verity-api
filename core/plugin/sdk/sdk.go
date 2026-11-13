@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/pgodlews/verity-api/core/plugin"
+	"github.com/pgodlews/verity-api/core/secrets"
 	"github.com/pgodlews/verity-api/core/spi"
 	"github.com/pgodlews/verity-api/core/verr"
 )
@@ -165,7 +166,10 @@ func protocolCallContext(params map[string]any) (context.Context, context.Cancel
 		}
 	}
 	return ctx, cancel, &spi.ProtocolContext{
-		Client:             http.DefaultClient,
+		Client: http.DefaultClient,
+		// Built-in code calls Redactor methods unconditionally; give plugin
+		// code a working (plugin-local) redactor rather than nil.
+		Redactor:           secrets.NewRedactor(),
 		Dir:                asString(params["dir"]),
 		AllowExternalFiles: asBool(params["allowExternalFiles"]),
 	}
@@ -221,7 +225,7 @@ func handleAssertion(a spi.Assertion, req plugin.Request) plugin.Response {
 	if cfg, ok := specMap["config"].(map[string]any); ok {
 		spec.Config = cfg
 	}
-	res, err := a.Evaluate(context.Background(), &spi.AssertionContext{Response: resp}, spec)
+	res, err := a.Evaluate(context.Background(), &spi.AssertionContext{Response: resp, Redactor: secrets.NewRedactor()}, spec)
 	if err != nil {
 		return errResp("plugin_error", err.Error())
 	}
