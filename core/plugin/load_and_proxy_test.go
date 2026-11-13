@@ -199,11 +199,15 @@ func TestWireErrorsAndDecodeEdges(t *testing.T) {
 		"headers": map[string]string{"X-Test": "one"},
 		"query":   map[string]string{"page": "1"},
 		"cookies": map[string]any{"session": 2},
-		"body":    "not-base64",
 	})
 	if err != nil || req.Headers.Get("X-Test") != "one" || req.Query["page"] != "1" || req.Cookies["session"] != "" || len(req.Body) != 0 {
 		t.Fatalf("decoded request = %#v, %v", req, err)
 	}
+	// A body that is not valid base64 is an error, not a silently empty body.
+	_, err = decodeRequest(map[string]any{"body": "not-base64"})
+	requirePluginCode(t, err, verr.CodePlugin)
+	_, err = decodeResponse(map[string]any{"body": "not-base64"})
+	requirePluginCode(t, err, verr.CodePlugin)
 	headers := http.Header{}
 	decodeHeaders(map[string][]string{"X-Multi": {"one", "two"}}, headers)
 	if len(headers.Values("X-Multi")) != 2 {
