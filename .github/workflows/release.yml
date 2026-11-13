@@ -77,7 +77,7 @@ jobs:
           sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq libgtk-3-dev libwebkit2gtk-4.1-dev pkg-config
       - name: Build desktop app
         run: |
-          go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+          go install github.com/wailsapp/wails/v2/cmd/wails@v2.13.0
           scripts/desktop-version.sh "${GITHUB_REF_NAME}"
           cd gui
           "$(go env GOPATH)/bin/wails" build -tags webkit2_41 -clean -ldflags "$(../scripts/desktop-version.sh --ldflags "${GITHUB_REF_NAME}")"
@@ -107,7 +107,7 @@ jobs:
           node-version: "22"
       - name: Build desktop app
         run: |
-          go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+          go install github.com/wailsapp/wails/v2/cmd/wails@v2.13.0
           scripts/desktop-version.sh "${GITHUB_REF_NAME}"
           cd gui
           "$(go env GOPATH)/bin/wails" build -platform darwin/universal -clean -ldflags "$(../scripts/desktop-version.sh --ldflags "${GITHUB_REF_NAME}")"
@@ -134,7 +134,7 @@ jobs:
           node-version: "22"
       - name: Build desktop app
         run: |
-          go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+          go install github.com/wailsapp/wails/v2/cmd/wails@v2.13.0
           scripts/desktop-version.sh "${GITHUB_REF_NAME}"
           cd gui
           "$(go env GOPATH)/bin/wails" build -platform windows/amd64 -clean -o verity-desktop.exe -ldflags "$(../scripts/desktop-version.sh --ldflags "${GITHUB_REF_NAME}")"
