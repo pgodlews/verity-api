@@ -23,6 +23,9 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 )
 
+// frontend/dist holds a committed .gitkeep, so this compiles (and vet and
+// tests run) before the first frontend build.
+//
 //go:embed all:frontend/dist
 var assets embed.FS
 

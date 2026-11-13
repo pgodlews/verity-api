@@ -138,8 +138,11 @@ required test services before invoking it.
 
 ## Docker
 
-A multi-stage `Dockerfile` produces a tiny image containing only the static
-`verity` binary:
+A multi-stage `Dockerfile` builds a tiny image containing only the static
+`verity` binary from a source checkout (`.dockerignore` keeps `.git`,
+dependencies, build output, and local `.env` files out of the build
+context). Release images are assembled by `scripts/docker-image.sh` from
+the release archives instead, with the same layout:
 
 ```bash
 docker build -t verity/verity .
