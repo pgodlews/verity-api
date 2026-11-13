@@ -553,7 +553,18 @@ func (e *execContext) graphqlInput(ctx context.Context, scope runScope, raw map[
 	return in
 }
 
+// bodyAssertions are the built-in assertion types that read the response
+// body; they cannot give a trustworthy answer on a truncated body.
+var bodyAssertions = map[string]bool{
+	"jsonpath": true, "xpath": true, "json_schema": true, "xsd": true,
+	"contains": true, "regex": true, "graphql_schema": true,
+}
+
 func (e *execContext) runAssertion(ctx context.Context, a model.Assertion, resp *spi.Response, resolver *secrets.Resolver, extra map[string]any, red *secrets.Redactor) *spi.AssertionResult {
+	if truncated, _ := resp.Meta[spi.MetaTruncated].(bool); truncated && bodyAssertions[a.Type] {
+		return &spi.AssertionResult{Passed: false, Type: a.Type, Description: a.Description,
+			Message: "response body exceeded the size limit and was truncated; body assertions cannot be evaluated"}
+	}
 	impl, err := e.runner.reg.Assertion(a.Type)
 	if err != nil {
 		return &spi.AssertionResult{Passed: false, Type: a.Type, Description: a.Description,

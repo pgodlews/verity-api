@@ -466,7 +466,7 @@ selector), `op` (comparison), `value` (expected), `description`.
 | type            | expr            | op (default)     | notes |
 |-----------------|-----------------|------------------|-------|
 | `status`        | —               | `eq`             | HTTP status code; for gRPC, the gRPC code (`0` = OK) |
-| `response_time` | —               | `lte`            | duration in ms |
+| `response_time` | —               | `lte`            | ms from sending the request until the response headers arrive (including a 401 challenge replay; not the body download) |
 | `jsonpath`      | JSONPath        | `eq`/`exists`    | JSON body |
 | `xpath`         | XPath           | `eq`/`exists`    | XML body |
 | `header`        | header name     | `eq`/`exists`    | response header |
@@ -475,6 +475,12 @@ selector), `op` (comparison), `value` (expected), `description`.
 | `json_schema`   | file path       | —                | validate body vs JSON Schema (`config.schema` for inline) |
 | `graphql_schema`| —               | —                | response `data` matches the GraphQL selection set; `config.allowErrors` allows an `errors` array |
 | `xsd`           | —               | —                | XML well-formedness (+ optional `config.rootElement`) |
+
+HTTP response bodies are kept up to 32 MiB. A larger body is cut at that
+size; body assertions (`jsonpath`, `xpath`, `json_schema`, `xsd`, `contains`,
+`regex`, `graphql_schema`) then fail with a "truncated" message instead of
+checking a partial body, while `status`, `header`, and `response_time` still
+run.
 
 Operators: `eq`, `ne`, `lt`, `lte`, `gt`, `gte`, `contains`, `not_contains`,
 `matches`, `not_matches`, `exists`, `not_exists`. Any other `op` is a

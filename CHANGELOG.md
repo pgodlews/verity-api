@@ -82,6 +82,10 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- A response body over 32 MiB is no longer cut silently: the response is
+  marked truncated and body assertions fail with a clear message instead of
+  running on a partial body. `response_time` is documented as time to
+  response headers (including a 401 challenge replay).
 - Request captures in reports and the desktop app show the URL that was sent,
   including the step's `query:` map and auth-added query parameters such as
   an API key (redacted), and a new `request.cookies` map (additive; values

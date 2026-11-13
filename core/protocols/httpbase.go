@@ -98,11 +98,19 @@ func doHTTP(ctx context.Context, pctx *spi.ProtocolContext, req *spi.Request) (*
 	}
 	defer resp.Body.Close()
 
+	// Duration is time to response headers, measured from the first send and
+	// including a 401 challenge replay; it does not include reading the body.
 	dur := time.Since(start)
 
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 32<<20))
+	// Read one byte past the cap so a cut body is detected, never silent.
+	body, err := io.ReadAll(io.LimitReader(resp.Body, int64(MaxResponseBody)+1))
 	if err != nil {
 		return nil, fmt.Errorf("read response body: %w", err)
+	}
+	meta := map[string]any{}
+	if len(body) > MaxResponseBody {
+		body = body[:MaxResponseBody]
+		meta[spi.MetaTruncated] = true
 	}
 
 	return &spi.Response{
@@ -112,9 +120,14 @@ func doHTTP(ctx context.Context, pctx *spi.ProtocolContext, req *spi.Request) (*
 		Body:        body,
 		Duration:    dur,
 		ContentType: resp.Header.Get("Content-Type"),
-		Meta:        map[string]any{},
+		Meta:        meta,
 	}, nil
 }
+
+// MaxResponseBody is the largest response body the HTTP protocols keep. A
+// larger body is cut to this size and the response is marked
+// Meta[spi.MetaTruncated]. It is a variable so tests can shrink it.
+var MaxResponseBody = 32 << 20
 
 // headersFromConfig converts a config map under key "headers" into http.Header.
 func headersFromConfig(raw map[string]any) http.Header {
