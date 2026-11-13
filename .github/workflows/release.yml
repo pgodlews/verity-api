@@ -18,10 +18,10 @@ jobs:
   cli:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version: "1.26"
           cache: true
@@ -38,7 +38,7 @@ jobs:
           export PATH="$(go env GOPATH)/bin:$PATH"
           echo "$TOKEN" | crane auth login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
           scripts/docker-image.sh "${GITHUB_REF_NAME}" "ghcr.io/pgodlews/verity" dist/release
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: cli
           path: dist/release/
@@ -46,12 +46,12 @@ jobs:
   desktop-linux:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version: "1.26"
           cache: true
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "22"
       - name: Install WebKitGTK
@@ -68,7 +68,7 @@ jobs:
           cp build/bin/verity-desktop ../LICENSE ../README.md "../dist/desktop/$d/"
           tar -C ../dist/desktop -czf "../dist/desktop/$d.tar.gz" "$d"
           rm -rf "../dist/desktop/$d"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: desktop-linux
           path: dist/desktop/
@@ -78,12 +78,12 @@ jobs:
   desktop-macos:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version: "1.26"
           cache: true
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "22"
       - name: Build desktop app
@@ -96,7 +96,7 @@ jobs:
           app=$(ls -d build/bin/*.app)
           [ "$app" = build/bin/Verity.app ] || mv "$app" build/bin/Verity.app
           ditto -c -k --keepParent build/bin/Verity.app "../dist/desktop/verity-desktop_${GITHUB_REF_NAME}_darwin_universal.zip"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: desktop-macos
           path: dist/desktop/
@@ -104,12 +104,12 @@ jobs:
   desktop-windows:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version: "1.26"
           cache: true
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "22"
       - name: Build desktop app
@@ -121,7 +121,7 @@ jobs:
           mkdir -p "../dist/desktop/$d"
           cp build/bin/verity-desktop.exe ../LICENSE ../README.md "../dist/desktop/$d/"
           (cd ../dist/desktop && zip -qr "$d.zip" "$d" && rm -rf "$d")
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: desktop-windows
           path: dist/desktop/
@@ -130,7 +130,7 @@ jobs:
     needs: [cli, desktop-linux, desktop-macos, desktop-windows]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           path: dist
       - name: Publish
@@ -147,7 +147,7 @@ jobs:
       # A final release updates Formula/verity.rb in pgodlews/homebrew-verity.
       # HOMEBREW_TAP_TOKEN is a fine-grained token with contents:write on that
       # repository only; without it the step is skipped with a warning.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         if: ${{ !contains(github.ref_name, '-') }}
         with:
           path: src
