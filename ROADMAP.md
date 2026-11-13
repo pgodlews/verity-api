@@ -10,6 +10,10 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` planned
 
 ## 0. Current implementation (including unreleased work)
 
+- [x] CI and release hardening: patched Go toolchain and `golang.org/x` modules,
+      Dependabot, `go mod tidy`/staticcheck/govulncheck checks, macOS CI,
+      Node.js 22, SHA-pinned actions, test-gated least-privilege releases,
+      reproducible archives, and an injection-safe composite action.
 - [x] Require consent before running a project's `.verity/plugins.json`
       (`--trust-plugins`, `VERITY_TRUST_PLUGINS=1`, or a remembered desktop approval).
 - [x] Confine secret files, mTLS files, JSON Schema files, feeds, and uploads to
