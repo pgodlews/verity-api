@@ -134,6 +134,10 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- `verity load` runs suite teardown hooks once after the load, and after a
+  failed setup (no virtual user starts then). A setup step that fails with
+  a config or validation error exits 3 instead of 1; the report adds
+  `setupErrorCode`, `teardown`, and `teardownFailed`.
 - OAuth2 token requests use the run's transport settings: proxy handling,
   the `--timeout` value (instead of a fixed 30 seconds), the load
   private-address guard, and the client certificate and CA bundle of an

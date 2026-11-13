@@ -715,6 +715,10 @@ export interface LoadReport {
   errorRateThreshold?: LoadErrorRateResult;
   setup?: LoadSetupStep[];
   setupFailed?: boolean;
+  /** verr code of the first failed setup step. */
+  setupErrorCode?: string;
+  teardown?: LoadSetupStep[];
+  teardownFailed?: boolean;
   passed: boolean;
 }
 
