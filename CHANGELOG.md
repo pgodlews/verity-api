@@ -82,6 +82,11 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- SOAP: a generated SOAP 1.2 envelope uses the 1.2 namespace
+  (`http://www.w3.org/2003/05/soap-envelope`) instead of 1.1's, SOAP 1.1
+  always sends `SOAPAction` (`""` when unset, as the spec requires), and a
+  `version` other than `1.1`/`1.2` is a `config_error` instead of silently
+  meaning 1.1.
 - `verity plugin new` validates the plugin name (`^[a-z][a-z0-9_-]*$`, so no
   `../` paths), generates valid Go identifiers (`my-plugin` becomes
   `MyPlugin`, not `My-Plugin`), refuses to overwrite a non-empty directory

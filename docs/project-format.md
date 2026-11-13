@@ -292,6 +292,11 @@ request:
   parameters: { a: "3", b: "4" }
 ```
 
+`version` is `"1.1"` (default) or `"1.2"`; any other value is a
+`config_error`. A generated envelope uses that version's namespace. SOAP 1.1
+always sends a `SOAPAction` header (`""` when `soapAction` is unset); SOAP 1.2
+puts the action in the `Content-Type` `action` parameter.
+
 ### GraphQL (`protocol: graphql`)
 ```yaml
 request:
