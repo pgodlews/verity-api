@@ -100,6 +100,9 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- Plugin SDK: `AssertionContext` and `ProtocolContext` carry a working
+  (plugin-local) redactor instead of nil, so plugin code that calls
+  `Redactor.Redact` like a built-in no longer panics.
 - Plugin host: a plugin that fails its handshake is killed and reaped (no
   zombie process or leaked pipes), and a response whose `id` does not match
   the request stops that plugin with a `plugin_error` instead of being used
