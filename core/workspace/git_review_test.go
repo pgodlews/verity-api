@@ -298,12 +298,12 @@ func TestWatchPathsKeepsRefsAndSurvivesBrokenFragment(t *testing.T) {
 	if !containsPath(sources, filepath.Join(dir, "parts", "api.yaml")) {
 		t.Fatalf("sources: %v", sources)
 	}
-	branch, err := gitOutput(dir, "rev-parse", "--git-path", "refs/heads/main")
+	branch, err := vcs.GitPath(dir, "refs/heads/main")
 	if err != nil {
 		t.Fatal(err)
 	}
 	branch = filepath.Clean(absGitPath(dir, branch))
-	up, err := gitOutput(dir, "rev-parse", "--git-path", "refs/heads/side")
+	up, err := vcs.GitPath(dir, "refs/heads/side")
 	if err != nil {
 		t.Fatal(err)
 	}

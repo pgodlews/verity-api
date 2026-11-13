@@ -102,14 +102,17 @@ and staged project symlinks are refused.
 Installation uses `git rev-parse --git-path hooks`, so `core.hooksPath` and
 worktrees are honoured. It refuses to replace an unrelated `pre-commit` hook.
 Use `--force` to move that hook to `pre-commit.verity-backup` first. Reinstalling
-a Verity hook is idempotent. To regenerate a hook installed by the pre-release
+a Verity hook is idempotent. One hook can check several projects in the same
+repository: installing it for another project adds that project (with its own
+`--fmt` choice) and keeps the ones already in the hook. To regenerate a hook installed by the pre-release
 CLI, re-run `verity hooks install [--fmt] project.yaml` so it calls `verity`.
 
 ```bash
 verity hooks uninstall project.yaml
 ```
 
-Uninstall removes only a hook carrying Verity's marker. When a hook blocks a
+Uninstall removes that project from the hook and deletes the hook when no
+project is left. It never touches a hook without Verity's marker. When a hook blocks a
 commit, its final output line shows the exceptional bypass:
 `git commit --no-verify`. Fix and commit normally whenever possible; the bypass
 skips the secret and formatting checks.

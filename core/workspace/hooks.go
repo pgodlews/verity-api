@@ -3,11 +3,12 @@ package workspace
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/pgodlews/verity-api/core/fsutil"
+	"github.com/pgodlews/verity-api/core/secrets"
+	"github.com/pgodlews/verity-api/core/vcs"
 	"github.com/pgodlews/verity-api/core/verr"
 )
 
@@ -50,8 +51,15 @@ func InstallHook(opts HookOptions) (string, error) {
 		return "", verr.Wrap(verr.CodeInternal, err, "create git hooks directory")
 	}
 	hookPath := filepath.Join(hooksDir, "pre-commit")
-	script := []byte(preCommitScript(filepath.ToSlash(relProject), opts.Fmt))
 	existing, readErr := os.ReadFile(hookPath)
+	// A Verity hook checks every project installed into it: keep the other
+	// projects already in a marked hook and add or update this one.
+	projects := []hookProject{}
+	if readErr == nil && markedHook(existing) {
+		projects = parseHookProjects(existing)
+	}
+	projects = upsertHookProject(projects, hookProject{Path: filepath.ToSlash(relProject), Fmt: opts.Fmt})
+	script := []byte(preCommitScript(projects))
 	if readErr == nil && !markedHook(existing) && !opts.Force {
 		return "", verr.Newf(verr.CodeConfig, "%s already exists without the Verity marker; use --force to back it up and replace it", hookPath)
 	}
@@ -83,7 +91,9 @@ func InstallHook(opts HookOptions) (string, error) {
 	return hookPath, nil
 }
 
-// UninstallHook removes only a hook carrying Verity's marker.
+// UninstallHook removes project from the Verity pre-commit hook. The hook
+// file is deleted when no project is left; a hook without Verity's marker
+// is never touched.
 func UninstallHook(project string) (string, error) {
 	if project == "" {
 		project = "project.yaml"
@@ -92,7 +102,7 @@ func UninstallHook(project string) (string, error) {
 	if err != nil {
 		return "", verr.Wrap(verr.CodeConfig, err, "resolve project path")
 	}
-	_, hooksDir, err := gitHookPaths(filepath.Dir(absProject))
+	root, hooksDir, err := gitHookPaths(filepath.Dir(absProject))
 	if err != nil {
 		return "", err
 	}
@@ -107,46 +117,117 @@ func UninstallHook(project string) (string, error) {
 	if !markedHook(data) {
 		return "", verr.New(verr.CodeConfig, "pre-commit hook is not managed by Verity; leaving it unchanged")
 	}
+	rest := []hookProject{}
+	if relProject, rerr := repoRelative(root, absProject); rerr == nil {
+		for _, p := range parseHookProjects(data) {
+			if p.Path != filepath.ToSlash(relProject) {
+				rest = append(rest, p)
+			}
+		}
+	}
+	if len(rest) > 0 {
+		if err := fsutil.WriteKeepingMode(hookPath, []byte(preCommitScript(rest))); err != nil {
+			return "", verr.Wrap(verr.CodeInternal, err, "rewrite pre-commit hook")
+		}
+		return hookPath, nil
+	}
 	if err := os.Remove(hookPath); err != nil {
 		return "", verr.Wrap(verr.CodeInternal, err, "remove pre-commit hook")
 	}
 	return hookPath, nil
 }
 
-func gitHookPaths(dir string) (string, string, error) {
-	if _, err := exec.LookPath("git"); err != nil {
-		return "", "", verr.New(verr.CodeConfig, "git was not found on PATH; install Git to manage hooks")
-	}
-	root, err := gitOutput(dir, "rev-parse", "--show-toplevel")
-	if err != nil {
-		return "", "", err
-	}
-	hooks, err := gitOutput(dir, "rev-parse", "--git-path", "hooks")
-	if err != nil {
-		return "", "", err
-	}
-	if !filepath.IsAbs(hooks) {
-		hooks = filepath.Join(dir, hooks)
-	}
-	hooks, err = filepath.Abs(hooks)
-	if err != nil {
-		return "", "", verr.Wrap(verr.CodeConfig, err, "resolve git hooks path")
-	}
-	return root, hooks, nil
+// hookProject is one project the pre-commit hook checks.
+type hookProject struct {
+	Path string // repository-relative, slash-separated
+	Fmt  bool   // also run fmt --check --staged
 }
 
-func gitOutput(dir string, args ...string) (string, error) {
-	cmd := exec.Command("git", args...)
-	cmd.Dir = dir
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		message := strings.TrimSpace(string(output))
-		if message == "" {
-			message = err.Error()
+func upsertHookProject(list []hookProject, p hookProject) []hookProject {
+	for i := range list {
+		if list[i].Path == p.Path {
+			list[i] = p
+			return list
 		}
-		return "", verr.Newf(verr.CodeConfig, "%s is not in a usable git repository: %s", dir, message)
 	}
-	return strings.TrimSpace(string(output)), nil
+	return append(list, p)
+}
+
+const (
+	scanPrefix = "verity scan-secrets --staged "
+	fmtPrefix  = "verity fmt --check --staged "
+)
+
+// parseHookProjects reads the projects back from a Verity hook script (this
+// version's or the earlier single-project one) by its scan-secrets and fmt
+// command lines.
+func parseHookProjects(data []byte) []hookProject {
+	var out []hookProject
+	fmtFor := map[string]bool{}
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(strings.TrimSuffix(line, "\r"))
+		if rest, ok := strings.CutPrefix(line, fmtPrefix); ok {
+			if p, ok := shellUnquote(rest); ok {
+				fmtFor[p] = true
+			}
+		}
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(strings.TrimSuffix(line, "\r"))
+		if rest, ok := strings.CutPrefix(line, scanPrefix); ok {
+			if p, ok := shellUnquote(rest); ok {
+				out = upsertHookProject(out, hookProject{Path: p, Fmt: fmtFor[p]})
+			}
+		}
+	}
+	return out
+}
+
+// shellQuote single-quotes s for sh.
+func shellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", "'\"'\"'") + "'"
+}
+
+// shellUnquote reverses shellQuote: a sequence of '...' and "'" pieces.
+func shellUnquote(s string) (string, bool) {
+	var b strings.Builder
+	for s != "" {
+		switch s[0] {
+		case '\'':
+			end := strings.IndexByte(s[1:], '\'')
+			if end < 0 {
+				return "", false
+			}
+			b.WriteString(s[1 : 1+end])
+			s = s[end+2:]
+		case '"':
+			if !strings.HasPrefix(s, `"'"`) {
+				return "", false
+			}
+			b.WriteByte('\'')
+			s = s[3:]
+		default:
+			return "", false
+		}
+	}
+	return b.String(), true
+}
+
+// gitHookPaths returns the repository root and the hooks directory (which
+// honours worktrees and core.hooksPath) through core/vcs.
+func gitHookPaths(dir string) (string, string, error) {
+	if !vcs.Available() {
+		return "", "", verr.New(verr.CodeConfig, "git was not found on PATH; install Git to manage hooks")
+	}
+	root, err := vcs.RepoRoot(dir)
+	if err != nil {
+		return "", "", verr.Newf(verr.CodeConfig, "%s is not in a usable git repository: %s", dir, secrets.RedactGitOutput(err.Error()))
+	}
+	hooks, err := vcs.GitPath(dir, "hooks")
+	if err != nil {
+		return "", "", verr.Newf(verr.CodeConfig, "%s is not in a usable git repository: %s", dir, secrets.RedactGitOutput(err.Error()))
+	}
+	return root, hooks, nil
 }
 
 func markedHook(data []byte) bool {
@@ -158,8 +239,7 @@ func markedHook(data []byte) bool {
 	return false
 }
 
-func preCommitScript(project string, checkFmt bool) string {
-	quoted := "'" + strings.ReplaceAll(project, "'", "'\"'\"'") + "'"
+func preCommitScript(projects []hookProject) string {
 	var out strings.Builder
 	out.WriteString("#!/bin/sh\n")
 	out.WriteString(hookMarker + "\n")
@@ -178,19 +258,22 @@ func preCommitScript(project string, checkFmt bool) string {
 	out.WriteString("  printf '%s\\n' 'Bypass with: git commit --no-verify' >&2\n")
 	out.WriteString("  exit 1\n")
 	out.WriteString("fi\n")
-	out.WriteString("verity scan-secrets --staged " + quoted + "\n")
-	out.WriteString("status=$?\n")
-	out.WriteString("if [ \"$status\" -ne 0 ]; then\n")
-	out.WriteString("  printf '%s\\n' 'Bypass with: git commit --no-verify' >&2\n")
-	out.WriteString("  exit \"$status\"\n")
-	out.WriteString("fi\n")
-	if checkFmt {
-		out.WriteString("verity fmt --check --staged " + quoted + "\n")
+	for _, p := range projects {
+		quoted := shellQuote(p.Path)
+		out.WriteString(scanPrefix + quoted + "\n")
 		out.WriteString("status=$?\n")
 		out.WriteString("if [ \"$status\" -ne 0 ]; then\n")
 		out.WriteString("  printf '%s\\n' 'Bypass with: git commit --no-verify' >&2\n")
 		out.WriteString("  exit \"$status\"\n")
 		out.WriteString("fi\n")
+		if p.Fmt {
+			out.WriteString(fmtPrefix + quoted + "\n")
+			out.WriteString("status=$?\n")
+			out.WriteString("if [ \"$status\" -ne 0 ]; then\n")
+			out.WriteString("  printf '%s\\n' 'Bypass with: git commit --no-verify' >&2\n")
+			out.WriteString("  exit \"$status\"\n")
+			out.WriteString("fi\n")
+		}
 	}
 	return out.String()
 }
