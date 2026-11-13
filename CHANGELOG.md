@@ -111,6 +111,9 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- `json_schema` assertions compile each schema once (cached by location and
+  content) instead of on every evaluation, and GraphQL schema files already
+  in the cache are not read from disk again.
 - Long runs and load tests with `hmac` or `aws_sigv4` auth no longer grow the
   redactor with every request: signatures are registered for their attempt
   only, new secrets are inserted into the redactor's ordered list instead of
