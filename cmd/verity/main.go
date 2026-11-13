@@ -110,9 +110,10 @@ Usage:
   verity scan-secrets [project.yaml] [--staged] [--json]
                              find plaintext credentials (exit 1 if any);
                              --staged checks what the next git commit records
-  verity import <openapi|wsdl> <spec-file> --out <project.yaml> [--json]
-  verity import postman <collection.json> [env.json ...] --out <project.yaml> [--json]
-  verity import soapui <project.xml> --out <project.yaml> [--json]
+  verity import <openapi|wsdl> <spec-file> --out <project.yaml> [--force] [--json]
+  verity import postman <collection.json> [env.json ...] --out <project.yaml> [--force] [--json]
+  verity import soapui <project.xml> --out <project.yaml> [--force] [--json]
+                             --out refuses an existing file unless --force
                         (soap is an alias of wsdl, not a SoapUI project)
   verity mock <spec-or-project> [--port 0] [--host 127.0.0.1]
                         [--validate] [--delay MS] [--seed N] [--json]

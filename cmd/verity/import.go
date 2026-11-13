@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/pgodlews/verity-api/core/importers"
+	"github.com/pgodlews/verity-api/core/verr"
 	"github.com/pgodlews/verity-api/core/workspace"
 )
 
@@ -14,6 +15,7 @@ func cmdImport(args []string) int {
 	fs := flag.NewFlagSet("import", flag.ContinueOnError)
 	out := fs.String("out", "", "output project file (YAML or JSON); default stdout")
 	jsonOut := fs.Bool("json", false, "emit structured JSON status")
+	force := fs.Bool("force", false, "overwrite an existing --out file")
 	fs.SetOutput(os.Stderr)
 	pos, err := parsePermuted(fs, args)
 	if err != nil {
@@ -49,6 +51,12 @@ func cmdImport(args []string) int {
 	}
 
 	target := *out
+	if target != "" && !*force {
+		if _, serr := os.Stat(target); serr == nil {
+			return failJSON(*jsonOut, exitConfig, "save",
+				verr.Newf(verr.CodeConfig, "%s already exists; pass --force to overwrite it", target))
+		}
+	}
 	var data []byte
 	if target == "" {
 		var merr error
@@ -61,7 +69,9 @@ func cmdImport(args []string) int {
 		}
 	} else {
 		if werr := res.Project.Save(target); werr != nil {
-			return failJSON(*jsonOut, exitInternal, "save", werr)
+			// An unwritable or invalid output path is a configuration
+			// problem (exit 3), not an internal error.
+			return failJSON(*jsonOut, exitConfig, "save", werr)
 		}
 		if _, ierr := workspace.Init(workspace.InitOptions{Dir: filepath.Dir(target), GitignoreOnly: true}); ierr != nil {
 			return failJSON(*jsonOut, exitInternal, "init", ierr)
