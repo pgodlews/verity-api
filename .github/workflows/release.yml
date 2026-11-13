@@ -2,7 +2,9 @@
 # plugin archives built by scripts/release.sh, the Linux, macOS and Windows
 # desktop apps, SHA256SUMS, a multi-arch image on ghcr.io and, for a final
 # (non pre-release) tag, the Homebrew formula in pgodlews/homebrew-verity.
-# See docs/releasing.md.
+# The test job must pass before anything is built; the image (including
+# :latest) is pushed only after the GitHub release exists. Every job gets
+# only the permissions it needs. See docs/releasing.md.
 
 name: Release
 
@@ -11,11 +13,34 @@ on:
     tags: ["v*"]
 
 permissions:
-  contents: write
-  packages: write
+  contents: read
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: "1.26"
+          cache: true
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+      - name: Test core and CLI
+        run: go vet ./... && go test ./...
+      - name: Test the gRPC plugin
+        working-directory: plugins/grpc
+        run: go vet ./... && go test ./...
+      - name: Test the desktop backend
+        working-directory: gui
+        run: go vet ./... && go test ./...
+      - name: Test the frontend
+        working-directory: gui/frontend
+        run: npm ci && npm test && npx tsc --noEmit
+
   cli:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -29,21 +54,13 @@ jobs:
         run: scripts/release.sh "${GITHUB_REF_NAME}" dist/release
       - name: Verify
         run: (cd dist/release && sha256sum -c SHA256SUMS)
-      - name: Push the image to ghcr.io
-        env:
-          TOKEN: ${{ github.token }}
-          IMAGE_SOURCE: ${{ github.server_url }}/${{ github.repository }}
-        run: |
-          CGO_ENABLED=0 go install github.com/google/go-containerregistry/cmd/crane@v0.20.2
-          export PATH="$(go env GOPATH)/bin:$PATH"
-          echo "$TOKEN" | crane auth login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
-          scripts/docker-image.sh "${GITHUB_REF_NAME}" "ghcr.io/pgodlews/verity" dist/release
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: cli
           path: dist/release/
 
   desktop-linux:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -76,6 +93,7 @@ jobs:
   # Unsigned universal (Intel + Apple silicon) app. macOS asks for
   # confirmation on first open; see docs/releasing.md.
   desktop-macos:
+    needs: test
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -102,6 +120,7 @@ jobs:
           path: dist/desktop/
 
   desktop-windows:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -129,6 +148,8 @@ jobs:
   publish:
     needs: [cli, desktop-linux, desktop-macos, desktop-windows]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
@@ -140,9 +161,16 @@ jobs:
           (cd dist/cli && sha256sum -c SHA256SUMS)
           for d in desktop-linux desktop-macos desktop-windows; do (cd "dist/$d" && sha256sum -- * >> ../cli/SHA256SUMS); done
           pre=""; case "$GITHUB_REF_NAME" in *-*) pre="--prerelease";; esac
-          gh release create "$GITHUB_REF_NAME" dist/cli/* dist/desktop-linux/* dist/desktop-macos/* dist/desktop-windows/* $pre \
-            --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" \
-            --notes "Verity $GITHUB_REF_NAME. Unsigned alpha builds; verify downloads with SHA256SUMS. See CHANGELOG.md."
+          files=(dist/cli/* dist/desktop-linux/* dist/desktop-macos/* dist/desktop-windows/*)
+          # Re-runnable: a release that already exists (an earlier, partly
+          # failed run) gets its assets replaced instead of failing.
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "${files[@]}" --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$GITHUB_REF_NAME" "${files[@]}" $pre \
+              --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" \
+              --notes "Verity $GITHUB_REF_NAME. Unsigned alpha builds; verify downloads with SHA256SUMS. See CHANGELOG.md."
+          fi
 
       # A final release updates Formula/verity.rb in pgodlews/homebrew-verity.
       # HOMEBREW_TAP_TOKEN is a fine-grained token with contents:write on that
@@ -168,3 +196,31 @@ jobs:
           if git diff --cached --quiet; then echo "tap already up to date"; exit 0; fi
           git -c user.name="Verity release" -c user.email="release@verity.invalid" commit -qm "verity $TAG"
           git push -q origin HEAD
+
+  # The image, including :latest for a final tag, is pushed only after the
+  # GitHub release exists.
+  image:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: "1.26"
+          cache: true
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: cli
+          path: dist/release
+      - name: Push the image to ghcr.io
+        env:
+          TOKEN: ${{ github.token }}
+          IMAGE_SOURCE: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          CGO_ENABLED=0 go install github.com/google/go-containerregistry/cmd/crane@v0.20.2
+          export PATH="$(go env GOPATH)/bin:$PATH"
+          echo "$TOKEN" | crane auth login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
+          scripts/docker-image.sh "${GITHUB_REF_NAME}" "ghcr.io/pgodlews/verity" dist/release

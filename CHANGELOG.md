@@ -47,6 +47,11 @@ and distribution names below use the final public names.
 
 ### Changed
 
+- Release workflow: a test job must pass before anything is built; the
+  container image (and `:latest`) is pushed only after the GitHub release
+  exists; each job gets only the token permissions it needs; a re-run
+  replaces the assets of an existing release; desktop builds install
+  frontend dependencies with `npm ci`.
 - The frontend now requires Node.js 22.12+ (`engines`), and CI and release
   builds use Node.js 22: Node.js 20 reached end of life in April 2026.
 - Removed `verity secret list`: the portable keychain backend cannot list

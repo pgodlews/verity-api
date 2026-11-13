@@ -20,6 +20,9 @@ git push origin "$VERSION"
 
 The public release pipeline is:
 
+0. **Tests:** a `test` job vets and tests the core/CLI, gRPC plugin, and
+   desktop backend modules and runs the frontend tests and type check.
+   Nothing is built unless it passes.
 1. **CLI and gRPC plugin archives:** `scripts/release.sh` builds `verity` and
    `verity-grpc` for linux/darwin/windows on amd64/arm64 (six targets each).
    Archives contain the binary, README, and MIT license; Unix archives use
@@ -32,10 +35,13 @@ The public release pipeline is:
    `verity-desktop_<tag>_windows_amd64.zip`.
 3. **Checksums and publication:** attach the archives and `SHA256SUMS` to a
    GitHub Release. Check archive hashes before publication and include
-   desktop bundles in the final checksum file.
-4. **Container image:** `scripts/docker-image.sh` uses `crane` to assemble
-   and push `ghcr.io/pgodlews/verity:<tag>` for linux/amd64 and linux/arm64.
-   Tags without a pre-release suffix also update `:latest`.
+   desktop bundles in the final checksum file. Re-running the job after a
+   partial failure replaces the assets of the existing release
+   (`gh release upload --clobber`) instead of failing.
+4. **Container image:** after the release exists, `scripts/docker-image.sh`
+   uses `crane` to assemble and push `ghcr.io/pgodlews/verity:<tag>` for
+   linux/amd64 and linux/arm64. Tags without a pre-release suffix also update
+   `:latest`, so a failed desktop build or release never moves `:latest`.
 5. **Homebrew:** for non-pre-releases, `scripts/homebrew-formula.sh` generates
    `Formula/verity.rb` with GitHub archive URLs and checksums, then the workflow
    updates the `pgodlews/homebrew-verity` tap.
@@ -46,8 +52,9 @@ its explicit version tag.
 
 ## GitHub configuration
 
-The release workflow uses the repository's `GITHUB_TOKEN` with
-`contents: write` for releases and `packages: write` for GHCR publication.
+The release workflow's `GITHUB_TOKEN` is read-only by default; only the
+`publish` job gets `contents: write` (the release) and only the `image` job
+gets `packages: write` (GHCR).
 The tap update needs a separate Actions secret named `HOMEBREW_TAP_TOKEN`:
 a fine-grained GitHub token limited to `pgodlews/homebrew-verity`, with
 repository **Contents: read and write** permission (`contents: write`).
