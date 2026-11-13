@@ -22,6 +22,9 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` planned
       `${secret:file:...}`, mTLS files, schema files, feeds, uploads): a
       per-project approval in the user-config trust store, prompted with the
       paths. Today the desktop refuses them with a `config_error`.
+- [ ] One JSON envelope for every command's `--json` output (results and
+      errors, including `run` validation errors and `gui-call`), defined in
+      `docs/ci.md`; settle before 1.0.
 - [ ] Concurrent plugin dispatch (request ids, VPP/2) so parallel cases and
       load-test users are not serialized through one plugin process.
 - [x] Require consent before running a project's `.verity/plugins.json`

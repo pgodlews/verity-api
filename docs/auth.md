@@ -435,6 +435,10 @@ verity secret get project/API_TOKEN --reveal        # plaintext; warns on stderr
 verity secret rm project/API_TOKEN --json
 ```
 
+With `--json`, output is indented like every other command, and an error
+is `{"ok": false, "phase": "secret get", "error": "config_error: ..."}`
+(exit 3), the same shape `run`, `validate`, and `import` use.
+
 `set` refuses an existing item unless `--force` is supplied. It accepts piped
 or redirected stdin only, rejects input over 1 MiB, removes one trailing LF or
 CRLF, then trims leading/trailing whitespace and refuses an empty result.

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"strings"
@@ -387,17 +388,29 @@ func warnLiteralSecrets(p *model.Project) {
 }
 
 func emitJSON(v any) {
-	enc := json.NewEncoder(os.Stdout)
+	emitJSONTo(os.Stdout, v)
+}
+
+// emitJSONTo writes v as two-space indented JSON, the shape every command's
+// --json output uses.
+func emitJSONTo(w io.Writer, v any) {
+	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	_ = enc.Encode(v)
 }
 
 // failJSON emits a structured error (when json mode) and returns the exit code.
 func failJSON(jsonMode bool, code int, phase string, err error) int {
+	return failJSONTo(os.Stdout, os.Stderr, jsonMode, code, phase, err)
+}
+
+// failJSONTo is failJSON with explicit streams: {"ok": false, "phase": …,
+// "error": "message"} on out in JSON mode, else "phase: message" on stderr.
+func failJSONTo(out, stderr io.Writer, jsonMode bool, code int, phase string, err error) int {
 	if jsonMode {
-		emitJSON(map[string]any{"ok": false, "phase": phase, "error": err.Error()})
+		emitJSONTo(out, map[string]any{"ok": false, "phase": phase, "error": err.Error()})
 	} else {
-		fmt.Fprintf(os.Stderr, "%s: %v\n", phase, err)
+		fmt.Fprintf(stderr, "%s: %v\n", phase, err)
 	}
 	return code
 }

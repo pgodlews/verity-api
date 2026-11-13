@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -48,15 +47,10 @@ func secretCommand(args []string, in io.Reader, out, stderr io.Writer, store *se
 		return exitUsage
 	}
 	reply := func(value any) {
-		_ = json.NewEncoder(out).Encode(value)
+		emitJSONTo(out, value)
 	}
 	fail := func(err error) int {
-		if *jsonOut {
-			reply(map[string]any{"ok": false, "error": err})
-		} else {
-			fmt.Fprintln(stderr, err)
-		}
-		return exitConfig
+		return failJSONTo(out, stderr, *jsonOut, exitConfig, "secret "+action, err)
 	}
 	name := pos[0]
 	if err := secrets.ValidateKeychainName(name); err != nil {
