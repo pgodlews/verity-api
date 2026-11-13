@@ -23,6 +23,9 @@ and distribution names below use the final public names.
 
 ### Added
 
+- `verity validate` warns (`no_assertions`, with the step's path) about
+  steps that have no assertions: they pass on any response, including an
+  HTTP 500. Warnings do not change the exit code.
 - Run summaries add explicitly named counts: `assertionsPassed`,
   `assertionsFailed`, `casesPassed`, `casesFailed`, `casesErrored`,
   `casesSkipped`, and `casesAborted`. The existing `passed`/`failed` (which
