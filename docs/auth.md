@@ -155,8 +155,9 @@ config:
   maxVersion: "1.3"
   # insecureSkipVerify: true     # test-only; strongly discouraged
 ```
-File paths resolve relative to the project directory. The keypair is validated
-at load time so misconfiguration fails fast.
+File paths resolve relative to the project directory and must stay inside it
+(after resolving symlinks) unless the run uses `--allow-external-files`. The
+keypair is validated at load time so misconfiguration fails fast.
 
 ### `oauth2` (message)
 

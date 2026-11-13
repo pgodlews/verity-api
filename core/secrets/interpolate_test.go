@@ -3,6 +3,7 @@ package secrets
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -139,7 +140,8 @@ func TestFileSecretProvider(t *testing.T) {
 	}
 	f.Close()
 
-	r := NewResolver(nil)
+	// The temp file is inside the project directory, so no opt-in is needed.
+	r := NewResolver(nil).WithFiles(filepath.Dir(f.Name()), false)
 	out, err := r.Interpolate("${secret:file:"+f.Name()+"}", false)
 	if err != nil {
 		t.Fatal(err)

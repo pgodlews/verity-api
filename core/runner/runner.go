@@ -240,7 +240,7 @@ func (r *Runner) prepare(project *model.Project, opts Options) (*execContext, *m
 		red:          red,
 		opts:         opts,
 		timeout:      timeout,
-		authResolver: auth.NewResolver(r.reg, project, red, secrets.NewResolver(mergeVars(baseVars, opts.ExtraVars)), project.SourceDir, auth.ResolverOptions{Sessions: opts.AuthSessions}),
+		authResolver: auth.NewResolver(r.reg, project, red, secrets.NewResolver(mergeVars(baseVars, opts.ExtraVars)).WithFiles(project.SourceDir, opts.AllowExternalFiles), project.SourceDir, auth.ResolverOptions{Sessions: opts.AuthSessions, AllowExternalFiles: opts.AllowExternalFiles}),
 		tlsCache:     &transportCache{},
 		gql:          graphql.NewCache(),
 	}
@@ -589,7 +589,7 @@ func (e *execContext) runCaseIteration(ctx context.Context, suite *model.Suite, 
 	// scope and is used as-is so each virtual user keeps its own captures.
 	if resolver == nil {
 		vars := mergeVars(e.baseVars, e.runVarsSnapshot(), suite.Vars, c.Vars, row, e.opts.ExtraVars)
-		resolver = secrets.NewResolver(vars)
+		resolver = e.newResolver(vars)
 	}
 
 	continueOnError := true

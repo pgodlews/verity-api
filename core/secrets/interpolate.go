@@ -32,9 +32,24 @@ type Resolver struct {
 	// Now and Rand supply dynamic function values; replaceable for tests.
 	Now  func() time.Time
 	Rand io.Reader
+	// FileDir is the project directory: ${secret:file:PATH} resolves a
+	// relative PATH against it and, unless AllowExternalFiles is set, must
+	// stay inside it. An empty FileDir refuses ${secret:file:...} unless
+	// AllowExternalFiles is set.
+	FileDir string
+	// AllowExternalFiles lets ${secret:file:...} read outside FileDir
+	// (--allow-external-files, trusted projects only).
+	AllowExternalFiles bool
 	// secretValues records every resolved secret literal so the Redactor can
 	// mask it wherever it later appears. It is process-memory only.
 	secretValues map[string]struct{}
+}
+
+// WithFiles sets the ${secret:file:...} policy and returns r.
+func (r *Resolver) WithFiles(dir string, allowExternal bool) *Resolver {
+	r.FileDir = dir
+	r.AllowExternalFiles = allowExternal
+	return r
 }
 
 // NewResolver builds a Resolver over the given variable map. The map is copied.
@@ -169,6 +184,10 @@ func (r *Resolver) resolveRef(inner string) (val string, secret, ok bool, err er
 		// External secret refs: ${secret:provider:key}. Resolution delegates to
 		// a registered provider. The default "env" provider reads an env var.
 		spec := strings.TrimPrefix(inner, "secret:")
+		if path, isFile := strings.CutPrefix(spec, "file:"); isFile {
+			v, found, e := readSecretFile(r.FileDir, path, r.AllowExternalFiles)
+			return v, true, found, e
+		}
 		v, found, e := resolveExternalSecret(spec)
 		return v, true, found, e
 	default:

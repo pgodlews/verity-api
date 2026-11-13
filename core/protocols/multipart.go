@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pgodlews/verity-api/core/fsutil"
 	"github.com/pgodlews/verity-api/core/spi"
 	"github.com/pgodlews/verity-api/core/verr"
 )
@@ -247,39 +248,15 @@ func setMultipartContentType(h http.Header, w *multipart.Writer) {
 	h.Set("Content-Type", mime.FormatMediaType(media, params))
 }
 
-// insideDir reports (as an error) whether path, after resolving symlinks,
-// lies outside dir. Uploads are confined to the project directory by default
-// so that opening and running a downloaded project cannot send arbitrary
-// local files (keys, dotenv files) to the project's servers.
-func insideDir(dir, path string) error {
-	root, err := filepath.EvalSymlinks(dir)
-	if err != nil {
-		return err
-	}
-	target, err := filepath.EvalSymlinks(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil // reported as "not found" by the caller
-		}
-		return err
-	}
-	rel, err := filepath.Rel(root, target)
-	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || filepath.IsAbs(rel) {
-		return fmt.Errorf("outside")
-	}
-	return nil
-}
-
+// copyUploadFile copies an upload file to out. Uploads are confined to the
+// project directory (see fsutil.ResolveInside) unless allowExternal is set,
+// so opening and running a downloaded project cannot send arbitrary local
+// files (keys, dotenv files) to the project's servers. An unknown project
+// directory is refused too.
 func copyUploadFile(out io.Writer, dir string, allowExternal bool, path string) (int64, error) {
-	resolved := path
-	if !filepath.IsAbs(resolved) {
-		resolved = filepath.Join(dir, resolved)
-	}
-	if dir != "" && !allowExternal {
-		if err := insideDir(dir, resolved); err != nil {
-			return 0, verr.Newf(verr.CodeConfig,
-				"upload file %q is outside the project directory; run with --allow-external-files if this project is trusted", path)
-		}
+	resolved, err := fsutil.ResolveInside(dir, path, allowExternal, "upload file")
+	if err != nil {
+		return 0, err
 	}
 	file, err := os.Open(resolved)
 	if err != nil {

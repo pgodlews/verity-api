@@ -5,6 +5,8 @@ import (
 	"os"
 	"strings"
 	"sync"
+
+	"github.com/pgodlews/verity-api/core/fsutil"
 )
 
 // ExternalProvider resolves an external secret by key. Implementations might
@@ -55,17 +57,32 @@ func (envProvider) Resolve(key string) (string, bool, error) {
 	return v, ok, nil
 }
 
+// fileProvider is registered so "file" is a known provider name. A project's
+// ${secret:file:PATH} never reaches it: the Resolver reads the file itself
+// under its project-directory policy (see readSecretFile). Direct callers of
+// the provider registry get the same confinement with no project directory,
+// which refuses every path.
 type fileProvider struct{}
 
-// Resolve reads the entire file at key and returns its trimmed contents. Useful
-// for Docker/Kubernetes secret mounts (e.g. /run/secrets/token).
 func (fileProvider) Resolve(key string) (string, bool, error) {
-	b, err := os.ReadFile(key)
+	return readSecretFile("", key, false)
+}
+
+// readSecretFile reads a secret file and returns its trimmed contents. Useful
+// for Docker/Kubernetes secret mounts (e.g. /run/secrets/token), which are
+// outside a project and therefore need --allow-external-files. A relative
+// path resolves against the project directory dir.
+func readSecretFile(dir, path string, allowExternal bool) (string, bool, error) {
+	resolved, err := fsutil.ResolveInside(dir, path, allowExternal, "secret file")
+	if err != nil {
+		return "", false, err
+	}
+	b, err := os.ReadFile(resolved)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return "", false, nil
 		}
-		return "", false, fmt.Errorf("read secret file %q: %w", key, err)
+		return "", false, fmt.Errorf("read secret file %q: %w", path, err)
 	}
 	return strings.TrimSpace(string(b)), true, nil
 }

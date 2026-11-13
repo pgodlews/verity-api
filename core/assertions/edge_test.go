@@ -144,7 +144,7 @@ func TestJSONSchemaAssertionInputsAndFailures(t *testing.T) {
 		{name: "unserializable inline schema", body: `{}`, spec: spi.AssertionSpec{Config: map[string]any{"schema": func() {}}}, message: "invalid inline schema"},
 		{name: "invalid inline JSON", body: `{}`, spec: spi.AssertionSpec{Config: map[string]any{"schema": "not-json"}}, message: "add schema"},
 		{name: "invalid schema definition", body: `{}`, spec: spi.AssertionSpec{Config: map[string]any{"schema": `{"type":12}`}}, message: "compile schema"},
-		{name: "missing schema file", body: `{}`, spec: spi.AssertionSpec{Expr: "missing.json"}, message: "read schema file"},
+		{name: "missing schema file", body: `{}`, spec: spi.AssertionSpec{Expr: "missing.json", Config: map[string]any{"__dir": t.TempDir()}}, message: "read schema file"},
 		{name: "invalid response JSON", body: `not-json`, spec: spi.AssertionSpec{Config: map[string]any{"schema": validSchema}}, message: "response is not valid JSON"},
 	}
 	for _, tt := range tests {
