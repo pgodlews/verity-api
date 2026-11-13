@@ -3,7 +3,7 @@
 A Verity project is a protocol-neutral, git-friendly description of API contract
 tests. It is written in YAML or JSON and may be split across files. The
 versioned JSON Schema is published via `verity schema` (and in
-`core/schema/schema.go`); editors and AI agents can validate against it.
+`core/schema/project.schema.json`); editors and AI agents can validate against it.
 
 Keys are checked when a project or fragment is loaded: a key the format does
 not define (a typo such as `asertions:` or `retrys:`) is a `validation_error`

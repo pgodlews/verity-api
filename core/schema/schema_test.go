@@ -193,13 +193,24 @@ func TestTierTwoAuthSchema(t *testing.T) {
 			}
 		})
 	}
-	for name, want := range map[string]string{"auth.schema.json": AuthSchemaJSON(), "project.schema.json": ProjectSchemaJSON()} {
+}
+
+// The embedded files are the published schemas and must compile.
+func TestEmbeddedSchemasCompile(t *testing.T) {
+	for name, src := range map[string]string{"auth.schema.json": AuthSchemaJSON(), "project.schema.json": ProjectSchemaJSON()} {
 		got, err := os.ReadFile(name)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if string(got) != want+"\n" {
-			t.Fatalf("published schema %s differs from source", name)
+		if string(got) != src+"\n" {
+			t.Fatalf("embedded %s differs from the file", name)
+		}
+		c := jsonschema.NewCompiler()
+		if err := c.AddResource(name, strings.NewReader(src)); err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		if _, err := c.Compile(name); err != nil {
+			t.Fatalf("%s does not compile: %v", name, err)
 		}
 	}
 }
