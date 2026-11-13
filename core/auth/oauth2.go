@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -116,11 +117,12 @@ func newOAuth2Provider(typ string, config map[string]any, red *secrets.Redactor)
 	if p.authStyle != "header" && p.authStyle != "body" {
 		return nil, verr.New(verr.CodeConfig, "oauth2 'authStyle' must be header|body")
 	}
-	if s := strConfig(config, "refreshSkewSeconds"); s != "" {
-		var secs int
-		if _, err := fmt.Sscanf(s, "%d", &secs); err == nil && secs >= 0 {
-			p.skew = time.Duration(secs) * time.Second
+	if s := strings.TrimSpace(strConfig(config, "refreshSkewSeconds")); s != "" {
+		secs, err := strconv.Atoi(s)
+		if err != nil || secs < 0 || secs > 86400 {
+			return nil, verr.Newf(verr.CodeConfig, "oauth2 'refreshSkewSeconds' must be an integer from 0 to 86400, got %q", s)
 		}
+		p.skew = time.Duration(secs) * time.Second
 	}
 	// Register every configured secret, including ones the active grant does
 	// not send, so a copied field cannot leak. The Basic client credential is
