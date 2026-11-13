@@ -112,7 +112,9 @@ Cancelling the run context (CLI SIGINT/SIGTERM, or the GUI's Cancel) is
 checked before each suite, case, feed row, step, and retry attempt. Work that
 never started is reported as `aborted` and `summary.aborted` is set. A step
 already in flight finishes or fails on that context; it is not relabelled.
-Teardown of a suite that had started runs on a fresh 10 second context.
+Teardown runs on the run context, with the normal step timeouts. Once the run
+is cancelled, the remaining teardown steps of a suite that had started share
+one fresh 10 second grace context.
 `runner.Options.OnEvent` (nil for the CLI) is called from the case goroutines
 with `case_started`, `step_done` (the redacted step), and `case_done`. The
 callback must be safe for concurrent use.

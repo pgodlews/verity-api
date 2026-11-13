@@ -63,6 +63,10 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- Suite teardown no longer runs under a shared 10-second deadline in every
+  run: teardown steps use the normal `--timeout`/`timeoutMs`/retry limits and
+  Ctrl-C interrupts them. The 10-second grace budget applies only to the
+  teardown that remains after a run is cancelled.
 - Assertion `eq`/`ne` no longer turn two strings into floats (`"1.10"` was
   equal to `"1.1"`, `"007"` to `"7"`), and numbers compare exactly instead of
   through float64, so large JSON integers such as `9007199254740993` are no
