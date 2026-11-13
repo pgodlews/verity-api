@@ -169,9 +169,14 @@ func (a containsAssertion) Evaluate(_ context.Context, actx *spi.AssertionContex
 	}
 	passed := strings.Contains(body, needle)
 	msg := fmt.Sprintf("expected body to contain %q", needle)
-	if spec.Op == "not_exists" {
+	switch spec.Op {
+	case "", "contains":
+	case "not_contains", "not_exists": // not_exists is a deprecated alias
 		passed = !passed
 		msg = fmt.Sprintf("expected body NOT to contain %q", needle)
+	default:
+		return result(a.Type(), spec.Description, false,
+			fmt.Sprintf("contains assertion does not support op %q (use contains or not_contains)", spec.Op), needle, nil), nil
 	}
 	return result(a.Type(), spec.Description, passed, actx.Redactor.Redact(msg), needle, nil), nil
 }
@@ -185,7 +190,16 @@ func (a regexAssertion) Evaluate(_ context.Context, actx *spi.AssertionContext, 
 	if pattern == "" {
 		pattern = toString(spec.Value)
 	}
-	passed, msg := compare("matches", string(actx.Response.Body), pattern)
+	op := spec.Op
+	switch op {
+	case "":
+		op = "matches"
+	case "matches", "not_matches":
+	default:
+		return result(a.Type(), spec.Description, false,
+			fmt.Sprintf("regex assertion does not support op %q (use matches or not_matches)", spec.Op), pattern, nil), nil
+	}
+	passed, msg := compare(op, string(actx.Response.Body), pattern)
 	return result(a.Type(), spec.Description, passed, actx.Redactor.Redact(msg), pattern, nil), nil
 }
 

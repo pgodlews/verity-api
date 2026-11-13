@@ -82,6 +82,11 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- Assertions no longer ignore `op`: `contains` supports `contains` and the
+  new `not_contains` (`not_exists` remains a deprecated alias), `regex`
+  supports `matches` and the new `not_matches`, and any other op fails the
+  assertion instead of silently running a positive match. `verity validate`
+  rejects unknown assertion ops and transfer `from` values.
 - JSONPath "not found" no longer depends on the library's error wording: a
   path that compiles but cannot be followed through the response (missing
   key, out-of-range index such as `$.items[5]`) is absent, so `op:
