@@ -108,8 +108,8 @@ func TestResolverSharesProviderInstance(t *testing.T) {
 		{Name: "tok", Type: "bearer", Config: map[string]any{"token": "shared-token-123456"}},
 	}}
 	res := NewResolver(reg, project, secrets.NewRedactor(), secrets.NewResolver(nil), "")
-	p1, _ := res.provider("tok")
-	p2, _ := res.provider("tok")
+	p1, _ := res.provider("tok", nil)
+	p2, _ := res.provider("tok", nil)
 	if p1 != p2 {
 		t.Fatal("expected cached provider instance to be reused")
 	}
