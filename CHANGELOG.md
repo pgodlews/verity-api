@@ -111,6 +111,10 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- Desktop request editor: adding and then removing the last header, query
+  parameter, or step variable no longer leaves the request marked unsaved,
+  and saving no longer writes an empty `headers: {}` (or `query: {}`,
+  `vars: {}`) into the step.
 - Desktop runs, load tests, and load-target checks report every project
   validation error, not only the first, and the desktop `ValidateProject`
   result adds `issues` (each with `code`, `message`, and `path`) alongside

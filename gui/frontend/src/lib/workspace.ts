@@ -47,6 +47,16 @@ export function resolvePreview(text: string, vars: Record<string, string>, seen 
   });
 }
 
+/** Sets an optional map field (headers, query, vars) on obj, or removes the
+ * field when the map is empty, so adding and then removing the last entry
+ * returns the object to its original shape instead of writing `{}`. */
+export function withOptionalMap<T extends object>(obj: T, key: string, map: Record<string, unknown>): T {
+  const out = { ...obj } as Record<string, unknown>;
+  if (Object.keys(map).length === 0) delete out[key];
+  else out[key] = map;
+  return out as T;
+}
+
 export type BodyMode = "none" | "json" | "text" | "form";
 export interface Draft {
   step: Step;
