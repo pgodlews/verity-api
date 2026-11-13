@@ -69,11 +69,10 @@ func validatePart(i int, part map[string]any) error {
 		return bad("requires exactly one of value or file")
 	}
 	if hasValue {
-		s, ok := scalarString(part["value"])
-		if !ok {
+		// Checked only: the caller's map is not modified.
+		if _, ok := scalarString(part["value"]); !ok {
 			return bad("value must be a string")
 		}
-		part["value"] = s
 	}
 	for key, v := range part {
 		if key == "value" {
@@ -172,7 +171,8 @@ func writeMultipart(dir string, allowExternal bool, req *spi.Request) error {
 	for i, item := range req.Config["multipart"].([]any) {
 		part := item.(map[string]any)
 		name := part["name"].(string)
-		if value, ok := part["value"].(string); ok {
+		if raw, isText := part["value"]; isText {
+			value, _ := scalarString(raw)
 			if err := writer.WriteField(name, value); err != nil {
 				return verr.Wrap(verr.CodeConfig, err, "write multipart text part")
 			}

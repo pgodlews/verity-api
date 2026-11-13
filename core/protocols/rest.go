@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/pgodlews/verity-api/core/registry"
 	"github.com/pgodlews/verity-api/core/spi"
+	"github.com/pgodlews/verity-api/core/verr"
 )
 
 // REST is the REST/HTTP protocol plugin. Request config fields:
@@ -27,6 +29,9 @@ func (RESTProtocol) Type() string { return "rest" }
 
 func (RESTProtocol) BuildRequest(_ context.Context, raw map[string]any) (*spi.Request, error) {
 	if err := validateUpload(raw); err != nil {
+		return nil, err
+	}
+	if err := validateRESTConfig(raw); err != nil {
 		return nil, err
 	}
 	req := &spi.Request{
@@ -60,15 +65,14 @@ func (RESTProtocol) BuildRequest(_ context.Context, raw map[string]any) (*spi.Re
 			req.Headers.Set("Content-Type", "application/json")
 		}
 	case raw["form"] != nil:
-		if form, ok := raw["form"].(map[string]any); ok {
-			vals := url.Values{}
-			for k, v := range form {
-				vals.Set(k, toStr(v))
-			}
-			req.Body = []byte(vals.Encode())
-			if req.Headers.Get("Content-Type") == "" {
-				req.Headers.Set("Content-Type", "application/x-www-form-urlencoded")
-			}
+		form := raw["form"].(map[string]any) // type-checked by validateRESTConfig
+		vals := url.Values{}
+		for k, v := range form {
+			vals.Set(k, toStr(v))
+		}
+		req.Body = []byte(vals.Encode())
+		if req.Headers.Get("Content-Type") == "" {
+			req.Headers.Set("Content-Type", "application/x-www-form-urlencoded")
 		}
 	case raw["body"] != nil:
 		req.Body = []byte(stringField(raw, "body"))
@@ -81,6 +85,42 @@ func (RESTProtocol) Execute(ctx context.Context, pctx *spi.ProtocolContext, req 
 		return nil, err
 	}
 	return doHTTP(ctx, pctx, req)
+}
+
+// validateRESTConfig rejects request shapes that would otherwise be sent
+// differently from what the author wrote: more than one body field (json
+// silently won over form and body), a form/query/headers value that is not a
+// map (silently sent nothing), and an empty url.
+func validateRESTConfig(raw map[string]any) error {
+	var set []string
+	for _, key := range []string{"body", "json", "form", "multipart", "bodyFile"} {
+		if raw[key] != nil {
+			set = append(set, key)
+		}
+	}
+	if len(set) > 1 {
+		return verr.Newf(verr.CodeConfig, "use only one of body, json, form, multipart, or bodyFile (got %s)", strings.Join(set, ", "))
+	}
+	if err := requireMaps(raw, "form", "query", "headers"); err != nil {
+		return err
+	}
+	if strings.TrimSpace(stringField(raw, "url")) == "" {
+		return verr.New(verr.CodeConfig, "rest request requires 'url'")
+	}
+	return nil
+}
+
+// requireMaps reports a config_error when one of keys is set to something
+// other than a map.
+func requireMaps(raw map[string]any, keys ...string) error {
+	for _, key := range keys {
+		if v := raw[key]; v != nil {
+			if _, ok := v.(map[string]any); !ok {
+				return verr.Newf(verr.CodeConfig, "'%s' must be a map of names to values", key)
+			}
+		}
+	}
+	return nil
 }
 
 // RegisterREST registers the REST protocol.

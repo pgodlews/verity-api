@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/pgodlews/verity-api/core/registry"
 	"github.com/pgodlews/verity-api/core/spi"
+	"github.com/pgodlews/verity-api/core/verr"
 )
 
 // GraphQLProtocol is the GraphQL protocol plugin. It posts a standard GraphQL
@@ -22,6 +24,15 @@ type GraphQLProtocol struct{}
 func (GraphQLProtocol) Type() string { return "graphql" }
 
 func (GraphQLProtocol) BuildRequest(_ context.Context, raw map[string]any) (*spi.Request, error) {
+	if strings.TrimSpace(stringField(raw, "url")) == "" {
+		return nil, verr.New(verr.CodeConfig, "graphql request requires 'url'")
+	}
+	if strings.TrimSpace(stringField(raw, "query")) == "" {
+		return nil, verr.New(verr.CodeConfig, "graphql request requires a non-empty 'query'")
+	}
+	if err := requireMaps(raw, "headers"); err != nil {
+		return nil, err
+	}
 	req := &spi.Request{
 		Method:  http.MethodPost,
 		URL:     stringField(raw, "url"),

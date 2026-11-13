@@ -248,6 +248,11 @@ request:
   bodyFile: payload.bin         # entire body is this file
 ```
 
+Set at most one of `json`, `form`, `body`, `multipart`, and `bodyFile`; two or
+more are a `config_error`. `headers`, `query`, and `form` must be maps, and
+`url` must not be empty. A GraphQL step also needs a non-empty `url` and
+`query`.
+
 In a URL query, spaces, controls, non-ASCII bytes, and `` `"<>\^`{|}` `` are
 percent-encoded before sending and before any signer parses the URL. Existing
 `%HH` escapes, `+`, `=`, `&`, `;`, and other bytes stay exactly as written.
