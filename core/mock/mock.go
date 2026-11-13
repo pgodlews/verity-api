@@ -39,6 +39,9 @@ type Options struct {
 	Delay    time.Duration
 	Seed     int64
 	Source   string
+	// AllowExternalFiles lets a project's include read fragments outside
+	// the project directory (--allow-external-files).
+	AllowExternalFiles bool
 }
 
 // Server is a bound mock listener. Run serves until ctx is cancelled, then
@@ -160,7 +163,7 @@ func build(path string, data []byte, fromFile bool, opts Options) (http.Handler,
 	case KindProject:
 		var p *model.Project
 		if fromFile {
-			p, err = model.Load(path)
+			p, err = model.LoadWith(path, model.LoadOptions{AllowExternalFiles: opts.AllowExternalFiles})
 			if err != nil {
 				return nil, "", 0, verr.Wrap(verr.CodeConfig, err, "load project")
 			}

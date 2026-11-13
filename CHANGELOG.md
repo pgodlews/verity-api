@@ -46,6 +46,13 @@ and distribution names below use the final public names.
 
 ### Changed
 
+- **BREAKING:** `include` fragments must be inside the project directory
+  (the root file's directory, after resolving symlinks), like every other
+  file a project names; `--allow-external-files` lifts it. That flag is now
+  accepted by `load`, `validate`, `fmt`, `mock`, and `graphql schema` as
+  well as `run`, so `${secret:file:...}` outside the project also works in
+  `verity load`. The desktop app does not read files outside the project
+  directory and reports them as `config_error`. (S-4)
 - **BREAKING:** `verity load`: `latency` (and latency thresholds) now measure the protocol
   call of each step's final attempt rather than the whole step, so client
   CPU work (captures, redaction, assertions) no longer inflates percentiles.

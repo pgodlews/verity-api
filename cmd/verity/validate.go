@@ -16,6 +16,7 @@ func cmdValidate(args []string) int {
 	fs := flag.NewFlagSet("validate", flag.ContinueOnError)
 	jsonOut := fs.Bool("json", false, "emit structured JSON result")
 	envName := fs.String("env", "", "environment used to resolve URLs, queries, and variables")
+	allowExternal := fs.Bool("allow-external-files", false, allowExternalUsage)
 	fs.SetOutput(os.Stderr)
 	pos, err := parsePermuted(fs, args)
 	if err != nil {
@@ -26,7 +27,7 @@ func cmdValidate(args []string) int {
 		return exitUsage
 	}
 
-	project, err := model.Load(pos[0])
+	project, err := model.LoadWith(pos[0], model.LoadOptions{AllowExternalFiles: *allowExternal})
 	if err != nil {
 		return failJSON(*jsonOut, exitConfig, "load", err)
 	}

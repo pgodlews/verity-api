@@ -296,7 +296,12 @@ you trust. The same rule covers every file a project names at run time:
 `${secret:file:PATH}`, mTLS `certFile`/`keyFile`/`caFile`, `json_schema`
 schema files, and data-feed `path`. A project without a known directory
 (built in memory) can read none of them without the flag. `include` fragments
-are not confined yet. A missing file fails the step with `config_error`. Text part values
+follow the same rule, checked against the root project file's directory
+(also for an include inside a fragment). Every command that loads a project
+accepts the flag: `run` (and `--watch`), `load`, `validate`, `fmt`, `mock`,
+and `graphql schema`. The desktop app never reads files outside the project
+directory and reports such a file as a `config_error` (detail
+`outsideProject: true`). A missing file fails the step with `config_error`. Text part values
 never appear in reports — only part names and sizes. When `Content-Type` is absent, multipart requests get
 `multipart/form-data` plus a boundary, and `bodyFile` gets
 `application/octet-stream`. An explicit boundary is the one written into the
@@ -636,7 +641,8 @@ empty string; nested objects and arrays become compact JSON text).
 
 ## Git-friendly split
 
-Keep one root file with `include:` pointing at suite fragments. Fragments are
+Keep one root file with `include:` pointing at suite fragments inside the
+project directory (fragments elsewhere need `--allow-external-files`). Fragments are
 merged (their `suites`, `environments`, and `auth` are appended). This keeps
 diffs small and avoids one giant file.
 

@@ -51,7 +51,12 @@ type commonRunFlags struct {
 	suites          listFlags
 	cases           listFlags
 	envFiles        listFlags
+	allowExternal   bool
 }
+
+// allowExternalUsage is the --allow-external-files help text, shared by every
+// command that loads a project.
+const allowExternalUsage = "let include, uploads, secret files, mTLS files, schema files, and feeds be read from outside the project directory (trusted projects only)"
 
 func bindCommonRunFlags(fs *flag.FlagSet) *commonRunFlags {
 	c := &commonRunFlags{vars: varFlags{}, timeout: 30 * time.Second}
@@ -74,6 +79,7 @@ func bindCommonRunFlags(fs *flag.FlagSet) *commonRunFlags {
 	fs.Var(&c.suites, "suite", "only run suites matching this name or glob (repeatable)")
 	fs.Var(&c.cases, "case", "only run cases matching this name or glob (repeatable)")
 	fs.Var(&c.envFiles, "env-file", "dotenv file to load before the run (repeatable; later files win)")
+	fs.BoolVar(&c.allowExternal, "allow-external-files", false, allowExternalUsage)
 	return c
 }
 
@@ -144,7 +150,7 @@ func cmdRun(args []string) int {
 		bail          = fs.Bool("bail", false, "stop scheduling new cases after the first failed or errored case")
 		watch         = fs.Bool("watch", false, "re-run when the project, fragments, feeds, or upload files change")
 		reporters     reporterFlags
-		allowExternal = fs.Bool("allow-external-files", false, "let uploads, secret files, mTLS files, schema files, and feeds be read from outside the project directory (trusted projects only)")
+		allowExternal = &common.allowExternal
 	)
 	fs.Var(&reporters, "reporter", "write a report with a registered reporter, including reporter plugins: TYPE=FILE (repeatable)")
 	fs.SetOutput(os.Stderr)
@@ -196,7 +202,7 @@ func cmdRun(args []string) int {
 		})
 	}
 
-	project, err := model.Load(projectPath)
+	project, err := model.LoadWith(projectPath, model.LoadOptions{AllowExternalFiles: *allowExternal})
 	if err != nil {
 		return failJSON(*jsonStdout, exitConfig, "load", err)
 	}

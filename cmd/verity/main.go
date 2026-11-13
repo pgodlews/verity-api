@@ -109,10 +109,10 @@ Usage:
                              [--timeout 30s] [--vus N] (--duration 30s | --iterations N)
                              [--ramp-up 10s] [--think 0ms]
                              [--threshold 'p95<500ms' ...] [--max-error-rate 1%]
-                             [--json FILE] [--allow-remote]
+                             [--json FILE] [--allow-remote] [--allow-external-files]
                              [--plugins FILE | --trust-plugins]
-  verity validate <project.yaml> [--env NAME] [--json]
-  verity fmt [--check [--staged]] [--json] [project.yaml ...]
+  verity validate <project.yaml> [--env NAME] [--json] [--allow-external-files]
+  verity fmt [--check [--staged]] [--json] [--allow-external-files] [project.yaml ...]
   verity init [--force] [dir]
   verity hooks install [--force] [--fmt] [project.yaml]
   verity hooks uninstall [project.yaml]
@@ -126,12 +126,14 @@ Usage:
                         (soap is an alias of wsdl, not a SoapUI project)
   verity mock <spec-or-project> [--port 0] [--host 127.0.0.1]
                         [--validate] [--delay MS] [--seed N] [--json]
+                        [--allow-external-files]
   verity plugin new <protocol|assertion|reporter|auth|datasource> <name> [--out DIR]
                              [--force] [--json]
   verity list [--json]
   verity schema [--kind project|auth]
   verity graphql schema <project.yaml> --step NAME [--suite NAME]
                              [--case NAME] [--env NAME] [--out FILE]
+                             [--allow-external-files]
                              fetch or print the step's GraphQL SDL
   verity graphql template <schema.graphql|URL> --operation Type.field
                              [--depth N]
@@ -160,10 +162,11 @@ Run:
                         continues. Ctrl-C exits with the last run's code.
                         --junit/--json/--html are rewritten every run.
                         May be combined with --bail.
-  --allow-external-files  let uploads, ${secret:file:...}, mTLS cert/key/CA
-                        files, json_schema files, and feed files be read
-                        from outside the project directory (trusted
-                        projects only)
+  --allow-external-files  let include, uploads, ${secret:file:...}, mTLS
+                        cert/key/CA files, json_schema files, and feed files
+                        be read from outside the project directory (trusted
+                        projects only). Also accepted by load, validate,
+                        fmt, mock, and graphql schema.
   Ctrl-C / SIGTERM      cancel the run. The in-flight step finishes or
                         fails; work that never started is reported as
                         aborted; requested reporters are still written;
