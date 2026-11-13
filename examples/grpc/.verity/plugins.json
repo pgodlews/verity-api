@@ -2,7 +2,7 @@
   "plugins": [
     {
       "name": "grpc",
-      "path": "../../../plugins/grpc/grpc",
+      "path": "../../../plugins/grpc/verity-grpc",
       "enabled": true
     }
   ]

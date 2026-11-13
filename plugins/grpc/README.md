@@ -1,11 +1,11 @@
-# grpc
+# verity-grpc
 
 First-party gRPC protocol plugin with unary, server-streaming, client-streaming
 and bidirectional calls. It speaks VPP/1 and is a separate Go module so the
 core `verity` binary does not link grpc-go.
 
 ```bash
-go build -o grpc .
+go build -o verity-grpc .
 ```
 
 Register it as protocol `grpc` (this replaces the core stub for the run).

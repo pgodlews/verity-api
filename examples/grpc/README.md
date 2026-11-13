@@ -9,10 +9,10 @@ Build the plugin (and, for a local try, the fixture):
 
 ```bash
 # plugins/grpc is its own Go module, so build from inside it
-(cd plugins/grpc && go build -o grpc . && go build -o internal/testserver/testserver ./internal/testserver)
+(cd plugins/grpc && go build -o verity-grpc . && go build -o internal/testserver/testserver ./internal/testserver)
 ```
 
-`examples/grpc/.verity/plugins.json` loads `plugins/grpc/grpc`. Start the
+`examples/grpc/.verity/plugins.json` loads `plugins/grpc/verity-grpc`. Start the
 fixture on a unix socket (`SOCK` is that socket's path), export `API_TOKEN`,
 then run:
 
