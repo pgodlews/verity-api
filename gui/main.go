@@ -1,8 +1,10 @@
 // Command verity-gui is the Verity desktop application, built with Wails v2.
 //
 // It is a thin shell over the same core library the CLI uses: the App struct
-// (app.go) binds core operations (validate, run, import, catalog) to a React +
-// TypeScript frontend. No protocol/auth/test/reporting logic lives here.
+// (app.go) binds core/workspace operations to a React + TypeScript frontend:
+// opening, validating, editing, and saving projects; runs and load tests;
+// imports; environments and OS keychain secrets; OAuth sign-in; and Git
+// source control. No protocol/auth/test/reporting logic lives here.
 //
 // Build (requires the Wails CLI — see gui/README.md):
 //

@@ -17,7 +17,7 @@
 //
 // The same five SPI extension points are supported in-process and over VPP/1:
 // Protocol, Assertion, Reporter, AuthProvider, and DataSource. Host-side proxy
-// types (see client.go) implement the spi interfaces by forwarding to the
+// types (see proxy.go and proxy_more.go) implement the spi interfaces by forwarding to the
 // subprocess, so the runner cannot tell a plugin from a built-in.
 package plugin
 
@@ -65,14 +65,16 @@ const (
 type Request struct {
 	ID     int    `json:"id"`
 	Method Method `json:"method"`
-	// Params holds the method-specific payload (see the *Params types).
+	// Params holds the method-specific payload (documented per method in
+	// docs/extending-plugins.md).
 	Params map[string]any `json:"params,omitempty"`
 }
 
 // Response is a single RPC envelope from plugin to host.
 type Response struct {
 	ID int `json:"id"`
-	// Result holds the method-specific payload (see the *Result types).
+	// Result holds the method-specific payload (documented per method in
+	// docs/extending-plugins.md).
 	Result map[string]any `json:"result,omitempty"`
 	// Error, when non-empty, indicates the call failed. It mirrors verr.Error.
 	Error *WireError `json:"error,omitempty"`

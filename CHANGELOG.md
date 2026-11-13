@@ -20,6 +20,8 @@ and distribution names below use the final public names.
   `crypto/tls`, `crypto/x509`, `html/template`, `mime/multipart`, `net/url`,
   and `x/net` issues before; it now reports none reachable. Dependabot keeps
   the Go modules, npm packages, and GitHub Actions up to date.
+- Apply Git project-file recognition and commit secret checks consistently through
+  directory symlink aliases; refuse commits when the project file list cannot be read.
 
 ### Added
 
@@ -35,24 +37,8 @@ and distribution names below use the final public names.
 - `verity run --reporter TYPE=FILE` (repeatable, also with `--watch`) writes
   a report with any registered reporter, so `reporter` plugins
   (`verity plugin new reporter`, `sdk.ServeReporter`) can finally be used.
-
 - Desktop release testing plans for Windows 11 and Linux, a shared scenario
   checklist, and historical macOS findings with explicit coverage limits.
-
-- Server, client, and bidirectional streaming in the first-party gRPC plugin,
-  with message and byte limits, idle timeouts, send intervals, and captured
-  message counts and truncation status.
-- OS keychain secrets through `${secret:keychain:NAME}` and
-  `${secret:keychain:project/NAME}`. Manage them with `verity secret set`,
-  `verity secret get`, and `verity secret rm`, or store a credential from the
-  desktop editor. CLI writes read from stdin and reads are masked by default.
-- Git stashes in desktop Source control: save tracked or selected files,
-  optionally include untracked files, inspect redacted diffs, and apply, pop,
-  or drop a stash. Conflicting applies retain the stash; unsaved editor drafts
-  keep their reload and save-conflict protection.
-- A desktop **Load test** view for configuring and running load tests.
-- `verity load --env-file`, `--var`, and `--timeout` to load environment values,
-  override project variables, and set the request timeout for load tests.
 
 ### Changed
 
@@ -122,19 +108,6 @@ and distribution names below use the final public names.
   longer execute programs it ships.
 - Upgrade frontend development tooling to Vite 7 and refresh audited dependencies.
   Building the frontend now requires Node.js 20.19+ (20.x) or 22.12+.
-
-- **BREAKING:** renamed the CLI from `apitest` to `verity`, built from
-  `./cmd/verity`. Update scripts and CI commands. After installing `verity`,
-  reinstall an existing pre-commit hook from the repository root with
-  `verity hooks install --fmt project.yaml` (substitute your project's
-  repository-relative path). If the hook did not check formatting, use
-  `verity hooks install project.yaml` instead.
-- **BREAKING:** the Go module path is now `github.com/pgodlews/verity-api`.
-  Update Go imports and module requirements, including GUI and plugin
-  references to the core module.
-- Public distribution names are `verity-desktop` for the desktop binary,
-  `ghcr.io/pgodlews/verity` for the container image, and `pgodlews/verity` for
-  the Homebrew tap (`brew install pgodlews/verity/verity`).
 
 ### Fixed
 
@@ -295,6 +268,42 @@ and distribution names below use the final public names.
 - Keep the previous desktop load report when validation or starting a new run fails.
 - Preserve unrelated folded YAML scalar values when saving requests and environments.
 
+## [0.6.0-alpha.1] - 2026-11-02
+
+### Added
+
+- Server, client, and bidirectional streaming in the first-party gRPC plugin,
+  with message and byte limits, idle timeouts, send intervals, and captured
+  message counts and truncation status.
+- OS keychain secrets through `${secret:keychain:NAME}` and
+  `${secret:keychain:project/NAME}`. Manage them with `verity secret set`,
+  `verity secret get`, and `verity secret rm`, or store a credential from the
+  desktop editor. CLI writes read from stdin and reads are masked by default.
+- Git stashes in desktop Source control: save tracked or selected files,
+  optionally include untracked files, inspect redacted diffs, and apply, pop,
+  or drop a stash. Conflicting applies retain the stash; unsaved editor drafts
+  keep their reload and save-conflict protection.
+- A desktop **Load test** view for configuring and running load tests.
+- `verity load --env-file`, `--var`, and `--timeout` to load environment values,
+  override project variables, and set the request timeout for load tests.
+
+### Changed
+
+- **BREAKING:** renamed the CLI from `apitest` to `verity`, built from
+  `./cmd/verity`. Update scripts and CI commands. After installing `verity`,
+  reinstall an existing pre-commit hook from the repository root with
+  `verity hooks install --fmt project.yaml` (substitute your project's
+  repository-relative path). If the hook did not check formatting, use
+  `verity hooks install project.yaml` instead.
+- **BREAKING:** the Go module path is now `github.com/pgodlews/verity-api`.
+  Update Go imports and module requirements, including GUI and plugin
+  references to the core module.
+- Public distribution names are `verity-desktop` for the desktop binary,
+  `ghcr.io/pgodlews/verity` for the container image, and `pgodlews/verity` for
+  the Homebrew tap (`brew install pgodlews/verity/verity`).
+
+### Fixed
+
 - Preserve JSON numbers without losing precision when loading, editing, and
   saving project data, including large integer values.
 - Escape URL query names and values correctly so reserved characters in
@@ -302,9 +311,6 @@ and distribution names below use the final public names.
 - Redact Digest authentication details consistently in captured output.
 
 ### Security
-
-- Apply Git project-file recognition and commit secret checks consistently through
-  directory symlink aliases; refuse commits when the project file list cannot be read.
 
 - Fixed disclosure of values resolved from `${env:NAME}` and
   `${secret:provider:key}` in JSON reports and `verity load` output when

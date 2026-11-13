@@ -505,8 +505,7 @@ func stringLeaves(v any) []string {
 	return nil
 }
 
-// runAssertion resolves the assertion plugin and evaluates it. The expected
-// value is interpolated so assertions can reference variables/transfers.
+// needsGraphQLSchema reports whether a step has a graphql_schema assertion.
 func needsGraphQLSchema(step *model.Step) bool {
 	for _, a := range step.Assertions {
 		if a.Type == "graphql_schema" {
@@ -572,6 +571,8 @@ var bodyAssertions = map[string]bool{
 	"contains": true, "regex": true, "graphql_schema": true,
 }
 
+// runAssertion resolves the assertion plugin and evaluates it. The expected
+// value is interpolated so assertions can reference variables/transfers.
 func (e *execContext) runAssertion(ctx context.Context, a model.Assertion, resp *spi.Response, resolver *secrets.Resolver, extra map[string]any, red *secrets.Redactor) *spi.AssertionResult {
 	if truncated, _ := resp.Meta[spi.MetaTruncated].(bool); truncated && bodyAssertions[a.Type] {
 		return &spi.AssertionResult{Passed: false, Type: a.Type, Description: a.Description,

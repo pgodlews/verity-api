@@ -103,7 +103,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pgodlews/verity-api/.github/actions/verity@main
+      - uses: pgodlews/verity-api/.github/actions/verity@v0.6.0-alpha.1 # pin a release tag or commit
         with:
           project: project.yaml
           junit: reports/junit.xml
