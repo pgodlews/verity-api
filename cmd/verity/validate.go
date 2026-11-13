@@ -32,7 +32,7 @@ func cmdValidate(args []string) int {
 	}
 	errs := project.Validate()
 	errs = append(errs, graphql.ValidateProject(context.Background(), project, graphqlOptions(*envName))...)
-	warnings := validateWarnings(pos[0])
+	warnings := validateWarnings(pos[0], project)
 	if *jsonOut {
 		emitJSON(map[string]any{
 			"ok":       len(errs) == 0,
@@ -65,14 +65,22 @@ type validateWarning struct {
 	Code    string   `json:"code"`
 	Message string   `json:"message"`
 	Name    string   `json:"name,omitempty"`
+	Path    string   `json:"path,omitempty"`
 	UsedIn  []string `json:"usedIn,omitempty"`
 }
 
-// validateWarnings reports plain ${NAME} references that only the process
-// environment defines: they resolve (redacted) from the environment, but the
-// author usually meant ${env:NAME}.
-func validateWarnings(path string) []validateWarning {
+// validateWarnings reports steps without assertions (no_assertions: they
+// pass on any response) and plain ${NAME} references that only the process
+// environment defines (env_fallback: the author usually meant ${env:NAME}).
+func validateWarnings(path string, project *model.Project) []validateWarning {
 	out := []validateWarning{}
+	for _, loc := range project.StepsWithoutAssertions() {
+		out = append(out, validateWarning{
+			Code:    "no_assertions",
+			Message: fmt.Sprintf("step %s has no assertions, so it passes on any response (including HTTP 500)", loc),
+			Path:    loc,
+		})
+	}
 	info, err := workspace.Inspect(path)
 	if err != nil {
 		return out

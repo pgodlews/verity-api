@@ -8,6 +8,24 @@ import (
 	"github.com/pgodlews/verity-api/core/verr"
 )
 
+// StepsWithoutAssertions returns the paths (suites[i].cases[j].steps[k]) of
+// case steps that declare no assertions and are not skipped: such a step
+// passes on any response, including an HTTP 500. Setup and teardown steps
+// are not listed.
+func (p *Project) StepsWithoutAssertions() []string {
+	var out []string
+	for si, s := range p.Suites {
+		for ci, c := range s.Cases {
+			for sti, st := range c.Steps {
+				if len(st.Assertions) == 0 && !st.Skip {
+					out = append(out, fmt.Sprintf("suites[%d].cases[%d].steps[%d]", si, ci, sti))
+				}
+			}
+		}
+	}
+	return out
+}
+
 // Validate performs semantic validation of a loaded project, returning a slice
 // of structured errors (empty when valid). It checks required fields, unique
 // names, resolvable auth references, and basic step well-formedness.
