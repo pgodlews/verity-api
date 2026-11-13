@@ -1,3 +1,5 @@
+//lint:file-ignore SA1019 reflectAlpha deliberately uses the deprecated reflection v1alpha API as the fallback for servers without reflection v1.
+
 package main
 
 import (
