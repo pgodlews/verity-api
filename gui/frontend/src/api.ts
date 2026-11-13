@@ -8,6 +8,7 @@
 
 import { subscribeGitProgress, subscribeProjectChanged } from "./gitBus";
 import { subscribeLoadLive, subscribeRunEvents } from "./runBus";
+import { onEvent } from "./lib/events";
 import type {
   Catalog,
   GitStashInfo,
@@ -141,11 +142,6 @@ function bindings(): GoBindings {
 export const hasNativeDialogs = () =>
   (typeof window !== "undefined" && !!(window as unknown as { go?: unknown }).go) || useMock();
 
-type WailsRuntime = {
-  EventsOn?: (name: string, cb: (event: RunEvent) => void) => (() => void) | void;
-  EventsOff?: (name: string) => void;
-};
-
 /** True in a Vite dev build opened with ?mock. */
 export function mockMode(): boolean {
   return import.meta.env.DEV && typeof location !== "undefined" && new URLSearchParams(location.search).has("mock");
@@ -159,56 +155,22 @@ export function canWatchProject(): boolean {
 
 /** Subscribe to run progress. Wails delivers "run:event"; ?mock uses a local bus. */
 export function onRunEvent(handler: (event: RunEvent) => void): () => void {
-  const runtime = (window as unknown as { runtime?: WailsRuntime }).runtime;
-  if (runtime?.EventsOn) {
-    const off = runtime.EventsOn("run:event", handler);
-    return () => {
-      if (typeof off === "function") off();
-      else runtime.EventsOff?.("run:event");
-    };
-  }
-  return subscribeRunEvents(handler);
+  return onEvent("run:event", handler, subscribeRunEvents);
 }
 
 /** Subscribe to load-test live stats. Wails delivers "load:live"; ?mock uses a local bus. */
 export function onLoadLive(handler: (stats: LoadLiveStats) => void): () => void {
-  const runtime = typeof window !== "undefined" ? (window as unknown as { runtime?: WailsRuntime }).runtime : undefined;
-  if (runtime?.EventsOn) {
-    const off = runtime.EventsOn("load:live", handler as unknown as (event: RunEvent) => void);
-    return () => {
-      if (typeof off === "function") off();
-      else runtime.EventsOff?.("load:live");
-    };
-  }
-  return subscribeLoadLive(handler);
+  return onEvent("load:live", handler, subscribeLoadLive);
 }
 
 /** Subscribe to external project edits. Wails delivers "project:changed"; ?mock uses a local bus. */
 export function onProjectChanged(handler: (event: ProjectChanged) => void): () => void {
-  const runtime = (window as unknown as { runtime?: WailsRuntime }).runtime;
-  if (runtime?.EventsOn) {
-    const off = runtime.EventsOn("project:changed", handler as unknown as (event: RunEvent) => void);
-    return () => {
-      if (typeof off === "function") off();
-      else runtime.EventsOff?.("project:changed");
-    };
-  }
-  if (mockMode()) return subscribeProjectChanged(handler);
-  return () => {};
+  return onEvent("project:changed", handler, mockMode() ? subscribeProjectChanged : undefined);
 }
 
 /** Subscribe to git progress. Wails delivers "git:progress"; ?mock uses a local bus. */
 export function onGitProgress(handler: (event: GitProgress) => void): () => void {
-  const runtime = (window as unknown as { runtime?: WailsRuntime }).runtime;
-  if (runtime?.EventsOn) {
-    const off = runtime.EventsOn("git:progress", handler as unknown as (event: RunEvent) => void);
-    return () => {
-      if (typeof off === "function") off();
-      else runtime.EventsOff?.("git:progress");
-    };
-  }
-  if (mockMode()) return subscribeGitProgress(handler);
-  return () => {};
+  return onEvent("git:progress", handler, mockMode() ? subscribeGitProgress : undefined);
 }
 
 export const api = {
