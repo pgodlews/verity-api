@@ -204,11 +204,17 @@ func TestWireConversionEdgeCases(t *testing.T) {
 		"headers": map[string]any{"Multi": []any{"one", 2}, "Empty": 3},
 		"query":   map[string]any{"page": 2},
 		"cookies": map[string]any{"session": 3},
-		"body":    "not-base64",
 		"config":  map[string]any{"key": "value"},
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+	// A body that is not valid base64 is an error, not a silently empty body.
+	if _, err := decodeRequest(map[string]any{"body": "not-base64"}); err == nil {
+		t.Fatal("invalid base64 request body accepted")
+	}
+	if _, err := decodeResponse(map[string]any{"body": "not-base64"}); err == nil {
+		t.Fatal("invalid base64 response body accepted")
 	}
 	if !reflect.DeepEqual(req.Headers.Values("Multi"), []string{"one", ""}) || req.Headers.Get("Empty") != "" {
 		t.Fatalf("decoded headers = %#v", req.Headers)

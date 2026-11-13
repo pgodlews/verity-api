@@ -240,9 +240,11 @@ func decodeRequest(v any) (*spi.Request, error) {
 		}
 	}
 	if b := asString(m["body"]); b != "" {
-		if dec, err := base64.StdEncoding.DecodeString(b); err == nil {
-			req.Body = dec
+		dec, err := base64.StdEncoding.DecodeString(b)
+		if err != nil {
+			return nil, verr.Wrap(verr.CodePlugin, err, "decode request body (base64)")
 		}
+		req.Body = dec
 	}
 	if cfg, ok := m["config"].(map[string]any); ok {
 		req.Config = cfg
@@ -278,9 +280,11 @@ func decodeResponse(v any) (*spi.Response, error) {
 		resp.Duration = time.Duration(ms) * time.Millisecond
 	}
 	if b := asString(m["body"]); b != "" {
-		if dec, err := base64.StdEncoding.DecodeString(b); err == nil {
-			resp.Body = dec
+		dec, err := base64.StdEncoding.DecodeString(b)
+		if err != nil {
+			return nil, verr.Wrap(verr.CodePlugin, err, "decode response body (base64)")
 		}
+		resp.Body = dec
 	}
 	return resp, nil
 }
