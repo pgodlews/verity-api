@@ -89,6 +89,7 @@ func Load(ctx context.Context, reg *registry.Registry, manifests []Manifest) (*M
 			m.Close()
 			return nil, err
 		}
+		client.name = name
 		m.clients = append(m.clients, client)
 		if err := checkOverride(reg, client.Handshake(), man); err != nil {
 			m.Close()

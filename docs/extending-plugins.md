@@ -51,6 +51,20 @@ host                                   plugin process
   reports, and errors like built-in credentials.
 - On shutdown the host sends `host.shutdown`, closes stdin, and waits (then
   kills after a timeout).
+- A plugin that fails its handshake is killed and reaped. A response whose
+  `id` does not match the request stops the plugin, since every later
+  answer would belong to another request.
+- **No restart.** When a call times out (step timeout plus a grace period),
+  is cancelled, or the plugin exits or answers out of order, the host kills
+  the process and keeps it stopped for the rest of the run. That call fails
+  with `plugin_error`; every later step that uses the plugin fails at once
+  with `plugin_error` naming the plugin and why it stopped, for example
+  `plugin "grpc" is no longer running: it was killed after its
+  protocol.execute call timed out after 35s`, with details `plugin` and
+  `reason`. Fix the cause (a hung call, a crash) and run again.
+- A plugin cannot replace a type the host already has (`rest`, `bearer`,
+  `json`, …) unless its plugins entry sets `"override": true`; the core
+  `grpc` protocol stub is the exception and is replaced without it.
 
 ## Handshake
 
