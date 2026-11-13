@@ -76,6 +76,10 @@ the [CI workflows](.github/workflows/ci.yml) and
 configuration. Run the checks for each module and frontend area you change;
 all required CI checks must pass before merge.
 
+After a dependency change, run `go mod tidy` in the module you changed; CI
+fails when `go mod tidy -diff` reports a difference in any of the four
+modules or in `gui/third_party/go-webview2`.
+
 For project YAML/JSON changes, validate and check formatting with the CLI:
 
 ```bash

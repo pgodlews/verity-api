@@ -44,6 +44,12 @@ jobs:
         run: |
           unformatted=$(gofmt -l $(git ls-files '*.go'))
           if [ -n "$unformatted" ]; then echo "gofmt needed:"; echo "$unformatted"; exit 1; fi
+      - name: Module tidiness (every module)
+        run: |
+          for m in . gui plugins/grpc plugins/example-assertion gui/third_party/go-webview2; do
+            echo "go mod tidy -diff in $m"
+            (cd "$m" && go mod tidy -diff) || exit 1
+          done
       - name: Vet
         run: go vet ./...
       - name: Test (core + CLI, race detector)
