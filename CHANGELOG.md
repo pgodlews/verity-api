@@ -82,6 +82,11 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- REST/GraphQL request checks: setting more than one of `json`, `form`,
+  `body`, `multipart`, `bodyFile` is a `config_error` (before, `json`
+  silently won); a non-map `form`, `query`, or `headers` and an empty `url`
+  (or empty GraphQL `query`) are rejected instead of sending nothing; and
+  multipart validation no longer modifies the project's request map.
 - SOAP: a generated SOAP 1.2 envelope uses the 1.2 namespace
   (`http://www.w3.org/2003/05/soap-envelope`) instead of 1.1's, SOAP 1.1
   always sends `SOAPAction` (`""` when unset, as the spec requires), and a
