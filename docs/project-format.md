@@ -86,6 +86,11 @@ captures with a transfer is visible to the next setup step. Setup and
 teardown are separate scopes: share a setup capture with the suite's cases
 or its teardown through `scope: run`.
 
+If a setup step fails or errors, the suite's cases are not run: each is
+reported `skipped` with a `setup` step whose error code is `setup_failed`.
+The remaining setup steps and the teardown still run, and other suites are
+unaffected. (`verity load` setups are not affected by this rule.)
+
 ### Variable precedence
 
 When the same name is defined at more than one scope, later entries in this

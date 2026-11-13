@@ -301,7 +301,9 @@ func (e *execContext) runSuite(ctx context.Context, suite *model.Suite) spi.Suit
 	// short fresh context so a cancelled run does not skip that cleanup.
 	suiteStarted := !e.bailTripped()
 
-	// Setup hook (sequential, before cases).
+	// Setup hook (sequential, before cases). A failed setup step skips the
+	// suite's cases (their preconditions are missing); teardown still runs.
+	setupFailed := ""
 	if suite.Setup != nil {
 		hookVars := e.hookResolver(suite)
 		for i := range suite.Setup.Steps {
@@ -318,6 +320,9 @@ func (e *execContext) runSuite(ctx context.Context, suite *model.Suite) spi.Suit
 			cr := e.runHookCase(ctx, suite, name, step, hookVars)
 			sr.Cases = append(sr.Cases, cr)
 			e.noteBail(cr.Status)
+			if setupFailed == "" && (cr.Status == spi.StatusFailed || cr.Status == spi.StatusError) {
+				setupFailed = step.Name
+			}
 		}
 	}
 
@@ -340,6 +345,17 @@ func (e *execContext) runSuite(ctx context.Context, suite *model.Suite) spi.Suit
 		}
 		if e.bailTripped() {
 			perCase[ci] = []spi.CaseResult{e.skippedCase(suite.Name, c.Name, -1)}
+			continue
+		}
+		if setupFailed != "" {
+			cr := e.skippedCase(suite.Name, c.Name, -1)
+			cr.Steps = []spi.StepResult{{
+				Name:   "setup",
+				Status: spi.StatusSkipped,
+				Error: e.errInfo(verr.Newf(verr.CodeSetupFailed,
+					"suite setup step %q failed; case not run", setupFailed)),
+			}}
+			perCase[ci] = []spi.CaseResult{cr}
 			continue
 		}
 		ci := ci

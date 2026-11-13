@@ -41,6 +41,9 @@ const (
 	// CodeConflict indicates a stale save baseline or Git reference.
 	// A refused save writes nothing.
 	CodeConflict Code = "conflict"
+	// CodeSetupFailed marks a case that was not run because a setup step of
+	// its suite failed.
+	CodeSetupFailed Code = "setup_failed"
 	// CodeGit indicates a git command failed. The message is git's own text
 	// with URL userinfo masked. Diverged, conflict, dirty, and missing
 	// upstream are result statuses, not this code.

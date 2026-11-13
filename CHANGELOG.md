@@ -36,6 +36,10 @@ and distribution names below use the final public names.
 
 ### Changed
 
+- **BREAKING:** a failed or errored setup step now skips the suite's cases;
+  each is reported `skipped` with a `setup` step carrying the new
+  `setup_failed` error code. Before, cases ran anyway (unless `--bail`)
+  against missing preconditions. Teardown still runs.
 - **BREAKING:** `steps[].vars` are now local to their step, as documented,
   and are applied in sorted name order. Before, they were set on the case
   and leaked into every later step, in random map order. Use case `vars` or a
