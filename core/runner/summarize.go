@@ -72,6 +72,18 @@ func summarize(result *spi.RunResult) spi.Summary {
 		s.Suites++
 		for _, c := range suite.Cases {
 			s.Cases++
+			switch c.Status {
+			case spi.StatusPassed:
+				s.CasesPassed++
+			case spi.StatusFailed:
+				s.CasesFailed++
+			case spi.StatusError:
+				s.CasesErrored++
+			case spi.StatusSkipped:
+				s.CasesSkipped++
+			case spi.StatusAborted:
+				s.CasesAborted++
+			}
 			for _, st := range c.Steps {
 				s.Steps++
 				switch st.Status {
@@ -93,8 +105,10 @@ func summarize(result *spi.RunResult) spi.Summary {
 					s.Assertions++
 					if a.Passed {
 						s.Passed++
+						s.AssertionsPassed++
 					} else {
 						s.Failed++
+						s.AssertionsFailed++
 						worst = worse(worst, spi.StatusFailed)
 					}
 				}

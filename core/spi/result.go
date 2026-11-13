@@ -69,6 +69,19 @@ type Summary struct {
 	// StepsAborted counts steps (including ones inside cases that never
 	// started) whose status is aborted. Omitted when zero.
 	StepsAborted int `json:"stepsAborted,omitempty"`
+
+	// Passed and Failed above count assertions while Errors and Skipped
+	// count steps; they are kept for compatibility. The fields below name
+	// their unit. Case counts include cases with no steps (for example
+	// cases --bail never started), which the step counts cannot see. Zero
+	// counts are omitted, like the step counts.
+	AssertionsPassed int `json:"assertionsPassed,omitempty"`
+	AssertionsFailed int `json:"assertionsFailed,omitempty"`
+	CasesPassed      int `json:"casesPassed,omitempty"`
+	CasesFailed      int `json:"casesFailed,omitempty"`
+	CasesErrored     int `json:"casesErrored,omitempty"`
+	CasesSkipped     int `json:"casesSkipped,omitempty"`
+	CasesAborted     int `json:"casesAborted,omitempty"`
 }
 
 // RunEvent is one progress notification from a run. Runner.Options.OnEvent
