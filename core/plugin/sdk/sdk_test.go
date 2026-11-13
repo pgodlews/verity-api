@@ -25,7 +25,7 @@ func TestSDKHeaderRoundTrip(t *testing.T) {
 	req.Headers.Add("Multi", "v1")
 	req.Headers.Add("Multi", "v2")
 
-	encReq := encodeRequest(req)
+	encReq := plugin.EncodeRequest(req)
 	decReq, err := decodeRequest(encReq)
 	if err != nil {
 		t.Fatalf("decodeRequest failed: %v", err)
@@ -50,7 +50,7 @@ func TestSDKHeaderRoundTrip(t *testing.T) {
 	resp.Headers.Add("Set-Cookie", "c1=1")
 	resp.Headers.Add("Set-Cookie", "c2=2")
 
-	encResp := encodeResponse(resp)
+	encResp := plugin.EncodeResponse(resp)
 	decResp, err := decodeResponse(encResp)
 	if err != nil {
 		t.Fatalf("decodeResponse failed: %v", err)

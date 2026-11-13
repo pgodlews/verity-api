@@ -281,8 +281,8 @@ func TestServeEntrypointsHandshakeAndShutdown(t *testing.T) {
 }
 
 func TestEncodeHeadersNil(t *testing.T) {
-	if got := encodeHeaders(nil); len(got) != 0 {
-		t.Fatalf("encodeHeaders(nil) = %#v", got)
+	if got := plugin.EncodeHeaders(nil); len(got) != 0 {
+		t.Fatalf("plugin.EncodeHeaders(nil) = %#v", got)
 	}
 	req, err := decodeRequest(nil)
 	if err != nil || req.Headers == nil || req.Query == nil || req.Cookies == nil {
@@ -292,7 +292,7 @@ func TestEncodeHeadersNil(t *testing.T) {
 	if err != nil || resp.Headers == nil || resp.Meta == nil {
 		t.Fatalf("decodeResponse(nil) = %#v, %v", resp, err)
 	}
-	if got := encodeHeaders(http.Header{"Empty": nil}); len(got) != 0 {
+	if got := plugin.EncodeHeaders(http.Header{"Empty": nil}); len(got) != 0 {
 		t.Fatalf("empty header encoded as %#v", got)
 	}
 }

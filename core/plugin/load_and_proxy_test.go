@@ -191,11 +191,11 @@ func TestWireErrorsAndDecodeEdges(t *testing.T) {
 	if got := wire.Error(); got != "plugin_error: failed" {
 		t.Fatalf("WireError.Error = %q", got)
 	}
-	_, err := decodeRequest(nil)
+	_, err := DecodeRequest(nil)
 	requirePluginCode(t, err, verr.CodePlugin)
-	_, err = decodeResponse(nil)
+	_, err = DecodeResponse(nil)
 	requirePluginCode(t, err, verr.CodePlugin)
-	req, err := decodeRequest(map[string]any{
+	req, err := DecodeRequest(map[string]any{
 		"headers": map[string]string{"X-Test": "one"},
 		"query":   map[string]string{"page": "1"},
 		"cookies": map[string]any{"session": 2},
@@ -204,17 +204,17 @@ func TestWireErrorsAndDecodeEdges(t *testing.T) {
 		t.Fatalf("decoded request = %#v, %v", req, err)
 	}
 	// A body that is not valid base64 is an error, not a silently empty body.
-	_, err = decodeRequest(map[string]any{"body": "not-base64"})
+	_, err = DecodeRequest(map[string]any{"body": "not-base64"})
 	requirePluginCode(t, err, verr.CodePlugin)
-	_, err = decodeResponse(map[string]any{"body": "not-base64"})
+	_, err = DecodeResponse(map[string]any{"body": "not-base64"})
 	requirePluginCode(t, err, verr.CodePlugin)
 	headers := http.Header{}
-	decodeHeaders(map[string][]string{"X-Multi": {"one", "two"}}, headers)
+	DecodeHeaders(map[string][]string{"X-Multi": {"one", "two"}}, headers)
 	if len(headers.Values("X-Multi")) != 2 {
 		t.Fatalf("decoded headers = %#v", headers)
 	}
-	if got := encodeHeaders(nil); len(got) != 0 {
-		t.Fatalf("encodeHeaders(nil) = %#v", got)
+	if got := EncodeHeaders(nil); len(got) != 0 {
+		t.Fatalf("EncodeHeaders(nil) = %#v", got)
 	}
 	for _, tt := range []struct {
 		value any

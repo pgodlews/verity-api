@@ -19,7 +19,7 @@ func TestEncodeDecodeHeaders(t *testing.T) {
 	h.Add("X-Multi", "val1")
 	h.Add("X-Multi", "val2")
 
-	encoded := encodeHeaders(h)
+	encoded := EncodeHeaders(h)
 	if encoded["Content-Type"] != "application/json" {
 		t.Fatalf("expected single string for Content-Type, got %v", encoded["Content-Type"])
 	}
@@ -30,7 +30,7 @@ func TestEncodeDecodeHeaders(t *testing.T) {
 
 	// Test decoding
 	decoded := http.Header{}
-	decodeHeaders(encoded, decoded)
+	DecodeHeaders(encoded, decoded)
 	if decoded.Get("Content-Type") != "application/json" {
 		t.Fatalf("decode Content-Type failed: %s", decoded.Get("Content-Type"))
 	}
@@ -52,8 +52,8 @@ func TestRequestAndResponseHeaderRoundTrip(t *testing.T) {
 	req.Headers.Add("X-List", "a")
 	req.Headers.Add("X-List", "b")
 
-	encReq := encodeRequest(req)
-	decReq, err := decodeRequest(encReq)
+	encReq := EncodeRequest(req)
+	decReq, err := DecodeRequest(encReq)
 	if err != nil {
 		t.Fatalf("decodeRequest error: %v", err)
 	}
@@ -74,8 +74,8 @@ func TestRequestAndResponseHeaderRoundTrip(t *testing.T) {
 	resp.Headers.Add("Set-Cookie", "c1=v1")
 	resp.Headers.Add("Set-Cookie", "c2=v2")
 
-	encResp := encodeResponse(resp)
-	decResp, err := decodeResponse(encResp)
+	encResp := EncodeResponse(resp)
+	decResp, err := DecodeResponse(encResp)
 	if err != nil {
 		t.Fatalf("decodeResponse error: %v", err)
 	}
