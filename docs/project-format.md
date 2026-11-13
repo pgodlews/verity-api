@@ -5,6 +5,13 @@ tests. It is written in YAML or JSON and may be split across files. The
 versioned JSON Schema is published via `verity schema` (and in
 `core/schema/schema.go`); editors and AI agents can validate against it.
 
+Keys are checked when a project or fragment is loaded: a key the format does
+not define (a typo such as `asertions:` or `retrys:`) is a `validation_error`
+whose path names the object that contains it, for example
+`suites[0].cases[1].steps[0]`. Free-form maps (`request`, `config`, `vars`,
+environment `variables`, feed rows) accept any key. JSON keys match
+case-insensitively, as in Go's JSON decoder.
+
 Use `verity fmt project.yaml` to normalize the root and all included fragments
 to two-space indentation without sorting keys or changing values. GUI saves use
 the same formatting. See [git.md](git.md) for check mode and Git automation.

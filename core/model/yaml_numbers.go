@@ -20,6 +20,13 @@ func decodeYAMLProject(data []byte, p *Project) error {
 		if err := doc.Content[0].Decode(p); err != nil {
 			return err
 		}
+		// Reject keys the model does not define (see checkKnownFields).
+		var generic any
+		if err := doc.Content[0].Decode(&generic); err == nil {
+			if err := checkKnownFields(generic, "yaml"); err != nil {
+				return err
+			}
+		}
 	}
 	return preserveYAMLRequestNumbers(&doc, p)
 }
