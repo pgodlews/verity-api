@@ -17,6 +17,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 
 	"github.com/pgodlews/verity-api/core/spi"
+	"github.com/pgodlews/verity-api/core/watchfs"
 )
 
 func TestWatchDebounce(t *testing.T) {
@@ -25,28 +26,28 @@ func TestWatchDebounce(t *testing.T) {
 	}
 	d := watchDebounce
 	t0 := time.Unix(1_700_000_000, 0)
-	deadline := pushDebounce(time.Time{}, t0, d)
+	deadline := watchfs.PushDebounce(time.Time{}, t0, d)
 	if !deadline.Equal(t0.Add(d)) {
 		t.Fatalf("first deadline %s", deadline)
 	}
 	later := t0.Add(100 * time.Millisecond)
-	pushed := pushDebounce(deadline, later, d)
+	pushed := watchfs.PushDebounce(deadline, later, d)
 	if !pushed.Equal(later.Add(d)) {
 		t.Fatalf("pushed deadline %s, want %s", pushed, later.Add(d))
 	}
-	if got := pushDebounce(pushed, t0, d); !got.Equal(pushed) {
+	if got := watchfs.PushDebounce(pushed, t0, d); !got.Equal(pushed) {
 		t.Fatalf("earlier event shortened the window to %s", got)
 	}
-	if debounceFired(time.Time{}, t0) {
+	if watchfs.DebounceFired(time.Time{}, t0) {
 		t.Fatal("zero deadline fired")
 	}
-	if debounceFired(pushed, pushed.Add(-time.Nanosecond)) {
+	if watchfs.DebounceFired(pushed, pushed.Add(-time.Nanosecond)) {
 		t.Fatal("fired before the deadline")
 	}
-	if !debounceFired(pushed, pushed) {
+	if !watchfs.DebounceFired(pushed, pushed) {
 		t.Fatal("deadline itself did not fire")
 	}
-	if !debounceFired(pushed, pushed.Add(time.Millisecond)) {
+	if !watchfs.DebounceFired(pushed, pushed.Add(time.Millisecond)) {
 		t.Fatal("past the deadline did not fire")
 	}
 }
@@ -72,20 +73,20 @@ func TestEventTriggers(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := eventTriggers(files, tt.path, tt.op); got != tt.want {
-				t.Fatalf("eventTriggers(%q, %v) = %v, want %v", tt.path, tt.op, got, tt.want)
+			if got := watchfs.EventTriggers(files, tt.path, tt.op); got != tt.want {
+				t.Fatalf("watchfs.EventTriggers(%q, %v) = %v, want %v", tt.path, tt.op, got, tt.want)
 			}
 		})
 	}
 }
 
 func TestWatchDirs(t *testing.T) {
-	got := watchDirs([]string{"/proj/a.yaml", "/proj/sub/b.yaml", "/proj/a.yaml"})
+	got := watchfs.WatchDirs([]string{"/proj/a.yaml", "/proj/sub/b.yaml", "/proj/a.yaml"})
 	want := []string{"/proj", "/proj/sub"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("watchDirs = %v, want %v", got, want)
 	}
-	if dirs := watchDirs(nil); len(dirs) != 0 {
+	if dirs := watchfs.WatchDirs(nil); len(dirs) != 0 {
 		t.Fatalf("empty = %v", dirs)
 	}
 }
@@ -478,18 +479,18 @@ func TestEventTriggersOnMissingDirectory(t *testing.T) {
 		{"/proj/datax", fsnotify.Create, false},
 		{"/proj/data/rows.csv", fsnotify.Create, true},
 	} {
-		if got := eventTriggers(files, tt.path, tt.op); got != tt.want {
-			t.Errorf("eventTriggers(%q, %v) = %v, want %v", tt.path, tt.op, got, tt.want)
+		if got := watchfs.EventTriggers(files, tt.path, tt.op); got != tt.want {
+			t.Errorf("watchfs.EventTriggers(%q, %v) = %v, want %v", tt.path, tt.op, got, tt.want)
 		}
 	}
 }
 
 func TestExistingAncestor(t *testing.T) {
 	dir := t.TempDir()
-	if got := existingAncestor(filepath.Join(dir, "a", "b")); got != dir {
+	if got := watchfs.ExistingAncestor(filepath.Join(dir, "a", "b")); got != dir {
 		t.Fatalf("existingAncestor = %q, want %q", got, dir)
 	}
-	if got := existingAncestor(dir); got != dir {
+	if got := watchfs.ExistingAncestor(dir); got != dir {
 		t.Fatalf("existing dir: got %q", got)
 	}
 }
