@@ -29,6 +29,35 @@ type Client struct {
 	mu     sync.Mutex
 	dead   bool
 	nextID int
+	// name labels the plugin in errors (the manifest name, else the
+	// binary's base name). deadReason says why the process was stopped.
+	name       string
+	deadReason string
+}
+
+// markDead stops using the plugin process for the rest of the run. Verity
+// does not relaunch plugins: later calls fail with deadError.
+func (c *Client) markDead(reason string) {
+	if !c.dead {
+		c.dead = true
+		c.deadReason = reason
+	}
+	if c.cmd != nil && c.cmd.Process != nil {
+		_ = c.cmd.Process.Kill()
+	}
+}
+
+// deadError is the error every call after markDead returns: plugin_error
+// naming the plugin and why it was stopped, with details "plugin" and
+// "reason".
+func (c *Client) deadError() error {
+	reason := c.deadReason
+	if reason == "" {
+		reason = "it was shut down"
+	}
+	return verr.Newf(verr.CodePlugin,
+		"plugin %q is no longer running: %s. Verity does not restart a plugin during a run; fix the cause and run again", c.name, reason).
+		WithDetail("plugin", c.name).WithDetail("reason", reason)
 }
 
 // hostStderr is where plugin stderr lines go; tests replace it.
@@ -60,7 +89,7 @@ func launch(ctx context.Context, path string, args []string, stderr *stderrWrite
 		return nil, verr.Wrap(verr.CodePlugin, err, "start plugin "+path)
 	}
 
-	c := &Client{cmd: cmd, stdin: stdin, stdout: bufio.NewReader(stdout), Timeout: 30 * time.Second, stderr: stderr}
+	c := &Client{cmd: cmd, stdin: stdin, stdout: bufio.NewReader(stdout), Timeout: 30 * time.Second, stderr: stderr, name: filepath.Base(path)}
 
 	// Read the handshake line (with a timeout so a bad binary can't hang us).
 	hsCh := make(chan error, 1)
@@ -127,7 +156,7 @@ func (c *Client) callTimeout(ctx context.Context, method Method, params map[stri
 	defer c.mu.Unlock()
 
 	if c.dead {
-		return nil, verr.New(verr.CodePlugin, "plugin is dead or terminated")
+		return nil, c.deadError()
 	}
 	if err := ctx.Err(); err != nil {
 		return nil, verr.Wrap(verr.CodePlugin, err, "plugin call cancelled")
@@ -150,7 +179,7 @@ func (c *Client) callTimeout(ctx context.Context, method Method, params map[stri
 		return nil, verr.Wrap(verr.CodePlugin, err, "plugin call cancelled")
 	}
 	if _, err := c.stdin.Write(append(data, '\n')); err != nil {
-		c.dead = true
+		c.markDead("writing a request to it failed (the process had exited)")
 		return nil, verr.Wrap(verr.CodePlugin, err, "write plugin request")
 	}
 
@@ -170,20 +199,15 @@ func (c *Client) callTimeout(ctx context.Context, method Method, params map[stri
 	var line []byte
 	select {
 	case <-ctx.Done():
-		c.dead = true
-		if c.cmd.Process != nil {
-			_ = c.cmd.Process.Kill()
-		}
+		c.markDead(fmt.Sprintf("it was killed when its %s call was cancelled", method))
 		return nil, verr.Wrap(verr.CodePlugin, ctx.Err(), "plugin call cancelled")
 	case <-timer.C:
-		c.dead = true
-		if c.cmd.Process != nil {
-			_ = c.cmd.Process.Kill()
-		}
-		return nil, verr.Newf(verr.CodePlugin, "plugin call %s timed out after %v", method, timeout)
+		c.markDead(fmt.Sprintf("it was killed after its %s call timed out after %v", method, timeout))
+		return nil, verr.Newf(verr.CodePlugin, "plugin %q call %s timed out after %v; the plugin was killed", c.name, method, timeout).
+			WithDetail("plugin", c.name)
 	case res := <-resCh:
 		if res.err != nil {
-			c.dead = true
+			c.markDead("it exited or closed its output")
 			return nil, verr.Wrap(verr.CodePlugin, res.err, "read plugin response")
 		}
 		line = res.line
@@ -196,11 +220,8 @@ func (c *Client) callTimeout(ctx context.Context, method Method, params map[stri
 	if resp.ID != req.ID {
 		// The stream is out of step: every later answer would belong to
 		// another request. Stop using this plugin process.
-		c.dead = true
-		if c.cmd.Process != nil {
-			_ = c.cmd.Process.Kill()
-		}
-		return nil, verr.Newf(verr.CodePlugin, "plugin answered request %d with response id %d", req.ID, resp.ID)
+		c.markDead(fmt.Sprintf("it was killed after answering request %d with response id %d", req.ID, resp.ID))
+		return nil, verr.Newf(verr.CodePlugin, "plugin %q answered request %d with response id %d", c.name, req.ID, resp.ID)
 	}
 	if resp.Error != nil {
 		return nil, &verr.Error{

@@ -134,6 +134,10 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- After a plugin is stopped (a timed-out or cancelled call, a crash, an
+  out-of-order answer), later steps fail with `plugin_error` naming the
+  plugin and why it stopped, instead of "plugin is dead or terminated".
+  Plugins are still not restarted during a run. (B-17)
 - Desktop saves no longer reformat unrelated parts of a YAML project file
   (dropped quotes, removed blank lines, folded text turned literal): the
   edited step or environment is merged field by field into its entry, which
