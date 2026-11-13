@@ -89,7 +89,10 @@ list win over earlier ones:
 4. Data-feed row columns (`feed`)
 5. CLI `--var KEY=VALUE` overrides
 6. Step-local variables (`steps[].vars`) and property transfers
-   (`steps[].transfers`), applied as each step runs
+   (`steps[].transfers`), applied as each step runs. Step variables apply
+   only to their own step (in sorted name order, so one may reference
+   another that sorts earlier); a transfer stays visible to the later steps
+   of the case
 
 So a CLI `--var` override always beats a value baked into the project file
 (useful for pointing a run at a different endpoint in CI), but a step's own

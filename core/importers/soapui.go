@@ -373,6 +373,8 @@ func (imp *suImporter) buildCase(suite string, tc suTestCase, caseNames map[stri
 	index := map[string]int{}
 	stepUsed := map[string]int{}
 	var propBuf []suProperty
+	carried := map[string]string{}
+	var carriedAt []map[string]bool // per step: vars repeated from an earlier properties step
 	var events []suEvent
 	for _, st := range tc.TestSteps {
 		raw := defaultName(st.Name, "Step")
@@ -408,7 +410,27 @@ func (imp *suImporter) buildCase(suite string, tc suTestCase, caseNames map[stri
 			if len(propBuf) > 0 {
 				step.Vars = imp.assignVars(stepWhere, step.Vars, propBuf)
 				propBuf = nil
+				for k, v := range step.Vars {
+					carried[k] = v
+				}
 			}
+			// Step vars are local to their step, but a SoapUI properties
+			// step stays visible to every later request: repeat its values
+			// on each later step.
+			var carriedHere map[string]bool
+			for k, v := range carried {
+				if step.Vars == nil {
+					step.Vars = map[string]string{}
+				}
+				if _, set := step.Vars[k]; !set {
+					step.Vars[k] = v
+					if carriedHere == nil {
+						carriedHere = map[string]bool{}
+					}
+					carriedHere[k] = true
+				}
+			}
+			carriedAt = append(carriedAt, carriedHere)
 			if isTrue(tc.Disabled) {
 				step.Skip = true
 			}
@@ -425,6 +447,17 @@ func (imp *suImporter) buildCase(suite string, tc suTestCase, caseNames map[stri
 		return model.TestCase{}, false
 	}
 	imp.attachTransfers(where, steps, index, events)
+	// A value captured by a transfer replaces an earlier property of the
+	// same name for the steps after the capture, as in SoapUI.
+	for i := range steps {
+		for _, t := range steps[i].Transfers {
+			for k := i + 1; k < len(steps); k++ {
+				if carriedAt[k][t.Name] {
+					delete(steps[k].Vars, t.Name)
+				}
+			}
+		}
+	}
 	imp.warnLateProperties(where, events, steps)
 	c := model.TestCase{Name: name, Steps: steps}
 	c.Vars = imp.assignVars(where, nil, tc.Properties.Property)

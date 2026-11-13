@@ -45,6 +45,16 @@ type Resolver struct {
 	secretValues map[string]struct{}
 }
 
+// Child returns a resolver that starts with r's variables and file policy.
+// Set on the child does not affect r. Secrets the child resolves are reported
+// by the child's SecretValues.
+func (r *Resolver) Child() *Resolver {
+	c := NewResolver(r.Vars)
+	c.Now, c.Rand = r.Now, r.Rand
+	c.FileDir, c.AllowExternalFiles = r.FileDir, r.AllowExternalFiles
+	return c
+}
+
 // WithFiles sets the ${secret:file:...} policy and returns r.
 func (r *Resolver) WithFiles(dir string, allowExternal bool) *Resolver {
 	r.FileDir = dir
