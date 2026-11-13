@@ -143,6 +143,11 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- The published project schema (`verity schema`) matches the Go model: a
+  project needs `schemaVersion` and `name`, and `suites` may be empty or
+  absent (a mocks-only project for `verity mock`). Both schemas use an
+  `$id` under `https://github.com/pgodlews/verity-api/`. A test now fails
+  when the schema and the model drift apart. (C-1)
 - `verity load` runs suite teardown hooks once after the load, and after a
   failed setup (no virtual user starts then). A setup step that fails with
   a config or validation error exits 3 instead of 1; the report adds

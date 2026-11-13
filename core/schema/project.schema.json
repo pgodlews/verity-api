@@ -1,10 +1,10 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://verity-api.dev/schemas/project-1.0.json",
+  "$id": "https://github.com/pgodlews/verity-api/blob/main/core/schema/project.schema.json",
   "title": "Verity Project",
-  "description": "A Verity API contract testing project. Protocol-neutral, git-friendly.",
+  "description": "A Verity API contract testing project file (the root file; include fragments are checked after they are merged). Protocol-neutral, git-friendly. verity run needs at least one suite; a project for verity mock may have only mocks.",
   "type": "object",
-  "required": ["schemaVersion", "name", "suites"],
+  "required": ["schemaVersion", "name"],
   "additionalProperties": false,
   "properties": {
     "schemaVersion": { "type": "string", "examples": ["1.0"] },
@@ -14,7 +14,7 @@
     "include": { "type": "array", "items": { "type": "string" } },
     "environments": { "type": "array", "items": { "$ref": "#/$defs/environment" } },
     "auth": { "type": "array", "items": { "$ref": "#/$defs/authDef" } },
-    "suites": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/suite" } },
+    "suites": { "type": "array", "items": { "$ref": "#/$defs/suite" } },
     "mocks": {
       "type": "array",
       "description": "Optional responses served by verity mock. Not executed by verity run.",

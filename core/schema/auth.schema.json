@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://verity-api.dev/schemas/auth-1.0.json",
+  "$id": "https://github.com/pgodlews/verity-api/blob/main/core/schema/auth.schema.json",
   "title": "Verity Auth Provider Config",
   "description": "Configuration shapes for built-in auth providers. Secrets must use ${env:VAR} or ${secret:...} references, never literals.",
   "oneOf": [
