@@ -7,6 +7,8 @@ import { verityBridge } from "./vite.bridge";
 // bindings over HTTP so `npm run dev` also works in a plain browser.
 export default defineConfig({
   plugins: [react(), verityBridge()],
+  // The dev bridge runs local commands; never listen beyond this machine.
+  server: { host: "localhost" },
   build: {
     outDir: "dist",
     // Retain the previous webview/browser target across the Vite upgrade.

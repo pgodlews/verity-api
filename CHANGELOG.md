@@ -57,6 +57,10 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- The frontend development bridge (`npm run dev`) refuses cross-site
+  requests: it needs a loopback `Host`, the `X-Verity-Bridge: 1` header, and
+  a same-origin `Origin`, so another page in the browser can no longer save,
+  commit, push, or run through it. The dev server binds to `localhost`.
 - Avoid opening Windows console windows for Git subprocesses during desktop operations.
 - Let Windows Git clean up staging locks on cancellation by sending CTRL_C
   in an isolated hidden console instead of CTRL_BREAK.
