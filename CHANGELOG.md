@@ -82,6 +82,9 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- YAML projects keep exact JSON number literals in setup and teardown step
+  `json`/`variables` and in mock `json` bodies, as they already did for case
+  steps.
 - A response body over 32 MiB is no longer cut silently: the response is
   marked truncated and body assertions fail with a clear message instead of
   running on a partial body. `response_time` is documented as time to

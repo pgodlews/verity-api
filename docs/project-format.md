@@ -259,7 +259,8 @@ percent-encoded before sending and before any signer parses the URL. Existing
 Auth-added query parameters are merged and encoded as before; `aws_sigv4`,
 `hmac`, and `digest` use the same escaped query that goes on the wire.
 
-YAML `request.json` bodies and GraphQL `request.variables` retain JSON numeric
+YAML `request.json` bodies and GraphQL `request.variables` (in case steps and
+in setup/teardown hook steps) and mock `json` bodies retain JSON numeric
 literals. YAML `<<` merge keys keep their normal semantics: explicit keys win,
 and earlier maps in a merge sequence win over later ones. JSON project files
 must contain exactly one JSON value; trailing content is an error.

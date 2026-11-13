@@ -43,48 +43,68 @@ func normalizeYAMLFloatTags(n *yaml.Node) {
 }
 
 // YAML otherwise decodes interface numbers to machine numeric types. Preserve
-// their source tokens in the two request fields that contain arbitrary JSON.
+// their source tokens wherever a project holds arbitrary JSON: the request
+// json/variables of case, setup, and teardown steps, and mock json bodies.
 func preserveYAMLRequestNumbers(doc *yaml.Node, p *Project) error {
 	if len(doc.Content) == 0 {
 		return nil
 	}
-	suites := yamlMapValue(doc.Content[0], "suites")
-	for si, suite := range yamlSequence(suites) {
+	root := doc.Content[0]
+	for mi, mock := range yamlSequence(yamlMapValue(root, "mocks")) {
+		if mi >= len(p.Mocks) {
+			break
+		}
+		if value := yamlMapValue(mock, "json"); value != nil {
+			p.Mocks[mi].JSON = yamlJSONValue(value)
+		}
+	}
+	for si, suite := range yamlSequence(yamlMapValue(root, "suites")) {
 		if si >= len(p.Suites) {
 			break
 		}
-		cases := yamlMapValue(suite, "cases")
-		for ci, testCase := range yamlSequence(cases) {
-			if ci >= len(p.Suites[si].Cases) {
+		s := &p.Suites[si]
+		if s.Setup != nil {
+			preserveStepNumbers(yamlMapValue(yamlMapValue(suite, "setup"), "steps"), s.Setup.Steps)
+		}
+		if s.Teardown != nil {
+			preserveStepNumbers(yamlMapValue(yamlMapValue(suite, "teardown"), "steps"), s.Teardown.Steps)
+		}
+		for ci, testCase := range yamlSequence(yamlMapValue(suite, "cases")) {
+			if ci >= len(s.Cases) {
 				break
 			}
-			steps := yamlMapValue(testCase, "steps")
-			for sti, step := range yamlSequence(steps) {
-				if sti >= len(p.Suites[si].Cases[ci].Steps) {
-					break
-				}
-				current := &p.Suites[si].Cases[ci].Steps[sti]
-				if current.Request == nil {
-					continue
-				}
-				field := ""
-				switch current.Protocol {
-				case "rest":
-					field = "json"
-				case "graphql":
-					field = "variables"
-				}
-				if field == "" {
-					continue
-				}
-				request := yamlMapValue(step, "request")
-				if value := yamlMapValue(request, field); value != nil {
-					current.Request[field] = yamlJSONValue(value)
-				}
-			}
+			preserveStepNumbers(yamlMapValue(testCase, "steps"), s.Cases[ci].Steps)
 		}
 	}
 	return nil
+}
+
+// preserveStepNumbers re-reads each step's JSON-carrying request field from
+// its YAML node with exact numbers.
+func preserveStepNumbers(stepsNode *yaml.Node, steps []Step) {
+	for sti, step := range yamlSequence(stepsNode) {
+		if sti >= len(steps) {
+			break
+		}
+		current := &steps[sti]
+		if current.Request == nil {
+			continue
+		}
+		field := ""
+		switch current.Protocol {
+		case "rest":
+			field = "json"
+		case "graphql":
+			field = "variables"
+		}
+		if field == "" {
+			continue
+		}
+		request := yamlMapValue(step, "request")
+		if value := yamlMapValue(request, field); value != nil {
+			current.Request[field] = yamlJSONValue(value)
+		}
+	}
 }
 
 func yamlJSONValue(n *yaml.Node) any {
