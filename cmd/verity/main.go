@@ -73,17 +73,23 @@ func run(args []string) int {
 		return cmdSecret(rest)
 	case "version":
 		return cmdVersion(rest)
-	case "gui-call": // internal: the GUI's browser dev bridge
-		return cmdGUICall(rest)
 	case "-h", "--help", "help":
 		usage()
 		return exitOK
 	default:
+		if f, ok := devCommands[cmd]; ok {
+			return f(rest)
+		}
 		fmt.Fprintf(os.Stderr, "unknown command %q\n\n", cmd)
 		usage()
 		return exitUsage
 	}
 }
+
+// devCommands are internal commands compiled in only by build tags: the
+// GUI's browser dev bridge (gui-call, -tags devbridge). Release builds have
+// none.
+var devCommands = map[string]func([]string) int{}
 
 func usage() {
 	fmt.Fprint(os.Stderr, `verity — Verity API contract testing

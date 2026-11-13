@@ -36,7 +36,17 @@ wails dev      # hot-reload: Go backend + Vite frontend
 
 `npm run dev` also works on its own. Outside the Wails shell the frontend
 calls a dev-only bridge (`frontend/vite.bridge.ts`) that runs
-`verity gui-call <Method>`; that command and the desktop app (`app.go`)
+`verity gui-call <Method>`. That command is compiled in only with the
+`devbridge` build tag, so build the CLI for it first (release binaries do
+not include it):
+
+```bash
+go build -tags devbridge -o verity ./cmd/verity   # at the repository root
+cd gui/frontend && npm run dev                     # or set VERITY_BIN
+```
+
+The bridge uses `$VERITY_BIN`, else the repository-root `verity`, else
+`verity` on `PATH`. `gui-call` and the desktop app (`app.go`)
 both call `core/workspace`, so the browser gets the same behaviour and real,
 redacted results. OAuth sign-in sessions require the desktop app because
 the browser bridge starts a fresh CLI process per call. Mock mode simulates
