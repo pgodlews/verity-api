@@ -12,12 +12,14 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/pgodlews/verity-api/core/plugin"
@@ -72,12 +74,45 @@ type AuthFactoryFunc func(config map[string]any) (spi.AuthProvider, error)
 
 // ServeAuth runs an AuthProvider plugin. typ is the registered type id.
 func ServeAuth(typ string, factory AuthFactoryFunc) {
+	cache := newAuthCache(factory)
 	serve(plugin.Handshake{
 		Magic: plugin.MagicCookie, Version: plugin.ProtocolVersion,
 		Kind: "auth", Type: typ,
 	}, func(req plugin.Request) plugin.Response {
-		return handleAuth(factory, req)
+		return handleAuth(cache.provider, req)
 	})
+}
+
+// authCache keeps one provider per distinct config for the plugin process,
+// so providers that fetch and cache tokens (OAuth-like flows) are not
+// rebuilt, and do not fetch again, on every request.
+type authCache struct {
+	factory AuthFactoryFunc
+	mu      sync.Mutex
+	items   map[[32]byte]spi.AuthProvider
+}
+
+func newAuthCache(factory AuthFactoryFunc) *authCache {
+	return &authCache{factory: factory, items: map[[32]byte]spi.AuthProvider{}}
+}
+
+func (c *authCache) provider(cfg map[string]any) (spi.AuthProvider, error) {
+	data, err := json.Marshal(cfg) // map keys are sorted, so equal configs hash equally
+	if err != nil {
+		return c.factory(cfg)
+	}
+	key := sha256.Sum256(data)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if p, ok := c.items[key]; ok {
+		return p, nil
+	}
+	p, err := c.factory(cfg)
+	if err != nil {
+		return nil, err
+	}
+	c.items[key] = p
+	return p, nil
 }
 
 // serve writes the handshake then runs the request/response loop until stdin

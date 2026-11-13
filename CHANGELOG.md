@@ -100,6 +100,9 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- Plugin SDK: `ServeAuth` keeps one provider per distinct config for the
+  plugin process instead of rebuilding it (and losing any cached token) on
+  every request.
 - Plugin SDK: `AssertionContext` and `ProtocolContext` carry a working
   (plugin-local) redactor instead of nil, so plugin code that calls
   `Redactor.Redact` like a built-in no longer panics.
