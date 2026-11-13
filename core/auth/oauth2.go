@@ -60,6 +60,9 @@ type oauth2Provider struct {
 
 	red    *secrets.Redactor
 	client *http.Client
+	// tokenRT, when set, picks the transport for each token request from
+	// the step's TLS config (see TokenClient).
+	tokenRT func(*spi.TLSConfig) (http.RoundTripper, error)
 
 	mu     sync.Mutex
 	cached *cachedToken
@@ -139,18 +142,32 @@ func (p *oauth2Provider) registerSecrets() {
 func (p *oauth2Provider) Type() string       { return p.providerType }
 func (*oauth2Provider) Layer() spi.AuthLayer { return spi.LayerMessage }
 
-// useHTTPTransport replaces the client that fetches tokens. The load command
-// installs a dialer that refuses non-private addresses.
-func (p *oauth2Provider) useHTTPTransport(rt http.RoundTripper) {
-	if rt == nil || p.client == nil {
-		return
+// useTokenClient makes token requests use the run's transport settings and
+// timeout instead of a default client.
+func (p *oauth2Provider) useTokenClient(tc TokenClient) {
+	p.tokenRT = tc.Transport
+	if tc.Timeout > 0 && p.client != nil {
+		p.client.Timeout = tc.Timeout
 	}
-	p.client.Transport = rt
+}
+
+// httpClient is the client for one token request. tlsCfg is the step's
+// transport-layer TLS (mTLS), so a token endpoint that needs the client
+// certificate or a private CA is reached the same way as the step.
+func (p *oauth2Provider) httpClient(tlsCfg *spi.TLSConfig) (*http.Client, error) {
+	if p.tokenRT == nil {
+		return p.client, nil
+	}
+	rt, err := p.tokenRT(tlsCfg)
+	if err != nil {
+		return nil, verr.New(verr.CodeAuth, "token endpoint transport: "+p.red.Redact(err.Error()))
+	}
+	return &http.Client{Transport: rt, Timeout: p.client.Timeout}, nil
 }
 
 // Apply ensures a valid token is cached and sets the Authorization header.
 func (p *oauth2Provider) Apply(ctx context.Context, req *spi.Request) error {
-	tok, err := p.token(ctx)
+	tok, err := p.token(ctx, req.TLS)
 	if err != nil {
 		return err
 	}
@@ -167,14 +184,14 @@ func (p *oauth2Provider) Apply(ctx context.Context, req *spi.Request) error {
 
 // token returns a valid cached token, fetching/refreshing as needed. The cache
 // is keyed to expiry: a token is reused until it is within skew of expiring.
-func (p *oauth2Provider) token(ctx context.Context) (*cachedToken, error) {
+func (p *oauth2Provider) token(ctx context.Context, tlsCfg *spi.TLSConfig) (*cachedToken, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
 	if p.cached != nil && time.Now().Add(p.skew).Before(p.cached.expiresAt) {
 		return p.cached, nil
 	}
-	tok, err := p.fetch(ctx)
+	tok, err := p.fetch(ctx, tlsCfg)
 	if err != nil {
 		return nil, err
 	}
@@ -184,7 +201,7 @@ func (p *oauth2Provider) token(ctx context.Context) (*cachedToken, error) {
 
 // fetch performs the token request against the token endpoint.
 // Caller must hold p.mu.
-func (p *oauth2Provider) fetch(ctx context.Context) (*cachedToken, error) {
+func (p *oauth2Provider) fetch(ctx context.Context, tlsCfg *spi.TLSConfig) (*cachedToken, error) {
 	grant := p.grant
 	if grant == "authorization_code" {
 		if p.refreshToken == "" || strings.Contains(p.refreshToken, "${") {
@@ -208,11 +225,11 @@ func (p *oauth2Provider) fetch(ctx context.Context) (*cachedToken, error) {
 		form.Set("scope", p.scope)
 	}
 
-	return p.requestToken(ctx, form)
+	return p.requestToken(ctx, form, tlsCfg)
 }
 
 // requestToken also serves the GUI code exchange. Caller holds p.mu or owns p.
-func (p *oauth2Provider) requestToken(ctx context.Context, form url.Values) (*cachedToken, error) {
+func (p *oauth2Provider) requestToken(ctx context.Context, form url.Values, tlsCfg *spi.TLSConfig) (*cachedToken, error) {
 	if p.authStyle == "body" || p.clientSecret == "" {
 		form.Set("client_id", p.clientID)
 		if p.clientSecret != "" {
@@ -231,7 +248,11 @@ func (p *oauth2Provider) requestToken(ctx context.Context, form url.Values) (*ca
 		httpReq.SetBasicAuth(p.clientID, p.clientSecret)
 	}
 
-	resp, err := p.client.Do(httpReq)
+	client, err := p.httpClient(tlsCfg)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.Do(httpReq)
 	if err != nil {
 		// The message is redacted and the raw error is not wrapped: reporters
 		// append an unwrapped cause, which would otherwise re-expose it.

@@ -251,6 +251,7 @@ func (r *Runner) prepare(project *model.Project, opts Options) (*execContext, *m
 		tlsCache:     &transportCache{},
 		gql:          graphql.NewCache(),
 	}
+	runCtx.authResolver.SetTokenClient(runCtx.tokenClient())
 	return runCtx, project, nil
 }
 

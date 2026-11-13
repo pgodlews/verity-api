@@ -172,7 +172,7 @@ func ExchangeCode(ctx context.Context, config map[string]any, code, redirect, ve
 		"code":          {code},
 		"redirect_uri":  {redirect},
 		"code_verifier": {verifier},
-	})
+	}, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -231,10 +231,10 @@ type sessionProvider struct {
 func (*sessionProvider) Type() string         { return "oauth2" }
 func (*sessionProvider) Layer() spi.AuthLayer { return spi.LayerMessage }
 
-func (s *sessionProvider) useHTTPTransport(rt http.RoundTripper) {
+func (s *sessionProvider) useTokenClient(tc TokenClient) {
 	s.session.mu.Lock()
 	defer s.session.mu.Unlock()
-	s.session.provider.useHTTPTransport(rt)
+	s.session.provider.useTokenClient(tc)
 }
 
 func (s *sessionProvider) Apply(ctx context.Context, req *spi.Request) error {

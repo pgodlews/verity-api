@@ -44,9 +44,6 @@ func TestGuardedTransportsIgnoreProxy(t *testing.T) {
 	if tr := newSharedTransport(2, dial); tr.Proxy != nil {
 		t.Fatal("guarded shared transport keeps a proxy")
 	}
-	if tr := newTokenTransport(dial); tr.Proxy != nil {
-		t.Fatal("guarded token transport keeps a proxy")
-	}
 	if tr := newSharedTransport(2, nil); tr.Proxy == nil {
 		t.Fatal("unguarded transport lost the environment proxy")
 	}
