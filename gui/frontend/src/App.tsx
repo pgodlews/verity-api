@@ -3,6 +3,7 @@ import { api, canWatchProject, hasNativeDialogs, mockMode, onLoadLive, onProject
 import { emitProjectChanged } from "./gitBus";
 import { Clock, Download, Folder, Gauge, GitBranch, Globe, Layers, Logo, Moon, Play, Search, Stop, Sun } from "./icons";
 import { branchLabel, changedCount, changedFilePaths, isCurrentGeneration, nextGeneration, stepBaseline } from "./lib/git";
+import { protocolList } from "./lib/protocols";
 import { applyTheme, fileName, initialTheme, loadRunSettings, recentProjects, rememberProject, saveRunSettings } from "./lib/storage";
 import type { RunSettings } from "./lib/storage";
 import type { StepLocation } from "./lib/workspace";
@@ -58,6 +59,14 @@ export function App() {
   const loadRunningRef = useRef(false);
   const openLock = useRef(false);
   const busy = running || loadRunning || saving || opening;
+  // The footer lists the protocols the backend actually registers.
+  const [protocols, setProtocols] = useState("");
+  useEffect(() => {
+    let live = true;
+    // Promise.resolve defers the call so a missing binding becomes a rejection.
+    Promise.resolve().then(() => api.catalog()).then((c) => { if (live) setProtocols(protocolList(c.protocols)); }).catch(() => undefined);
+    return () => { live = false; };
+  }, []);
   useEffect(() => {
     function focusSearch(event: KeyboardEvent) {
       if (info && (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
@@ -374,7 +383,7 @@ export function App() {
           emitProjectChanged({ files: [info.path], git: true });
         });
       }}>Simulate disk change</button>}
-      <span className="protocol-list">REST · SOAP · GraphQL</span>
+      {protocols && <span className="protocol-list">{protocols}</span>}
     </footer>
   </div>;
 }

@@ -111,6 +111,9 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- The desktop footer lists the protocols the app actually supports (from the
+  extension catalog, including gRPC) instead of a fixed "REST · SOAP ·
+  GraphQL".
 - Closing the desktop window cancels an in-flight run, load test, or Git
   operation instead of only stopping the file watcher.
 - Desktop release builds carry their version, commit, and date (a new
