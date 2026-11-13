@@ -2,8 +2,6 @@ package workspace
 
 import (
 	"bytes"
-	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -182,6 +180,15 @@ func editEnvironments(data []byte, file string, req SaveEnvironmentRequest, crea
 	root := doc.Content[0]
 	envs := mapValue(root, "environments")
 	changed, found := false, false
+	var edited []*yaml.Node // environment entries to re-encode
+	mark := func(e *yaml.Node) {
+		for _, x := range edited {
+			if x == e {
+				return
+			}
+		}
+		edited = append(edited, e)
+	}
 
 	if createHere {
 		if envs == nil {
@@ -202,8 +209,9 @@ func editEnvironments(data []byte, file string, req SaveEnvironmentRequest, crea
 		if name == req.Name {
 			found = true
 			if !createHere {
-				setMapValue(e, "variables", varsNode(req.Variables))
+				setMapValue(e, "variables", model.MergeYAMLNode(mapValue(e, "variables"), varsNode(req.Variables), nil))
 				changed = true
+				mark(e)
 			}
 		}
 		if req.Default != nil {
@@ -215,13 +223,19 @@ func editEnvironments(data []byte, file string, req SaveEnvironmentRequest, crea
 					deleteMapKey(e, "default")
 				}
 				changed = true
+				mark(e)
 			}
 		}
 	}
 	if !changed {
 		return nil, found, nil
 	}
-	out, err := formatEditedYAML(data, &doc)
+	if createHere {
+		// A new entry has no place in the original text: format the file.
+		out, err := model.FormatYAMLNode(data, &doc)
+		return out, found, err
+	}
+	out, _, err := model.SpliceYAMLItems(data, &doc, edited)
 	return out, found, err
 }
 
@@ -244,7 +258,9 @@ func varsNode(vars map[string]string) *yaml.Node {
 func setMapValue(m *yaml.Node, key string, v *yaml.Node) {
 	for i := 0; i+1 < len(m.Content); i += 2 {
 		if m.Content[i].Value == key {
-			v.HeadComment, v.LineComment = m.Content[i+1].HeadComment, m.Content[i+1].LineComment
+			if v != m.Content[i+1] {
+				v.HeadComment, v.LineComment = m.Content[i+1].HeadComment, m.Content[i+1].LineComment
+			}
 			m.Content[i+1] = v
 			return
 		}
@@ -261,44 +277,8 @@ func deleteMapKey(m *yaml.Node, key string) {
 	}
 }
 
+// editEnvironmentsJSON edits the ordered JSON tree: key and variable order,
+// unknown keys, and number text survive.
 func editEnvironmentsJSON(data []byte, req SaveEnvironmentRequest, createHere bool) ([]byte, bool, error) {
-	// UseNumber keeps number text (9007199254740993) through the round
-	// trip; float64 would round it in steps the user did not edit.
-	var p model.Project
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	if err := dec.Decode(&p); err != nil {
-		return nil, false, err
-	}
-	changed, found := false, false
-	if createHere {
-		p.Environments = append(p.Environments, model.Environment{Name: req.Name, Variables: req.Variables})
-		changed, found = true, true
-	}
-	for i := range p.Environments {
-		e := &p.Environments[i]
-		if e.Name == req.Name {
-			found = true
-			if !createHere {
-				e.Variables = req.Variables
-				changed = true
-			}
-		}
-		if req.Default != nil {
-			want := e.Name == req.Name && *req.Default
-			if e.Default != want {
-				e.Default = want
-				changed = true
-			}
-		}
-	}
-	if !changed {
-		return nil, found, nil
-	}
-	encoded, err := model.MarshalJSONIndent(&p)
-	if err != nil {
-		return nil, false, fmt.Errorf("encode: %w", err)
-	}
-	out, err := model.FormatJSON(encoded)
-	return out, found, err
+	return model.EditJSONEnvironments(data, req.Name, req.Variables, req.Default, createHere)
 }

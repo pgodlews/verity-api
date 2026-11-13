@@ -98,9 +98,18 @@ OS or browser persistence. See `docs/auth.md` for platform requirements.
 GraphQL variables cross the desktop bridge as source text, so formatting or an
 unrelated edit does not round large numbers, `1e400`, `-0`, or decimal literals.
 
-Request and environment saves normalize YAML indentation while preserving comments,
-document markers, and unrelated scalar values. Folded multiline text may use
-literal style to preserve its decoded value across repeated saves.
+YAML saves from the desktop app change only the step or environment
+they edit: the edit is merged field by field into the existing entry
+(untouched keys keep their order, comments, and quoting), and only that
+entry is written again, with two-space indentation. The rest of the file
+keeps its exact bytes, including blank lines, quotes, and folded text. A
+file the splice cannot handle safely (for example CRLF line endings) is
+written whole, formatted like `verity fmt`. JSON saves edit the ordered
+document (key order and number text survive, `<`, `>`, and `&` are not
+escaped) and format it like `verity fmt`. A symlinked project file is
+written through, not replaced.
+Folded multiline text inside an edited entry may use literal style to keep
+its decoded value across repeated saves.
 
 With a project open, the status bar shows the git branch (or a detached short
 commit), how many paths differ from HEAD, and ahead/behind when the branch
