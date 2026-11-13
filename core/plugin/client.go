@@ -46,6 +46,8 @@ func Launch(ctx context.Context, path string, args ...string) (*Client, error) {
 func launch(ctx context.Context, path string, args []string, stderr *stderrWriter) (*Client, error) {
 	cmd := exec.CommandContext(ctx, path, args...)
 	cmd.Stderr = stderr
+	// Bound Wait if a plugin's own children keep stderr open after it exits.
+	cmd.WaitDelay = 2 * time.Second
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, verr.Wrap(verr.CodePlugin, err, "open plugin stdin")
@@ -70,23 +72,30 @@ func launch(ctx context.Context, path string, args []string, stderr *stderrWrite
 		}
 		hsCh <- json.Unmarshal(line, &c.hs)
 	}()
+	// abandon kills a plugin that failed its handshake and reaps it, so no
+	// zombie process or open pipe is left behind.
+	abandon := func() {
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
+		stderr.Flush()
+	}
 	select {
 	case <-time.After(10 * time.Second):
-		_ = cmd.Process.Kill()
+		abandon()
 		return nil, verr.New(verr.CodePlugin, "plugin handshake timed out")
 	case err := <-hsCh:
 		if err != nil {
-			_ = cmd.Process.Kill()
+			abandon()
 			return nil, verr.Wrap(verr.CodePlugin, err, "read plugin handshake")
 		}
 	}
 
 	if c.hs.Magic != MagicCookie {
-		_ = cmd.Process.Kill()
+		abandon()
 		return nil, verr.New(verr.CodePlugin, "invalid plugin handshake magic")
 	}
 	if c.hs.Version != ProtocolVersion {
-		_ = cmd.Process.Kill()
+		abandon()
 		return nil, verr.Newf(verr.CodePlugin,
 			"plugin speaks VPP/%d but host requires VPP/%d", c.hs.Version, ProtocolVersion)
 	}
@@ -183,6 +192,15 @@ func (c *Client) callTimeout(ctx context.Context, method Method, params map[stri
 	var resp Response
 	if err := json.Unmarshal(line, &resp); err != nil {
 		return nil, verr.Wrap(verr.CodePlugin, err, "decode plugin response")
+	}
+	if resp.ID != req.ID {
+		// The stream is out of step: every later answer would belong to
+		// another request. Stop using this plugin process.
+		c.dead = true
+		if c.cmd.Process != nil {
+			_ = c.cmd.Process.Kill()
+		}
+		return nil, verr.Newf(verr.CodePlugin, "plugin answered request %d with response id %d", req.ID, resp.ID)
 	}
 	if resp.Error != nil {
 		return nil, &verr.Error{

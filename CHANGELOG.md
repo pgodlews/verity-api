@@ -96,6 +96,10 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- Plugin host: a plugin that fails its handshake is killed and reaped (no
+  zombie process or leaked pipes), and a response whose `id` does not match
+  the request stops that plugin with a `plugin_error` instead of being used
+  as the answer to the wrong call.
 - Steps of one setup or teardown hook share a variable scope, so a token a
   setup step captures reaches the next setup step; before, each hook step ran
   with a fresh resolver and case-scoped captures were lost.
