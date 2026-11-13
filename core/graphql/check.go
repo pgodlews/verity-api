@@ -60,7 +60,7 @@ func issueFrom(e *gqlerror.Error) issue {
 }
 
 func loadQuery(schema *ast.Schema, query string) (*ast.QueryDocument, []issue) {
-	doc, err := gqlparser.LoadQuery(schema, query)
+	doc, err := gqlparser.LoadQueryWithRules(schema, query, nil) // nil: the default validation rules
 	if err != nil {
 		return nil, issuesFrom(err)
 	}

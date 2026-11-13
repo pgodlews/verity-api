@@ -45,7 +45,6 @@ const (
 )
 
 var (
-	fileDesc protoreflect.FileDescriptor
 	reqDesc  protoreflect.MessageDescriptor
 	repDesc  protoreflect.MessageDescriptor
 	setBytes []byte
@@ -56,7 +55,6 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	fileDesc = fd
 	setBytes = b
 	reqDesc = fd.Messages().ByName("EchoRequest")
 	repDesc = fd.Messages().ByName("EchoReply")

@@ -88,7 +88,7 @@ func (info *ProjectInfo) EnvFallbacks() []EnvFallback {
 	out := []EnvFallback{}
 	for _, u := range info.UndefinedVars {
 		if _, set := os.LookupEnv(u.Name); set {
-			out = append(out, EnvFallback{Name: u.Name, MissingIn: u.MissingIn, UsedIn: u.UsedIn})
+			out = append(out, EnvFallback(u))
 		}
 	}
 	return out

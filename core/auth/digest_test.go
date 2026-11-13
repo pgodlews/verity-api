@@ -119,11 +119,10 @@ func TestDigestResponsesDoNotGrowRedactor(t *testing.T) {
 	p := provider.(*digestProvider)
 	challenge := &digestChallenge{realm: "realm", nonce: "nonce", algorithm: "MD5", qop: "auth"}
 	var header, response string
-	var scoped *secrets.Redactor
 	var done func()
 	for i := 0; i < 100_000; i++ {
 		var ctx context.Context
-		ctx, scoped, done = red.AttemptScope(context.Background())
+		ctx, _, done = red.AttemptScope(context.Background())
 		p.mu.Lock()
 		header, err = p.sign(ctx, challenge, http.MethodGet, "/resource")
 		p.mu.Unlock()
