@@ -1,0 +1,14 @@
+# The Dockerfile builds only ./cmd/verity; keep everything else, and anything
+# that may hold local credentials, out of the build context.
+.git
+.github
+.claude
+**/node_modules
+gui
+plugins
+dist
+reports
+*.out
+.env
+.env.*
+!.env.example

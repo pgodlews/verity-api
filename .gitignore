@@ -1,5 +1,4 @@
 # Binaries
-/apitest
 /verity
 /dist/
 *.exe
@@ -7,7 +6,10 @@
 # Build output
 gui/build/
 gui/gui
-gui/frontend/dist/assets/
+# The frontend build output; only the placeholder that lets `go build`
+# embed frontend/dist before the first frontend build is committed.
+gui/frontend/dist/*
+!gui/frontend/dist/.gitkeep
 gui/frontend/node_modules/
 gui/frontend/wailsjs/
 gui/frontend/package.json.md5
