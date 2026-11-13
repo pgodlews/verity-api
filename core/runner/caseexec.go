@@ -104,13 +104,17 @@ func (x *CaseExec) CloseIdleTransports() {
 }
 
 // FeedRows returns the data rows for a case, using the same loader as
-// RunCase. A case with no feed (or an empty feed) returns one nil row.
-// A feed that fails to load returns a config error.
+// RunCase. A case with no feed returns one nil row; an empty feed returns
+// no rows (RunCase reports that case as skipped). A feed that fails to load
+// returns a config error.
 func (x *CaseExec) FeedRows(c *model.TestCase) ([]map[string]string, error) {
 	if c == nil || c.Feed == nil {
 		return []map[string]string{nil}, nil
 	}
 	rows, fed, errCase := x.e.feedRows(c)
+	if errCase != nil && errCase.Status == spi.StatusSkipped {
+		return []map[string]string{}, nil
+	}
 	if errCase != nil {
 		msg := "load feed"
 		if len(errCase.Steps) > 0 && errCase.Steps[0].Error != nil && errCase.Steps[0].Error.Message != "" {
@@ -308,7 +312,22 @@ func (e *execContext) feedRows(c *model.TestCase) (rows []map[string]string, fed
 		}
 	}
 	if len(fetched) == 0 {
-		return rows, false, nil
+		// Running the case un-fed would send literal ${column} placeholders.
+		where := c.Feed.Path
+		if where == "" {
+			where = "inline rows"
+		}
+		return nil, false, &spi.CaseResult{
+			Name:      c.Name,
+			Status:    spi.StatusSkipped,
+			Iteration: -1,
+			Steps: []spi.StepResult{{
+				Name:   "feed",
+				Status: spi.StatusSkipped,
+				Error: e.errInfo(verr.Newf(verr.CodeConfig,
+					"%s feed (%s) produced no rows; case skipped", c.Feed.Type, where)),
+			}},
+		}
 	}
 	return fetched, true, nil
 }
