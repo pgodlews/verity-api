@@ -33,8 +33,11 @@ type Redactor struct {
 	mu       sync.RWMutex
 	literals map[string]struct{}
 	// ordered is literals sorted longest first, then lexicographically.
-	// Rebuilt on Add (rare) so Redact (hot) does not sort.
+	// Maintained on Add (copy-on-write) so Redact (hot) does not sort.
 	ordered []string
+	// shortList is the values of short as a slice, replaced (never mutated)
+	// on Add, so Redact can use it without allocating.
+	shortList []*regexp.Regexp
 	// short holds secrets under four characters. Masking them as plain
 	// substrings would shred ordinary text, so they are masked only where
 	// they stand alone (not inside a longer word or number).
@@ -154,10 +157,7 @@ func (r *Redactor) Redact(s string) string {
 	// First mask exact known literals (most precise).
 	r.mu.RLock()
 	lits := r.ordered
-	shorts := make([]*regexp.Regexp, 0, len(r.short))
-	for _, re := range r.short {
-		shorts = append(shorts, re)
-	}
+	shorts := r.shortList
 	r.mu.RUnlock()
 
 	s = maskLiterals(s, lits)
@@ -388,8 +388,12 @@ func RedactGitOutput(s string) string {
 	s = RedactURLCredentials(s)
 	s = urlQuerySecret.ReplaceAllString(s, "${1}"+Mask)
 	s = extraHeaderEcho.ReplaceAllString(s, "${1}"+Mask)
-	return NewRedactor().Redact(s)
+	return structuralRedactor.Redact(s)
 }
+
+// structuralRedactor applies only the structural patterns. Nothing is ever
+// added to it, so one instance is shared instead of building one per call.
+var structuralRedactor = NewRedactor()
 
 // LooksLikeSecret reports whether s appears to be a hard-coded secret value
 // (rather than a ${...} reference). It is a heuristic used only to emit
