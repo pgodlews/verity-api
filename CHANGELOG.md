@@ -74,6 +74,11 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- `verity load` without `--allow-remote` ignores `HTTP_PROXY`/`HTTPS_PROXY`,
+  so a loopback or private proxy can no longer carry a redirect or captured
+  host to a public address past the private-address guard. Embedding code
+  that passes a `load.Options.Transport` with its own dialer (or a
+  non-`*http.Transport`) now gets a `config_error` instead of an unguarded run.
 - A plain `${NAME}` that falls back to the process environment is now
   redacted like `${env:NAME}`; before, a forgotten `env:` prefix printed the
   value in console, JSON, JUnit, and HTML reports and in the desktop app.

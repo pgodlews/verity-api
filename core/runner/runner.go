@@ -63,10 +63,12 @@ type Options struct {
 	// teardown of a suite that did start still runs. Summary.Bailed is set
 	// when a case trips this.
 	Bail bool
-	// AllowExternalFiles lets multipart/bodyFile uploads read files outside
-	// the project directory (off by default; see spi.ProtocolContext).
+	// AllowExternalFiles lets uploads, secret files, mTLS files, schema files,
+	// and feeds be read from outside the project directory (off by default;
+	// see core/fsutil).
 	AllowExternalFiles bool
-	// DialContext, when set, dials every HTTP connection this run opens,
+	// DialContext, when set, dials every HTTP connection this run opens
+	// (HTTP(S)_PROXY is then ignored so the dialer sees each destination),
 	// including private TLS transports. Nil keeps the transport default.
 	// Load testing sets this so a redirect, a proxy, or a captured host
 	// cannot leave the private-address allow-list.

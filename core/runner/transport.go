@@ -77,7 +77,10 @@ func defaultTransport(tlsCfg *spi.TLSConfig, dial func(context.Context, string, 
 		TLSHandshakeTimeout: 10 * time.Second,
 	}
 	if dial != nil {
+		// A custom dialer (the load-test private-address guard) must see the
+		// real destination, so HTTP(S)_PROXY is not used.
 		transport.DialContext = dial
+		transport.Proxy = nil
 	}
 
 	if tlsCfg != nil {

@@ -454,7 +454,8 @@ func TestSharedTransportReusesConnections(t *testing.T) {
 	defer tr.CloseIdleConnections()
 	const iters = 4
 	rep, err := Run(context.Background(), bootstrap.Default(), oneStep(srv.URL), Options{
-		VUs: 1, Iterations: iters, FollowRedirects: true, Transport: tr,
+		// A transport with its own dialer cannot be guarded, so this test opts out.
+		VUs: 1, Iterations: iters, FollowRedirects: true, Transport: tr, AllowRemote: true,
 	})
 	if err != nil {
 		t.Fatal(err)

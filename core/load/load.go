@@ -149,9 +149,16 @@ func Run(ctx context.Context, reg *registry.Registry, project *model.Project, op
 		owned = newSharedTransport(opts.VUs, dial)
 		transport = owned
 	} else if dial != nil {
-		if t, ok := transport.(*http.Transport); ok && t.DialContext == nil {
-			t.DialContext = dial
+		// The private-address guard must see every connection's real
+		// destination: install it on the caller's transport and turn off
+		// its proxy, or refuse a transport it cannot guard.
+		t, ok := transport.(*http.Transport)
+		if !ok || t.DialContext != nil || t.DialTLSContext != nil {
+			return nil, verr.New(verr.CodeConfig,
+				"load: a custom Transport with its own dialer cannot be guarded; pass --allow-remote or leave Transport nil")
 		}
+		t.DialContext = dial
+		t.Proxy = nil
 	}
 	if owned != nil {
 		defer owned.CloseIdleConnections()
@@ -553,7 +560,11 @@ func newPooledTransport(maxIdle, perHost int, dial func(context.Context, string,
 		DisableKeepAlives:     false,
 	}
 	if dial != nil {
+		// With the private-address guard active, never send requests to an
+		// HTTP(S)_PROXY: the guard would only see the proxy's address, and the
+		// proxy could reach any public host (a redirect or captured host).
 		t.DialContext = dial
+		t.Proxy = nil
 	}
 	return t
 }
