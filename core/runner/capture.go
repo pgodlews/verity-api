@@ -11,6 +11,48 @@ import (
 )
 
 // captureRequest builds a redacted snapshot of a request for reports/inspector.
+// captureRequest is captureRequest unless the run asked for lean captures.
+func (e *execContext) captureRequest(req *spi.Request, red *secrets.Redactor) *spi.RequestCapture {
+	if e.opts.LeanCaptures {
+		return nil
+	}
+	return captureRequest(req, red)
+}
+
+// captureResponse is captureResponse unless the run asked for lean
+// captures; then only the status and duration are kept.
+func (e *execContext) captureResponse(resp *spi.Response, red *secrets.Redactor) *spi.ResponseCapture {
+	if e.opts.LeanCaptures {
+		return &spi.ResponseCapture{
+			StatusCode: resp.StatusCode,
+			Status:     red.Redact(resp.Status),
+			DurationMS: resp.Duration.Milliseconds(),
+		}
+	}
+	return captureResponse(resp, red)
+}
+
+// shownBody returns the response body as a full capture shows it, for the
+// checks that treat a value redaction masked in the body as secret. Lean
+// captures keep no body, so it is redacted on first use instead (and only
+// when a value actually occurs in the raw body).
+func (e *execContext) shownBody(res *spi.StepResult, resp *spi.Response, red *secrets.Redactor) func() string {
+	if !e.opts.LeanCaptures {
+		return func() string { return res.Response.Body }
+	}
+	var (
+		body string
+		done bool
+	)
+	return func() string {
+		if !done {
+			body, _ = captureBody(string(resp.Body), red)
+			done = true
+		}
+		return body
+	}
+}
+
 func captureRequest(req *spi.Request, red *secrets.Redactor) *spi.RequestCapture {
 	headers := map[string]string{}
 	for k, vs := range req.Headers {

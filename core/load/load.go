@@ -661,5 +661,6 @@ func prepare(reg *registry.Registry, project *model.Project, opts Options, dial 
 		Timeout:            opts.Timeout,
 		AllowExternalFiles: opts.AllowExternalFiles,
 		DialContext:        dial,
+		LeanCaptures:       true,
 	})
 }

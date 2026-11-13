@@ -48,6 +48,19 @@ type Latency struct {
 	MaxMs  millis `json:"maxMs"`
 }
 
+// latencyOf reads a histogram into a Latency.
+func latencyOf(h *Histogram) Latency {
+	return Latency{
+		MinMs:  usToMs(h.Min()),
+		MeanMs: usToMs(h.Mean()),
+		P50Ms:  usToMs(h.Quantile(0.50)),
+		P90Ms:  usToMs(h.Quantile(0.90)),
+		P95Ms:  usToMs(h.Quantile(0.95)),
+		P99Ms:  usToMs(h.Quantile(0.99)),
+		MaxMs:  usToMs(h.Max()),
+	}
+}
+
 // StatusCount is how many responses carried one HTTP (or protocol) status.
 type StatusCount struct {
 	Code  int   `json:"code"`
@@ -57,16 +70,21 @@ type StatusCount struct {
 // Metrics is the load summary for the whole run or for one step name.
 // Identical step names across cases are combined.
 type Metrics struct {
-	Name              string        `json:"name,omitempty"`
-	Requests          int64         `json:"requests"`
-	AssertionFailures int64         `json:"assertionFailures"`
-	TransportErrors   int64         `json:"transportErrors"`
-	OtherErrors       int64         `json:"otherErrors,omitempty"`
-	ErrorRate         float64       `json:"errorRate"`
-	RPS               float64       `json:"rps"`
-	Latency           Latency       `json:"latency"`
-	StatusCodes       []StatusCount `json:"statusCodes"`
-	Errors            []string      `json:"errors"`
+	Name              string  `json:"name,omitempty"`
+	Requests          int64   `json:"requests"`
+	AssertionFailures int64   `json:"assertionFailures"`
+	TransportErrors   int64   `json:"transportErrors"`
+	OtherErrors       int64   `json:"otherErrors,omitempty"`
+	ErrorRate         float64 `json:"errorRate"`
+	RPS               float64 `json:"rps"`
+	// Latency is the protocol call of the final attempt (the network
+	// exchange). A step that got no response counts its step time instead.
+	Latency Latency `json:"latency"`
+	// StepLatency is the whole step: every attempt and retry delay plus
+	// interpolation, auth, redaction, assertions, and transfers.
+	StepLatency Latency       `json:"stepLatency"`
+	StatusCodes []StatusCount `json:"statusCodes"`
+	Errors      []string      `json:"errors"`
 }
 
 func (m Metrics) failures() int64 {
@@ -82,7 +100,8 @@ type recorder struct {
 }
 
 type stepRec struct {
-	hist      *Histogram
+	hist      *Histogram // protocol latency
+	stepHist  *Histogram // whole-step time
 	requests  int64
 	assertF   int64
 	transport int64
@@ -104,7 +123,7 @@ func newRecorder(red *secrets.Redactor) *recorder {
 }
 
 func newStepRec() *stepRec {
-	return &stepRec{hist: NewHistogram(), status: map[int]int64{}, seen: map[string]struct{}{}}
+	return &stepRec{hist: NewHistogram(), stepHist: NewHistogram(), status: map[int]int64{}, seen: map[string]struct{}{}}
 }
 
 // record adds one finished step. Skipped and aborted steps are not requests.
@@ -130,6 +149,7 @@ func (r *recorder) record(st spi.StepResult) {
 func note(s *stepRec, st spi.StepResult, red *secrets.Redactor) {
 	s.requests++
 	s.hist.Observe(sampleUS(st))
+	s.stepHist.Observe(stepUS(st))
 	if st.Response != nil {
 		s.status[st.Response.StatusCode]++
 	}
@@ -185,16 +205,9 @@ func (s *stepRec) metrics(name string, elapsed time.Duration) Metrics {
 		AssertionFailures: s.assertF,
 		TransportErrors:   s.transport,
 		OtherErrors:       s.other,
-		Latency: Latency{
-			MinMs:  usToMs(s.hist.Min()),
-			MeanMs: usToMs(s.hist.Mean()),
-			P50Ms:  usToMs(s.hist.Quantile(0.50)),
-			P90Ms:  usToMs(s.hist.Quantile(0.90)),
-			P95Ms:  usToMs(s.hist.Quantile(0.95)),
-			P99Ms:  usToMs(s.hist.Quantile(0.99)),
-			MaxMs:  usToMs(s.hist.Max()),
-		},
-		Errors: append([]string{}, s.errors...),
+		Latency:           latencyOf(s.hist),
+		StepLatency:       latencyOf(s.stepHist),
+		Errors:            append([]string{}, s.errors...),
 	}
 	if s.requests > 0 {
 		m.ErrorRate = float64(m.failures()) / float64(s.requests)
@@ -236,7 +249,17 @@ func latencyValue(l Latency, metric string) float64 {
 // sampleUS is the step duration in microseconds. Duration is the precise
 // value; DurationMS is the fallback for a result that only set the truncated
 // field (a hand-built sample in a test).
+// sampleUS is the latency sample: the protocol call when a response
+// arrived, otherwise the step time (a transport error's time to fail).
 func sampleUS(st spi.StepResult) float64 {
+	if st.ResponseDuration > 0 {
+		return float64(st.ResponseDuration.Microseconds())
+	}
+	return stepUS(st)
+}
+
+// stepUS is the whole step's time in microseconds.
+func stepUS(st spi.StepResult) float64 {
 	if st.Duration > 0 {
 		return float64(st.Duration.Microseconds())
 	}

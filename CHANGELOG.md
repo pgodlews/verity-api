@@ -42,6 +42,11 @@ and distribution names below use the final public names.
 
 ### Changed
 
+- **BREAKING:** `verity load`: `latency` (and latency thresholds) now measure the protocol
+  call of each step's final attempt rather than the whole step, so client
+  CPU work (captures, redaction, assertions) no longer inflates percentiles.
+  The whole-step distribution is reported as `stepLatency`. Load runs keep
+  lean captures (status only). (E-1)
 - **BREAKING:** the composite action's `vars` input takes one `KEY=VALUE`
   per line (values may contain spaces); several space-separated pairs on one
   line are now a single value. Inputs reach the script through environment

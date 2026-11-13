@@ -130,13 +130,20 @@ Per step name, and once for the whole run:
 | other errors | steps that errored for another reason (config, auth) |
 | error rate | (assertion + transport + other) / requests |
 | RPS | requests / load-window seconds |
-| latency | min, mean, p50, p90, p95, p99, max, in milliseconds |
+| latency | min, mean, p50, p90, p95, p99, max of the protocol call, in milliseconds |
+| step latency | the same statistics for the whole step |
 | status codes | response status counts |
 | errors | the first 10 distinct failure messages |
 
-Skipped and aborted steps are not requests. Latency is the runner's step
-duration: every attempt of that step plus the retry delays, recorded in
-microseconds. JSON prints milliseconds with three decimal places. The
+Skipped and aborted steps are not requests. Latency is the protocol call
+of the step's final attempt (`spi.Response.Duration`: the network exchange),
+recorded in microseconds, so client-side work does not inflate it. A step
+that got no response (a transport error) counts its step time instead.
+Step latency (`stepLatency`) is the runner's whole step: every attempt and
+retry delay plus interpolation, auth, redaction, assertions, and transfers.
+Latency thresholds use latency, not step latency. A load run keeps lean
+captures: no request capture and only the status of each response, since
+the load report shows neither. JSON prints milliseconds with three decimal places. The
 console table prints two decimal places; the live line prints one. Min,
 mean, and max are the raw samples, including ones longer than an hour.
 Percentiles come from a fixed log-bucket histogram (about 1% bucket width,
@@ -228,6 +235,10 @@ Plugins are loaded the same way as `verity run`: `--plugins FILE`, or
     "latency": {
       "minMs": 4.210, "meanMs": 12.400, "p50Ms": 11.200,
       "p90Ms": 20.100, "p95Ms": 28.500, "p99Ms": 40.800, "maxMs": 55.000
+    },
+    "stepLatency": {
+      "minMs": 4.900, "meanMs": 13.300, "p50Ms": 12.000,
+      "p90Ms": 21.200, "p95Ms": 29.700, "p99Ms": 42.100, "maxMs": 57.400
     },
     "statusCodes": [{"code": 200, "count": 1840}],
     "errors": []
