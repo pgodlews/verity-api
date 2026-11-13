@@ -81,7 +81,9 @@ func readSecretFile(dir, path string, allowExternal bool) (string, bool, error) 
 	b, err := os.ReadFile(resolved)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return "", false, nil
+			// A missing file is an error, not an unset value: a lenient
+			// caller would otherwise send the literal ${secret:file:…} text.
+			return "", false, verr.Newf(verr.CodeConfig, "secret file %q does not exist", path)
 		}
 		return "", false, verr.Context(verr.CodeConfig, err, fmt.Sprintf("read secret file %q", path))
 	}

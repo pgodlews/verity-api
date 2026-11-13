@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/pgodlews/verity-api/core/verr"
 )
 
 func TestInterpolatePlainVar(t *testing.T) {
@@ -148,5 +150,22 @@ func TestFileSecretProvider(t *testing.T) {
 	}
 	if out != "file-secret-value-9999" {
 		t.Fatalf("got %q", out)
+	}
+}
+
+// A missing secret file must be an error even for lenient interpolation;
+// otherwise the literal ${secret:file:…} text would be sent to the server.
+func TestSecretFileMissingIsAnError(t *testing.T) {
+	dir := t.TempDir()
+	r := NewResolver(nil).WithFiles(dir, false)
+	for _, strict := range []bool{false, true} {
+		out, err := r.Interpolate("Bearer ${secret:file:missing-token}", strict)
+		if err == nil {
+			t.Fatalf("strict=%v: want an error, got %q", strict, out)
+		}
+		e, ok := verr.As(err)
+		if !ok || e.Code != verr.CodeConfig {
+			t.Fatalf("strict=%v: want config_error, got %v", strict, err)
+		}
 	}
 }
