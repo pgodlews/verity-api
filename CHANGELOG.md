@@ -111,6 +111,10 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- Desktop runs, load tests, and load-target checks report every project
+  validation error, not only the first, and the desktop `ValidateProject`
+  result adds `issues` (each with `code`, `message`, and `path`) alongside
+  the existing `errors` strings.
 - OpenAPI, WSDL, and Postman imports (collections and environments) refuse
   input over 50 MiB with an `import_error`, as SoapUI imports already did,
   so a huge file cannot exhaust memory in the CLI or the desktop preview.

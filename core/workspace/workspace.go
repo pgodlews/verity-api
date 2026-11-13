@@ -7,6 +7,7 @@ package workspace
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"time"
 
@@ -30,6 +31,22 @@ type ValidateResult struct {
 	OK      bool     `json:"ok"`
 	Project string   `json:"project"`
 	Errors  []string `json:"errors"`
+	// Issues are the same problems as structured errors (code, message,
+	// path), so a frontend can link each one to the step it concerns.
+	// Errors stays for compatibility.
+	Issues []*verr.Error `json:"issues"`
+}
+
+// validationFailure reports every validation error of a project, not only
+// the first: the message lists them all (a desktop error crosses the
+// bridge as text) and Details["errors"] carries them structured.
+func validationFailure(verrs []*verr.Error) error {
+	msgs := make([]string, len(verrs))
+	for i, e := range verrs {
+		msgs[i] = e.Error()
+	}
+	return verr.Wrap(verr.CodeValidation, verrs[0], "project validation failed: "+strings.Join(msgs, "; ")).
+		WithPath(verrs[0].Path).WithDetail("errors", verrs)
 }
 
 // Validate loads and validates a project file (mirrors `verity validate`).
@@ -41,19 +58,28 @@ func Validate(ctx context.Context, path, environment string, sessions *OAuthSess
 	}
 	p, err := model.Load(path)
 	if err != nil {
-		return ValidateResult{OK: false, Errors: []string{err.Error()}}
+		return ValidateResult{OK: false, Errors: []string{err.Error()}, Issues: []*verr.Error{asIssue(err)}}
 	}
 	opt, err := graphqlOptionsFor(p, path, environment, nil, sessions)
 	if err != nil {
-		return ValidateResult{OK: false, Project: p.Name, Errors: []string{err.Error()}}
+		return ValidateResult{OK: false, Project: p.Name, Errors: []string{err.Error()}, Issues: []*verr.Error{asIssue(err)}}
 	}
 	verrs := p.Validate()
 	verrs = append(verrs, graphql.ValidateProject(ctx, p, opt)...)
-	out := ValidateResult{OK: len(verrs) == 0, Project: p.Name, Errors: []string{}}
+	out := ValidateResult{OK: len(verrs) == 0, Project: p.Name, Errors: []string{}, Issues: []*verr.Error{}}
 	for _, e := range verrs {
 		out.Errors = append(out.Errors, e.Error())
+		out.Issues = append(out.Issues, e)
 	}
 	return out
+}
+
+// asIssue returns err as a structured error, wrapping a plain one.
+func asIssue(err error) *verr.Error {
+	if e, ok := verr.As(err); ok {
+		return e
+	}
+	return verr.Wrap(verr.CodeInternal, err, err.Error())
 }
 
 // RunOptions are the run parameters a frontend supplies.
@@ -99,7 +125,7 @@ func run(ctx context.Context, opts RunOptions, sessions *OAuthSessions, trust pl
 		return nil, err
 	}
 	if verrs := p.Validate(); len(verrs) > 0 {
-		return nil, verr.Wrap(verr.CodeValidation, verrs[0], "project validation failed")
+		return nil, validationFailure(verrs)
 	}
 
 	reg := bootstrap.Default()
