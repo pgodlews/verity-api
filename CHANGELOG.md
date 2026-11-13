@@ -36,6 +36,12 @@ and distribution names below use the final public names.
 
 ### Changed
 
+- **BREAKING:** `steps[].vars` are now local to their step, as documented,
+  and are applied in sorted name order. Before, they were set on the case
+  and leaked into every later step, in random map order. Use case `vars` or a
+  transfer to share a value with later steps. The SoapUI importer repeats a
+  properties step's values on each later step so imported projects keep
+  their behaviour.
 - **BREAKING:** loading a project or fragment rejects keys the format does
   not define with a `validation_error` naming the key and its path. A typo
   such as `asertions:` or `retrys:` was silently ignored, so the step ran

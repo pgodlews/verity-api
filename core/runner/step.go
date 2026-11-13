@@ -6,6 +6,7 @@ import (
 	"math"
 	"net/http"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -48,18 +49,29 @@ func (e *execContext) runStep(ctx context.Context, scope runScope, resolver *sec
 	start := time.Now()
 	base := spi.StepResult{Name: step.Name, Protocol: step.Protocol}
 
-	// Apply step-local vars once. They are not part of an attempt, and a bad
-	// variable is a config error rather than something a retry would fix.
-	for k, v := range step.Vars {
-		iv, err := resolver.Interpolate(v, false)
-		e.red.AddAll(resolver.SecretValues())
-		if err != nil {
-			base.Status = spi.StatusError
-			base.Error = e.errInfo(verr.Wrap(verr.CodeConfig, err, "interpolate step var "+k))
-			stampStep(&base, start)
-			return base
+	// Apply step-local vars once, in sorted name order, on a child resolver
+	// so they stay local to this step (property transfers still write the
+	// case resolver). They are not part of an attempt, and a bad variable is
+	// a config error rather than something a retry would fix.
+	caseResolver := resolver
+	if len(step.Vars) > 0 {
+		resolver = resolver.Child()
+		names := make([]string, 0, len(step.Vars))
+		for k := range step.Vars {
+			names = append(names, k)
 		}
-		resolver.Set(k, iv)
+		sort.Strings(names)
+		for _, k := range names {
+			iv, err := resolver.Interpolate(step.Vars[k], false)
+			e.red.AddAll(resolver.SecretValues())
+			if err != nil {
+				base.Status = spi.StatusError
+				base.Error = e.errInfo(verr.Wrap(verr.CodeConfig, err, "interpolate step var "+k))
+				stampStep(&base, start)
+				return base
+			}
+			resolver.Set(k, iv)
+		}
 	}
 
 	proto, err := e.runner.reg.Protocol(step.Protocol)
@@ -110,7 +122,7 @@ func (e *execContext) runStep(ctx context.Context, scope runScope, resolver *sec
 		// client's own timeout does not cancel this context.
 		if n == attempts || ctx.Err() != nil || !shouldRetry(until, ar) {
 			if ar.resp != nil {
-				e.applyTransfers(&last, ar.resp, step, resolver, opts, red)
+				e.applyTransfers(&last, ar.resp, step, caseResolver, opts, red)
 			}
 			if last.Error != nil {
 				last.Error.Message = red.Redact(last.Error.Message)
