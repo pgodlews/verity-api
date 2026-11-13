@@ -16,7 +16,7 @@ vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
   the `go` command downloads that patch release when yours is older.
 - Git; desktop branch switching requires Git 2.23 or newer.
 - Node.js 22.12+ and npm for `gui/frontend`.
-- Wails v2 for desktop development (the release workflows use v2.12.0), with
+- Wails v2 for desktop development (the release workflows use v2.13.0), with
   its platform dependencies: GTK and WebKitGTK development packages on Linux,
   WebView2 on Windows, and the macOS development tools on macOS. The Linux
   release build uses WebKitGTK 4.1 and the `webkit2_41` build tag.

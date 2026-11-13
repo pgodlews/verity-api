@@ -12,6 +12,9 @@ and distribution names below use the final public names.
 
 ### Security
 
+- The desktop app builds with Wails v2.13.0 (from v2.12.0), which fixes
+  GO-2026-6862; govulncheck reports no vulnerabilities in the desktop
+  module. The release workflow installs the matching Wails CLI.
 - Build with a patched Go standard library and dependencies: every module
   now declares `toolchain go1.26.11` (the `go` command fetches it when an
   older 1.26 patch is installed), and `golang.org/x/net` (v0.62.0),

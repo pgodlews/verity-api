@@ -235,7 +235,7 @@ record. Planned scenarios are separate from completed native testing.
 ## Windows focus compatibility
 
 The GUI module pins a small local copy of the WebView2 dependency used by Wails
-v2.12.0. It guards focus during startup/shutdown and treats a failed focus request
+v2.13.0 (`go-webview2` v1.0.22, the same version v2.12.0 used). It guards focus during startup/shutdown and treats a failed focus request
 as recoverable, preserving unsaved work. The patch, upstream provenance, licenses,
 and Windows regression command are documented in
 [the compatibility notes](third_party/go-webview2/VERITY.md).
