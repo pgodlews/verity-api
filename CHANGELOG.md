@@ -47,6 +47,12 @@ and distribution names below use the final public names.
 
 ### Changed
 
+- **BREAKING:** the composite action's `vars` input takes one `KEY=VALUE`
+  per line (values may contain spaces); several space-separated pairs on one
+  line are now a single value. Inputs reach the script through environment
+  variables, so quotes or `$(...)` in an input can no longer break or inject
+  into the shell. New inputs: `suite`, `case`, `bail`, `env-file`, and
+  `trust-plugins`.
 - `verity-grpc --version` prints the plugin's version, commit, and build
   date; release archives now stamp them like the CLI.
 - Release workflow: a test job must pass before anything is built; the

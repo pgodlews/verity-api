@@ -128,8 +128,12 @@ required test services before invoking it.
 | `env` | Empty: use the project's default environment. |
 | `parallel` | `1`: maximum concurrent cases per suite. |
 | `junit`, `json`, `html` | Empty: optional report file paths. |
-| `vars` | Empty: space-separated `KEY=VALUE` overrides; pass secrets through job environment variables. |
+| `vars` | Empty: `KEY=VALUE` overrides, one per line (values may contain spaces); pass secrets through job environment variables. |
+| `suite`, `case` | Empty: names or globs to run, one per line (`--suite`, `--case`). |
+| `bail` | `false`: `true` stops scheduling new cases after the first failure. |
+| `env-file` | Empty: dotenv files to load, one path per line. |
 | `plugins` | Empty: optional plugins configuration path; naming the file trusts it. |
+| `trust-plugins` | `false`: `true` runs the project's own `.verity/plugins.json`. |
 | `go-version` | `1.26`: Go toolchain used to build the CLI. |
 
 ## Docker
