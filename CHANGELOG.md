@@ -47,6 +47,9 @@ and distribution names below use the final public names.
   CPU work (captures, redaction, assertions) no longer inflates percentiles.
   The whole-step distribution is reported as `stepLatency`. Load runs keep
   lean captures (status only). (E-1)
+- The gRPC plugin reuses one connection per target and transport settings,
+  parses each descriptor set once, and caches reflection results, instead
+  of dialing and reflecting for every step. (E-6)
 - **BREAKING:** the composite action's `vars` input takes one `KEY=VALUE`
   per line (values may contain spaces); several space-separated pairs on one
   line are now a single value. Inputs reach the script through environment

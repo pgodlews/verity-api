@@ -14,6 +14,13 @@ See `examples/grpc` for registration and `docs/project-format.md` for TLS and
 metadata options. When `descriptorSet` is omitted, the plugin uses server
 reflection v1, then v1alpha. The descriptor determines the streaming kind.
 
+The plugin process lives for one run, and it keeps state across steps: one
+client connection per target and transport settings (plaintext, TLS options,
+and the CA bundle's contents), descriptor sets parsed once per distinct
+content, and reflection results per connection and method. A server that
+changes its services in the middle of a run is therefore still seen with
+the descriptors reflected first; restart the run to pick up the change.
+
 Use `request.message` for unary and server-streaming calls. It accepts a JSON
 object or a string containing one. Client-streaming and bidi calls require
 `request.messages`, a list of JSON objects; an empty list is allowed. Setting
