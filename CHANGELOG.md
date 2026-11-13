@@ -12,6 +12,10 @@ and distribution names below use the final public names.
 
 ### Added
 
+- `verity run --reporter TYPE=FILE` (repeatable, also with `--watch`) writes
+  a report with any registered reporter, so `reporter` plugins
+  (`verity plugin new reporter`, `sdk.ServeReporter`) can finally be used.
+
 - Desktop release testing plans for Windows 11 and Linux, a shared scenario
   checklist, and historical macOS findings with explicit coverage limits.
 

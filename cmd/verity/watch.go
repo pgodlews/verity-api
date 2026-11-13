@@ -50,6 +50,7 @@ type watchConfig struct {
 	Quiet              bool
 	FollowRedirects    bool
 	PluginsFile        string
+	Reporters          []reporterTarget
 	TrustPlugins       bool
 	UntilStep          int
 	Bail               bool
@@ -177,6 +178,9 @@ func runOnce(ctx context.Context, cfg watchConfig) (code int, result *spi.RunRes
 	defer mgr.Close()
 	red := secrets.NewRedactor()
 	mgr.SetRedactor(red)
+	if err := checkReporters(reg, cfg.Reporters); err != nil {
+		return failJSON(cfg.JSONStdout, exitConfig, "reporter", err), nil, files
+	}
 
 	result, err = runner.New(reg).Run(ctx, project, runner.Options{
 		Redactor:           red,
@@ -217,6 +221,11 @@ func runOnce(ctx context.Context, cfg watchConfig) (code int, result *spi.RunRes
 	}
 	if cfg.HTMLOut != "" {
 		if rc := writeReporter(reg, "html", result, cfg.HTMLOut); rc != exitOK {
+			return rc, result, files
+		}
+	}
+	for _, t := range cfg.Reporters {
+		if rc := writeReporter(reg, t.Type, result, t.File); rc != exitOK {
 			return rc, result, files
 		}
 	}
