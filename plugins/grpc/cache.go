@@ -113,13 +113,6 @@ func (c *connCache) drop(key string, conn *grpc.ClientConn) {
 	_ = conn.Close()
 }
 
-// len reports how many connections are cached (for tests).
-func (c *connCache) len() int {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	return len(c.conns)
-}
-
 // filesCache keeps parsed descriptor files by key: a hash of a descriptor
 // set's bytes, or a connection key plus the reflected symbol.
 type filesCache struct {
