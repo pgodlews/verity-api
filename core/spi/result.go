@@ -147,6 +147,8 @@ type RequestCapture struct {
 	Method  string            `json:"method,omitempty"`
 	URL     string            `json:"url,omitempty"`
 	Headers map[string]string `json:"headers,omitempty"`
+	// Cookies are the request cookies (from the step and auth), redacted.
+	Cookies map[string]string `json:"cookies,omitempty"`
 	Body    string            `json:"body,omitempty"`
 }
 
