@@ -123,6 +123,13 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- Release archives are reproducible: zip archives use fixed timestamps,
+  modes, and sorted entries, tar.gz archives sorted entries and no gzip time
+  stamp. `scripts/release.sh` stops with a clear message when GNU tar,
+  `sha256sum`, or python3 is missing (macOS) instead of failing midway. The
+  image no longer gets an empty `org.opencontainers.image.source` label when
+  `IMAGE_SOURCE` is unset, and the `docker run` examples pass `--user` so
+  reports can be written to the mounted directory.
 - JSON project saves (desktop step and environment saves, imports) and
   `verity fmt` no longer HTML-escape `<`, `>`, and `&`, so SOAP/XML bodies
   and URLs stay readable instead of becoming `\u003c…`. Desktop saves to a

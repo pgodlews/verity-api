@@ -36,10 +36,12 @@ for arch in amd64 arm64; do
   # The single-arch image goes to the version tag first; the index pushed
   # below replaces that tag.
   ref=$("${crane[@]}" append --oci-empty-base -f "$work/$arch.tar" -t "$repo:$version")
+  labels=(--label "org.opencontainers.image.version=$version")
+  # Leave the source label out rather than writing an empty one.
+  [ -n "${IMAGE_SOURCE:-}" ] && labels+=(--label "org.opencontainers.image.source=$IMAGE_SOURCE")
   ref=$("${crane[@]}" mutate "$ref" --set-platform "linux/$arch" \
     --entrypoint /usr/local/bin/verity --cmd --help --user 65534:65534 --workdir /work \
-    --label "org.opencontainers.image.version=$version" \
-    --label "org.opencontainers.image.source=${IMAGE_SOURCE:-}")
+    "${labels[@]}")
   echo "linux/$arch: $ref"
   manifests+=(-m "$ref")
 done

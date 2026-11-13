@@ -82,7 +82,7 @@ with the matching checksum entry. After extracting the CLI, run
 
 ```bash
 brew install pgodlews/verity/verity
-docker run --rm -v "$PWD:/work" -w /work ghcr.io/pgodlews/verity:latest run project.yaml
+docker run --rm -v "$PWD:/work" -w /work --user "$(id -u):$(id -g)" ghcr.io/pgodlews/verity:latest run project.yaml
 ```
 
 The Linux desktop app needs the WebKitGTK 4.1 runtime. Windows needs WebView2.
