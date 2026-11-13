@@ -23,6 +23,12 @@ and distribution names below use the final public names.
 
 ### Added
 
+- Run summaries add explicitly named counts: `assertionsPassed`,
+  `assertionsFailed`, `casesPassed`, `casesFailed`, `casesErrored`,
+  `casesSkipped`, and `casesAborted`. The existing `passed`/`failed` (which
+  count assertions) and `errors`/`skipped` (which count steps) are unchanged.
+  Case counts include cases with no steps, such as cases `--bail` never
+  started, which no existing field counted.
 - `verity run --reporter TYPE=FILE` (repeatable, also with `--watch`) writes
   a report with any registered reporter, so `reporter` plugins
   (`verity plugin new reporter`, `sdk.ServeReporter`) can finally be used.

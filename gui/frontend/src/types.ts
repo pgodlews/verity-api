@@ -33,6 +33,13 @@ export interface Summary {
   stepsErrored?: number;
   stepsSkipped?: number;
   stepsAborted?: number;
+  assertionsPassed?: number;
+  assertionsFailed?: number;
+  casesPassed?: number;
+  casesFailed?: number;
+  casesErrored?: number;
+  casesSkipped?: number;
+  casesAborted?: number;
   /** True when the run was cancelled before it finished. */
   aborted?: boolean;
   status: Status;

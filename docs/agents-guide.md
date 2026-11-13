@@ -152,7 +152,11 @@ The JSON result shape is defined in `core/spi/result.go` (`RunResult`). Key
 fields: `summary.status` (`passed|failed|error|skipped|aborted`), `summary.bailed`
 (true when `--bail` stopped scheduling new cases; omitted otherwise),
 `summary.aborted` (true when the run was cancelled; omitted otherwise),
-`summary.passed/failed/errors`, and a `suites[].cases[].steps[]` tree where
+`summary.passed/failed/errors` (passed/failed count assertions, errors and
+skipped count steps; prefer the explicit `assertionsPassed`,
+`assertionsFailed`, `casesPassed`, `casesFailed`, `casesErrored`,
+`casesSkipped`, and `casesAborted`, which also count cases with no steps),
+and a `suites[].cases[].steps[]` tree where
 each step has redacted `request`/`response` captures, an `assertions[]`
 array, and `attempts` (executions of the request; omitted when the step never
 ran). `durationMs` on a step is the total across attempts and retry delays;
