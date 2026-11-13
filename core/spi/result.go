@@ -132,6 +132,11 @@ type StepResult struct {
 	// testing reads Duration so a sub-millisecond sample is not truncated
 	// to zero.
 	Duration time.Duration `json:"-"`
+	// ResponseDuration is how long the final attempt's protocol call took
+	// (spi.Response.Duration): the network exchange, without interpolation,
+	// auth, captures, redaction, assertions, transfers, or retry delays.
+	// Zero when no response arrived. Not serialized; load testing reads it.
+	ResponseDuration time.Duration `json:"-"`
 	// Attempts is how many times this step executed the request, including
 	// the first try. Omitted when the step was skipped, aborted, or failed
 	// before an attempt (for example a bad step variable or an unknown protocol).

@@ -661,7 +661,10 @@ export interface LoadMetrics {
   otherErrors?: number;
   errorRate: number;
   rps: number;
+  /** Protocol call of the final attempt (network exchange). */
   latency: LoadLatency;
+  /** Whole step: attempts, retry delays, auth, assertions, transfers. */
+  stepLatency?: LoadLatency;
   statusCodes: LoadStatusCount[];
   errors: string[];
 }

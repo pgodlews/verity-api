@@ -80,6 +80,11 @@ type Options struct {
 	// so several calls may be in flight together; it must be concurrency-safe
 	// and should return quickly. The Step pointer is a copy and may be retained.
 	OnEvent func(spi.RunEvent)
+	// LeanCaptures skips the request capture and keeps only the status and
+	// duration of each response (no headers or body), so captures and their
+	// redaction do not cost CPU per request. Load testing sets it; results
+	// built with it are not meant for reports.
+	LeanCaptures bool
 }
 
 // teardownTimeout is the grace budget for teardown of a suite that already

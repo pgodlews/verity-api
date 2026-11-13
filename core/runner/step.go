@@ -233,7 +233,7 @@ func (e *execContext) doAttempt(ctx context.Context, scope runScope, resolver *s
 
 	// Capture before execution so a transport-setup failure still records the
 	// request. Uploads fill the body during Execute; recapture afterwards.
-	res.Request = captureRequest(req, red)
+	res.Request = e.captureRequest(req, red)
 
 	// Build an HTTP client honoring transport-level TLS from the auth chain.
 	// timeout is this attempt's budget, not a budget shared across retries.
@@ -256,7 +256,7 @@ func (e *execContext) doAttempt(ctx context.Context, scope runScope, resolver *s
 
 	pctx := &spi.ProtocolContext{ChallengeResponders: chain.ChallengeResponders(), Client: client, Redactor: red, Dir: e.project.SourceDir, AllowExternalFiles: e.opts.AllowExternalFiles}
 	resp, err := proto.Execute(ctx, pctx, req)
-	res.Request = captureRequest(req, red)
+	res.Request = e.captureRequest(req, red)
 	if err != nil {
 		res.Status = spi.StatusError
 		// A missing upload is a config error. Network failures stay transport,
@@ -282,12 +282,14 @@ func (e *execContext) doAttempt(ctx context.Context, scope runScope, resolver *s
 	if leaves := secrets.JSONSecretLeaves(resp.Body); len(leaves) > 0 {
 		red.AddAll(leaves)
 	}
-	res.Response = captureResponse(resp, red)
+	res.Response = e.captureResponse(resp, red)
+	res.ResponseDuration = resp.Duration
 
 	var gqlIn *graphql.AssertionInput
 	if needsGraphQLSchema(step) {
 		gqlIn = e.graphqlInput(ctx, scope, rawReq, req, client, chain, chain.ChallengeResponders(), chain.Names(), red)
 	}
+	shown := e.shownBody(&res, resp, red)
 	allPassed := true
 	for ai := range step.Assertions {
 		var extra map[string]any
@@ -295,7 +297,7 @@ func (e *execContext) doAttempt(ctx context.Context, scope runScope, resolver *s
 			extra = map[string]any{"__gql": gqlIn}
 		}
 		ar := e.runAssertion(ctx, step.Assertions[ai], resp, resolver, extra, red)
-		e.redactAssertion(ar, step.Assertions[ai], resp, res.Response.Body, red)
+		e.redactAssertion(ar, step.Assertions[ai], resp, shown, red)
 		if !ar.Passed {
 			allPassed = false
 		}
@@ -318,6 +320,7 @@ func (e *execContext) doAttempt(ctx context.Context, scope runScope, resolver *s
 func (e *execContext) applyTransfers(res *spi.StepResult, resp *spi.Response, step *model.Step, resolver *secrets.Resolver, opts stepOpts, red *secrets.Redactor) {
 	allPassed := res.Status == spi.StatusPassed
 	newSecret := false
+	shown := e.shownBody(res, resp, red)
 	for _, t := range step.Transfers {
 		val, terr := extractTransfer(t, resp)
 		if terr != nil && t.Default == "" {
@@ -344,7 +347,7 @@ func (e *execContext) applyTransfers(res *spi.StepResult, resp *spi.Response, st
 		// that redaction masks. Register it so it is masked wherever later
 		// requests send it, and never show it in the capture list.
 		sensitive := sensitiveName.MatchString(t.Name) || sensitiveName.MatchString(t.Expr) ||
-			(val != "" && strings.Contains(string(resp.Body), val) && !strings.Contains(res.Response.Body, val))
+			(val != "" && strings.Contains(string(resp.Body), val) && !strings.Contains(shown(), val))
 		shown := red.Redact(val)
 		if sensitive && val != "" {
 			red.AddAll([]string{val})
@@ -358,7 +361,7 @@ func (e *execContext) applyTransfers(res *spi.StepResult, resp *spi.Response, st
 		// The response was captured before these values were known secrets;
 		// capture it again so other copies of them are masked too, and redact
 		// the assertion results again for the same reason.
-		res.Response = captureResponse(resp, red)
+		res.Response = e.captureResponse(resp, red)
 		for i := range res.Assertions {
 			ar := &res.Assertions[i]
 			ar.Message = red.Redact(ar.Message)
@@ -446,9 +449,9 @@ var sensitiveName = regexp.MustCompile(`(?i)(token|secret|passw|api[_-]?key|apik
 // credential ($.token) or when it appears in the raw body but not in the
 // redacted body capture (a structural pattern hid it there). Everything else
 // goes through the redactor.
-func (e *execContext) redactAssertion(ar *spi.AssertionResult, a model.Assertion, resp *spi.Response, shownBody string, red *secrets.Redactor) {
+func (e *execContext) redactAssertion(ar *spi.AssertionResult, a model.Assertion, resp *spi.Response, shownBody func() string, red *secrets.Redactor) {
 	hidden := func(s string) bool {
-		return len(s) >= 4 && strings.Contains(string(resp.Body), s) && !strings.Contains(shownBody, s)
+		return len(s) >= 4 && strings.Contains(string(resp.Body), s) && !strings.Contains(shownBody(), s)
 	}
 	// maskAll hides v and every string inside it, in Message too.
 	maskAll := func(v any) any {
