@@ -6,10 +6,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/PaesslerAG/jsonpath"
 	"github.com/antchfx/xmlquery"
 
 	"github.com/pgodlews/verity-api/core/internal/jsonnum"
+	"github.com/pgodlews/verity-api/core/internal/jsonq"
 	"github.com/pgodlews/verity-api/core/model"
 	"github.com/pgodlews/verity-api/core/spi"
 )
@@ -87,15 +87,5 @@ func jsonPathValue(body []byte, expr string) (any, bool, error) {
 	if err != nil {
 		return nil, false, fmt.Errorf("parse JSON for transfer: %w", err)
 	}
-	if expr != "" && !strings.HasPrefix(expr, "$") {
-		expr = "$." + expr
-	}
-	res, err := jsonpath.Get(expr, v)
-	if err != nil {
-		if strings.Contains(err.Error(), "unknown key") || strings.Contains(err.Error(), "no match") {
-			return nil, false, nil
-		}
-		return nil, false, err
-	}
-	return res, true, nil
+	return jsonq.Get(v, expr)
 }

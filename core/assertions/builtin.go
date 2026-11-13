@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/PaesslerAG/jsonpath"
 	"github.com/antchfx/xmlquery"
 
+	"github.com/pgodlews/verity-api/core/internal/jsonq"
 	"github.com/pgodlews/verity-api/core/registry"
 	"github.com/pgodlews/verity-api/core/spi"
 )
@@ -225,16 +225,5 @@ func evalJSONPath(body []byte, expr string) (any, bool, error) {
 	if err != nil {
 		return nil, false, fmt.Errorf("parse JSON: %w", err)
 	}
-	if expr != "" && !strings.HasPrefix(expr, "$") {
-		expr = "$." + expr
-	}
-	res, err := jsonpath.Get(expr, v)
-	if err != nil {
-		// jsonpath returns an error when nothing matches; treat as not-found.
-		if strings.Contains(err.Error(), "unknown key") || strings.Contains(err.Error(), "no match") {
-			return nil, false, nil
-		}
-		return nil, false, fmt.Errorf("jsonpath %q: %w", expr, err)
-	}
-	return res, true, nil
+	return jsonq.Get(v, expr)
 }
