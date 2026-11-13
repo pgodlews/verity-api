@@ -103,6 +103,8 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- mTLS: an unknown `minVersion`/`maxVersion` (or a minimum above the
+  maximum) is a `config_error` instead of silently using Go's default.
 - `${fn:randomHex:N}` is limited to N <= 4096; a larger N is a
   `config_error` instead of an unbounded allocation.
 - `verity` usage lists the `run` flags `--json-stdout`, `--quiet`,
