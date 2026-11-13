@@ -156,6 +156,14 @@ func cmdRun(args []string) int {
 		fmt.Fprintln(os.Stderr, "run: missing project file")
 		return exitUsage
 	}
+	if *parallel < 1 {
+		fmt.Fprintln(os.Stderr, "run: --parallel must be >= 1")
+		return exitUsage
+	}
+	if *untilStep < 0 {
+		fmt.Fprintln(os.Stderr, "run: --until-step must be >= 0")
+		return exitUsage
+	}
 	projectPath := pos[0]
 
 	// Load dotenv before the project so ${env:NAME} and redaction see the
