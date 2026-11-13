@@ -150,21 +150,12 @@ func (r *Registry) Catalog() Catalog {
 		Protocols:   keys(r.protocols),
 		Assertions:  keys(r.assertions),
 		Reporters:   keys(r.reporters),
-		Auth:        keysAuth(r.authFactory),
+		Auth:        keys(r.authFactory),
 		DataSources: keys(r.dataSources),
 	}
 }
 
 func keys[V any](m map[string]V) []string {
-	out := make([]string, 0, len(m))
-	for k := range m {
-		out = append(out, k)
-	}
-	sort.Strings(out)
-	return out
-}
-
-func keysAuth(m map[string]spi.AuthFactory) []string {
 	out := make([]string, 0, len(m))
 	for k := range m {
 		out = append(out, k)
