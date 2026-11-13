@@ -122,15 +122,22 @@ func summarize(result *spi.RunResult) spi.Summary {
 // worse returns the more severe of two statuses
 // (error > failed > aborted > passed/skipped).
 func worse(a, b spi.Status) spi.Status {
-	rank := map[spi.Status]int{
-		spi.StatusPassed:  0,
-		spi.StatusSkipped: 0,
-		spi.StatusAborted: 1,
-		spi.StatusFailed:  2,
-		spi.StatusError:   3,
-	}
-	if rank[b] > rank[a] {
+	if statusRank(b) > statusRank(a) {
 		return b
 	}
 	return a
+}
+
+// statusRank orders statuses by severity without building a map per call.
+func statusRank(s spi.Status) int {
+	switch s {
+	case spi.StatusAborted:
+		return 1
+	case spi.StatusFailed:
+		return 2
+	case spi.StatusError:
+		return 3
+	default: // passed, skipped
+		return 0
+	}
 }
