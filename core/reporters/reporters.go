@@ -9,8 +9,8 @@ package reporters
 import (
 	"io"
 	"os"
-	"path/filepath"
 
+	"github.com/pgodlews/verity-api/core/fsutil"
 	"github.com/pgodlews/verity-api/core/registry"
 	"github.com/pgodlews/verity-api/core/secrets"
 )
@@ -31,12 +31,9 @@ func openOut(out string) (io.Writer, func() error, error) {
 	if out == "" || out == "-" {
 		return os.Stdout, func() error { return nil }, nil
 	}
-	if dir := filepath.Dir(out); dir != "" && dir != "." {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			return nil, nil, err
-		}
-	}
-	f, err := os.Create(out)
+	// Written to a temporary file and renamed into place by close, so a
+	// failed or interrupted report never leaves a half-written file.
+	f, err := fsutil.CreateAtomic(out)
 	if err != nil {
 		return nil, nil, err
 	}

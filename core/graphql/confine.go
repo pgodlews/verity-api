@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pgodlews/verity-api/core/fsutil"
 	"github.com/pgodlews/verity-api/core/verr"
 )
 
@@ -58,7 +59,7 @@ func confinedPath(dir, path string) (string, error) {
 		joined = filepath.Join(root, joined)
 	}
 	joined = filepath.Clean(joined)
-	if !within(root, joined) {
+	if !fsutil.Within(root, joined) {
 		return "", verr.Newf(verr.CodeValidation, "schema file %q is outside the project directory", path)
 	}
 	rootReal, err := filepath.EvalSymlinks(root)
@@ -72,16 +73,8 @@ func confinedPath(dir, path string) (string, error) {
 		}
 		return "", verr.Newf(verr.CodeValidation, "schema file %q cannot be read", path)
 	}
-	if !within(rootReal, targetReal) {
+	if !fsutil.Within(rootReal, targetReal) {
 		return "", verr.Newf(verr.CodeValidation, "schema file %q is outside the project directory", path)
 	}
 	return targetReal, nil
-}
-
-func within(root, target string) bool {
-	rel, err := filepath.Rel(root, target)
-	if err != nil {
-		return false
-	}
-	return rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) && !filepath.IsAbs(rel)
 }

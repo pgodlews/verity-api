@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/pgodlews/verity-api/core/fsutil"
 	"github.com/pgodlews/verity-api/core/model"
 	"github.com/pgodlews/verity-api/core/verr"
 )
@@ -104,7 +105,7 @@ func Init(opts InitOptions) (*InitResult, error) {
 		if errs := p.Validate(); len(errs) > 0 {
 			return nil, verr.Wrap(verr.CodeValidation, errs[0], "starter project is invalid")
 		}
-		if err := writeKeepingMode(project, []byte(starterProject)); err != nil {
+		if err := fsutil.WriteKeepingMode(project, []byte(starterProject)); err != nil {
 			return nil, verr.Wrap(verr.CodeInternal, err, "write starter project")
 		}
 		result.Changed = append(result.Changed, project)
@@ -130,7 +131,7 @@ func Init(opts InitOptions) (*InitResult, error) {
 	if _, err := os.Stat(result.EnvExample); err != nil && !os.IsNotExist(err) {
 		return nil, verr.Wrap(verr.CodeInternal, err, "inspect .env.example")
 	} else if os.IsNotExist(err) || opts.Force {
-		if err := writeKeepingMode(result.EnvExample, envExample); err != nil {
+		if err := fsutil.WriteKeepingMode(result.EnvExample, envExample); err != nil {
 			return nil, verr.Wrap(verr.CodeInternal, err, "write .env.example")
 		}
 		result.Changed = append(result.Changed, result.EnvExample)
@@ -168,7 +169,7 @@ func initGitignore(dir string, result *InitResult) error {
 	if err == nil && string(updated) == string(data) {
 		return nil
 	}
-	if err := writeKeepingMode(path, updated); err != nil {
+	if err := fsutil.WriteKeepingMode(path, updated); err != nil {
 		return verr.Wrap(verr.CodeInternal, err, "write .gitignore")
 	}
 	result.Changed = append(result.Changed, path)

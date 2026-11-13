@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/pgodlews/verity-api/core/fsutil"
 )
 
 // readExternal loads an OpenAPI externalValue example. The reference must be
@@ -24,28 +26,11 @@ func readExternal(specPath, ref string) ([]byte, error) {
 	if hasDotDot(ref) {
 		return nil, errors.New("externalValue escapes the spec directory")
 	}
-	dir := filepath.Dir(specPath)
-	full := filepath.Clean(filepath.Join(dir, filepath.FromSlash(ref)))
-	rel, err := filepath.Rel(dir, full)
-	if err != nil || escapes(rel) {
+	full, err := fsutil.ResolveInside(filepath.Dir(specPath), filepath.FromSlash(ref), false, "externalValue")
+	if err != nil {
 		return nil, errors.New("externalValue escapes the spec directory")
 	}
-	realDir, err := filepath.EvalSymlinks(dir)
-	if err != nil {
-		return nil, err
-	}
-	if _, err := os.Stat(full); err != nil {
-		return nil, err
-	}
-	realFull, err := filepath.EvalSymlinks(full)
-	if err != nil {
-		return nil, err
-	}
-	rel, err = filepath.Rel(realDir, realFull)
-	if err != nil || escapes(rel) {
-		return nil, errors.New("externalValue escapes the spec directory")
-	}
-	b, err := os.ReadFile(realFull)
+	b, err := os.ReadFile(full)
 	if err != nil {
 		return nil, err
 	}
@@ -62,8 +47,4 @@ func hasDotDot(ref string) bool {
 		}
 	}
 	return false
-}
-
-func escapes(rel string) bool {
-	return rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }

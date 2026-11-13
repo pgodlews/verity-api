@@ -97,6 +97,89 @@ func Within(root, target string) bool {
 	return rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) && !filepath.IsAbs(rel)
 }
 
+// WriteKeepingMode replaces path atomically (temp file in the same
+// directory, then rename) and keeps an existing file's permission bits; a new
+// file gets 0644. A symlinked path is written through: its target is
+// replaced and the link is kept.
+func WriteKeepingMode(path string, data []byte) error {
+	// Write through a symlinked project file: replace its target, not the
+	// link, so the link and the file it points to stay as the user set them.
+	if real, err := filepath.EvalSymlinks(path); err == nil {
+		path = real
+	}
+	mode := os.FileMode(0o644)
+	if st, err := os.Stat(path); err == nil {
+		mode = st.Mode().Perm()
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".verity-write-*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmp.Name())
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	if err := os.Chmod(tmp.Name(), mode); err != nil {
+		return err
+	}
+	return os.Rename(tmp.Name(), path)
+}
+
+// AtomicFile is a file written to a temporary name and renamed over its
+// destination by Close, so readers never see a partial file.
+type AtomicFile struct {
+	*os.File
+	dest string
+	mode os.FileMode
+	done bool
+}
+
+// CreateAtomic starts an atomic write of path, creating parent directories.
+// Close commits it; Abort discards it.
+func CreateAtomic(path string) (*AtomicFile, error) {
+	if real, err := filepath.EvalSymlinks(path); err == nil {
+		path = real
+	}
+	mode := os.FileMode(0o644)
+	if st, err := os.Stat(path); err == nil {
+		mode = st.Mode().Perm()
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return nil, err
+	}
+	f, err := os.CreateTemp(filepath.Dir(path), ".verity-write-*")
+	if err != nil {
+		return nil, err
+	}
+	return &AtomicFile{File: f, dest: path, mode: mode}, nil
+}
+
+// Close finishes the write and renames the file into place.
+func (a *AtomicFile) Close() error {
+	if a.done {
+		return nil
+	}
+	a.done = true
+	name := a.File.Name()
+	if err := a.File.Close(); err != nil {
+		os.Remove(name)
+		return err
+	}
+	if err := os.Chmod(name, a.mode); err != nil {
+		os.Remove(name)
+		return err
+	}
+	if err := os.Rename(name, a.dest); err != nil {
+		os.Remove(name)
+		return err
+	}
+	return nil
+}
+
 // AllowExternal reads the injected AllowExternalKey flag from a config map.
 func AllowExternal(config map[string]any) bool {
 	v, _ := config[AllowExternalKey].(bool)

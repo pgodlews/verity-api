@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/pgodlews/verity-api/core/fsutil"
 )
 
 // Save writes the project to a file. The extension selects the format: .json
@@ -21,7 +23,7 @@ func (p *Project) Save(path string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, data, 0o644)
+	return fsutil.WriteKeepingMode(path, data)
 }
 
 // MarshalJSONIndent is json.MarshalIndent with two-space indentation but

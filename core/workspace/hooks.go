@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pgodlews/verity-api/core/fsutil"
 	"github.com/pgodlews/verity-api/core/verr"
 )
 
@@ -67,13 +68,13 @@ func InstallHook(opts HookOptions) (string, error) {
 		if err := os.Rename(hookPath, backup); err != nil {
 			return "", verr.Wrap(verr.CodeInternal, err, "back up pre-commit hook")
 		}
-		if err := writeKeepingMode(hookPath, script); err != nil {
+		if err := fsutil.WriteKeepingMode(hookPath, script); err != nil {
 			_ = os.Rename(backup, hookPath)
 			return "", verr.Wrap(verr.CodeInternal, err, "write pre-commit hook")
 		}
 	} else if readErr == nil && string(existing) == string(script) {
 		// Re-installation is idempotent apart from restoring the executable bit.
-	} else if err := writeKeepingMode(hookPath, script); err != nil {
+	} else if err := fsutil.WriteKeepingMode(hookPath, script); err != nil {
 		return "", verr.Wrap(verr.CodeInternal, err, "write pre-commit hook")
 	}
 	if err := os.Chmod(hookPath, 0o755); err != nil {

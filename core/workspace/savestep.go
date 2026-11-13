@@ -10,6 +10,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/pgodlews/verity-api/core/fsutil"
 	"github.com/pgodlews/verity-api/core/model"
 	"github.com/pgodlews/verity-api/core/verr"
 )
@@ -143,7 +144,7 @@ func writeNoted(path string, data []byte, note func(string, []byte)) error {
 	if note != nil {
 		note(path, data)
 	}
-	return writeKeepingMode(path, data)
+	return fsutil.WriteKeepingMode(path, data)
 }
 
 // hashStepIn hashes the step at suite/case/index in one project file.
@@ -321,33 +322,4 @@ func replaceStepJSON(data []byte, req SaveStepRequest) ([]byte, bool, error) {
 		}
 	}
 	return nil, false, nil
-}
-
-// writeKeepingMode replaces a file via a temp file and rename, keeping its mode.
-func writeKeepingMode(path string, data []byte) error {
-	// Write through a symlinked project file: replace its target, not the
-	// link, so the link and the file it points to stay as the user set them.
-	if real, err := filepath.EvalSymlinks(path); err == nil {
-		path = real
-	}
-	mode := os.FileMode(0o644)
-	if st, err := os.Stat(path); err == nil {
-		mode = st.Mode().Perm()
-	}
-	tmp, err := os.CreateTemp(filepath.Dir(path), ".verity-save-*")
-	if err != nil {
-		return err
-	}
-	defer os.Remove(tmp.Name())
-	if _, err := tmp.Write(data); err != nil {
-		tmp.Close()
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		return err
-	}
-	if err := os.Chmod(tmp.Name(), mode); err != nil {
-		return err
-	}
-	return os.Rename(tmp.Name(), path)
 }
