@@ -116,7 +116,7 @@ func (p grpcProtocol) Execute(ctx context.Context, pctx *spi.ProtocolContext, re
 		if err != nil {
 			return nil, err
 		}
-		files, err = filesFromDescriptorSet(set)
+		files, err = cachedDescriptorSet(set)
 		if err != nil {
 			return nil, err
 		}
@@ -134,7 +134,7 @@ func (p grpcProtocol) Execute(ctx context.Context, pctx *spi.ProtocolContext, re
 	if err != nil {
 		return nil, err
 	}
-	creds, err := transportCreds(dir, allow, plaintext, tlsMap)
+	creds, tlsKey, err := transportCredsKeyed(dir, allow, plaintext, tlsMap)
 	if err != nil {
 		return nil, err
 	}
@@ -144,14 +144,15 @@ func (p grpcProtocol) Execute(ctx context.Context, pctx *spi.ProtocolContext, re
 	}
 	outMD := pairs.asMD()
 
-	conn, err := dial(ctx, target, creds)
+	// The connection is cached for later steps (see cache.go), not closed.
+	key := connKey(target, plaintext, tlsKey)
+	conn, err := conns.get(ctx, key, target, creds)
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
 
 	if md == nil {
-		files, err = reflectFiles(ctx, conn, service, meth)
+		files, err = cachedReflect(ctx, key, conn, service, meth)
 		if err != nil {
 			return nil, err
 		}
