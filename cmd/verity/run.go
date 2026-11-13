@@ -18,6 +18,7 @@ import (
 	"github.com/pgodlews/verity-api/core/runner"
 	"github.com/pgodlews/verity-api/core/secrets"
 	"github.com/pgodlews/verity-api/core/spi"
+	"github.com/pgodlews/verity-api/core/verr"
 )
 
 // varFlags collects repeated --var k=v flags.
@@ -85,6 +86,45 @@ func pluginTrust(trustFlag bool) plugin.TrustFunc {
 	return plugin.TrustFromEnv
 }
 
+// reporterTarget is one --reporter TYPE=FILE request: any registered
+// reporter, including a reporter plugin, writing to FILE.
+type reporterTarget struct {
+	Type string
+	File string
+}
+
+// reporterFlags collects repeatable --reporter TYPE=FILE values.
+type reporterFlags []reporterTarget
+
+func (r *reporterFlags) String() string {
+	parts := make([]string, len(*r))
+	for i, t := range *r {
+		parts[i] = t.Type + "=" + t.File
+	}
+	return strings.Join(parts, ",")
+}
+
+func (r *reporterFlags) Set(s string) error {
+	typ, file, ok := strings.Cut(s, "=")
+	typ, file = strings.TrimSpace(typ), strings.TrimSpace(file)
+	if !ok || typ == "" || file == "" {
+		return fmt.Errorf("want TYPE=FILE, got %q", s)
+	}
+	*r = append(*r, reporterTarget{Type: typ, File: file})
+	return nil
+}
+
+// checkReporters fails before the run when a requested reporter type is not
+// registered (built-in or loaded plugin).
+func checkReporters(reg *registry.Registry, targets []reporterTarget) error {
+	for _, t := range targets {
+		if _, err := reg.Reporter(t.Type); err != nil {
+			return verr.Newf(verr.CodeNotFound, "reporter %q is not registered (built-in types: console, json, junit, html; or load a reporter plugin)", t.Type)
+		}
+	}
+	return nil
+}
+
 func (c *commonRunFlags) applyEnvFiles() error {
 	return loadEnvFiles(c.envFiles, c.envFileOverride)
 }
@@ -103,8 +143,10 @@ func cmdRun(args []string) int {
 		untilStep     = fs.Int("until-step", 0, "run only the first N steps of each case (0 = all)")
 		bail          = fs.Bool("bail", false, "stop scheduling new cases after the first failed or errored case")
 		watch         = fs.Bool("watch", false, "re-run when the project, fragments, feeds, or upload files change")
+		reporters     reporterFlags
 		allowExternal = fs.Bool("allow-external-files", false, "let uploads, secret files, mTLS files, schema files, and feeds be read from outside the project directory (trusted projects only)")
 	)
+	fs.Var(&reporters, "reporter", "write a report with a registered reporter, including reporter plugins: TYPE=FILE (repeatable)")
 	fs.SetOutput(os.Stderr)
 	pos, err := parsePermuted(fs, args)
 	if err != nil {
@@ -129,6 +171,7 @@ func cmdRun(args []string) int {
 			JUnitOut:           *junitOut,
 			JSONOut:            *jsonOut,
 			HTMLOut:            *htmlOut,
+			Reporters:          reporters,
 			Parallel:           *parallel,
 			Timeout:            common.timeout,
 			JSONStdout:         *jsonStdout,
@@ -191,6 +234,9 @@ func cmdRun(args []string) int {
 	// Plugin stderr is redacted with the run's redactor.
 	red := secrets.NewRedactor()
 	mgr.SetRedactor(red)
+	if err := checkReporters(reg, reporters); err != nil {
+		return failJSON(*jsonStdout, exitConfig, "reporter", err)
+	}
 
 	return finishRun(ctx, reg, project, runner.Options{
 		Redactor:           red,
@@ -204,13 +250,13 @@ func cmdRun(args []string) int {
 		UntilStep:          *untilStep,
 		Bail:               *bail,
 		AllowExternalFiles: *allowExternal,
-	}, *jsonStdout, *quiet, *junitOut, *jsonOut, *htmlOut)
+	}, *jsonStdout, *quiet, *junitOut, *jsonOut, *htmlOut, reporters...)
 }
 
 // finishRun executes project and writes every requested reporter, including
 // when ctx is already cancelled or is cancelled mid-run. A cancelled run
 // returns exitInterrupted after the reporters have been written.
-func finishRun(ctx context.Context, reg *registry.Registry, project *model.Project, opts runner.Options, jsonStdout, quiet bool, junitOut, jsonOut, htmlOut string) int {
+func finishRun(ctx context.Context, reg *registry.Registry, project *model.Project, opts runner.Options, jsonStdout, quiet bool, junitOut, jsonOut, htmlOut string, extra ...reporterTarget) int {
 	result, err := runner.New(reg).Run(ctx, project, opts)
 	if err != nil {
 		if ctx.Err() != nil {
@@ -239,6 +285,11 @@ func finishRun(ctx context.Context, reg *registry.Registry, project *model.Proje
 	}
 	if htmlOut != "" {
 		if rc := writeReporter(reg, "html", result, htmlOut); rc != exitOK {
+			return rc
+		}
+	}
+	for _, t := range extra {
+		if rc := writeReporter(reg, t.Type, result, t.File); rc != exitOK {
 			return rc
 		}
 	}

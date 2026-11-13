@@ -94,6 +94,7 @@ Usage:
                              [--env-file FILE ...] [--env-file-override] [--bail]
                              [--watch] [--allow-external-files]
                              [--plugins FILE | --trust-plugins]
+                             [--reporter TYPE=FILE ...]
   verity load <project.yaml> [--env NAME] [--suite GLOB ...] [--case GLOB ...]
                              [--var k=v ...] [--env-file FILE ...] [--env-file-override]
                              [--timeout 30s] [--vus N] (--duration 30s | --iterations N)

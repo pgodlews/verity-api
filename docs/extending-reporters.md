@@ -70,6 +70,16 @@ reg.RegisterReporter(myreport.TAP{})   // in-process
 verity plugin new reporter tap        # out-of-process
 ```
 
+Run with a reporter plugin by naming its type and output file. `--reporter`
+is repeatable, works with `run --watch`, and accepts built-in types too:
+
+```bash
+verity run project.yaml --plugins plugins.json --reporter tap=reports/run.tap
+```
+
+An unregistered type stops the run before it starts (exit 3,
+`not_found`); a malformed value (not `TYPE=FILE`) is a usage error (exit 2).
+
 ## The RunResult shape
 
 See `core/spi/result.go`. Top level: `Project`, `Environment`, `DurationMS`,
