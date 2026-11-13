@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/pgodlews/verity-api/core/internal/scalar"
 	"github.com/pgodlews/verity-api/core/registry"
 )
 
@@ -101,14 +102,8 @@ func (jsonSource) Rows(dir string, _ map[string]any, inline []map[string]string,
 	for _, r := range rows {
 		row := map[string]string{}
 		for k, v := range r {
-			switch val := v.(type) {
-			case json.Number:
-				row[k] = val.String()
-			case string:
-				row[k] = val
-			default:
-				row[k] = fmt.Sprintf("%v", val)
-			}
+			// null is "", nested objects/arrays are compact JSON text.
+			row[k] = scalar.String(v)
 		}
 		out = append(out, row)
 	}

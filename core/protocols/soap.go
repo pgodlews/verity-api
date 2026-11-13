@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/pgodlews/verity-api/core/internal/scalar"
 	"github.com/pgodlews/verity-api/core/registry"
 	"github.com/pgodlews/verity-api/core/spi"
 )
@@ -137,7 +138,7 @@ func buildEnvelope(raw map[string]any) (string, error) {
 			if !validXMLName(k) {
 				return "", fmt.Errorf("soap: %q is not a valid XML element name for a parameter", k)
 			}
-			fmt.Fprintf(&b, `<%s>%s</%s>`, k, escapeXMLText(fmt.Sprintf("%v", params[k])), k)
+			fmt.Fprintf(&b, `<%s>%s</%s>`, k, escapeXMLText(scalar.String(params[k])), k)
 		}
 	}
 	fmt.Fprintf(&b, `</%s>`, op)
