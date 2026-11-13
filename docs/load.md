@@ -104,8 +104,10 @@ The same allow-list is applied again at connect time, unless
 `--allow-remote` is set. Every HTTP connection the load run opens — the
 shared pool, a private TLS transport, and an OAuth2 token request — is
 dialed through a guard. The guard checks the IP that would be connected,
-including a redirect target, the proxy address when a proxy would be used,
-a host a feed row substituted, and a host a transfer captured at runtime.
+including a redirect target, a host a feed row substituted, and a host a
+transfer captured at runtime. While the guard is active, `HTTP_PROXY` and
+`HTTPS_PROXY` are ignored: a proxy would hide the real destination from the
+guard, so every request connects directly.
 A name is resolved at dial time, so a DNS change after the screen is caught.
 A refused dial is a transport error
 (`refusing non-private address <address>; pass --allow-remote`). The
@@ -189,8 +191,10 @@ server name, so certificates are not reused for other steps and idle
 connections are not rebuilt on every attempt. The shared pool and that
 cache are closed when the run finishes. Unless `--allow-remote` is set,
 those transports (and OAuth2 token requests) dial through the connect-time
-guard above. Pass a transport of your own only when embedding `core/load`;
-if it has no dialer of its own, the guard is installed on it.
+guard above. Pass a transport of your own only when embedding `core/load`.
+Without `AllowRemote` it must be an `*http.Transport` with no dialer of its
+own; the guard is installed on it and its proxy is turned off. Any other
+transport is refused with a `config_error`.
 
 Plugins are loaded the same way as `verity run`: `--plugins FILE`, or
 `<project-dir>/.verity/plugins.json` when that file is present and trusted
