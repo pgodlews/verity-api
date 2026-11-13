@@ -47,6 +47,8 @@ and distribution names below use the final public names.
 
 ### Changed
 
+- The frontend now requires Node.js 22.12+ (`engines`), and CI and release
+  builds use Node.js 22: Node.js 20 reached end of life in April 2026.
 - Removed `verity secret list`: the portable keychain backend cannot list
   names, so the command could only ever fail. `verity secret list` is now a
   usage error (exit 2).

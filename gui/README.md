@@ -13,7 +13,7 @@ by core before they reach the frontend.
 ## Prerequisites
 
 - Go 1.26+
-- Node.js 20.19+ (20.x) or 22.12+ and npm
+- Node.js 22.12+ and npm
 - The Wails CLI:
   ```bash
   go install github.com/wailsapp/wails/v2/cmd/wails@latest

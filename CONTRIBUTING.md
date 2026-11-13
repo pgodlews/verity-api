@@ -15,7 +15,7 @@ vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
   Each module pins `toolchain go1.26.11`; with the default `GOTOOLCHAIN=auto`
   the `go` command downloads that patch release when yours is older.
 - Git; desktop branch switching requires Git 2.23 or newer.
-- Node.js 20.19+ (20.x) or 22.12+ and npm for `gui/frontend`.
+- Node.js 22.12+ and npm for `gui/frontend`.
 - Wails v2 for desktop development (the release workflows use v2.12.0), with
   its platform dependencies: GTK and WebKitGTK development packages on Linux,
   WebView2 on Windows, and the macOS development tools on macOS. The Linux
