@@ -18,6 +18,12 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` planned
       time reported separately) with lean captures, bounded redactor growth,
       cached JSON Schemas and SDL files, 1 MiB capture cap, and gRPC
       connection and descriptor reuse.
+- [x] Owner follow-ups: auth configs that use captured values, desktop saves
+      that keep unrelated bytes, `include` confinement with
+      `--allow-external-files` on every loader, clear errors for stopped
+      plugins, OAuth token requests on the run's transports, load teardown
+      and setup exit codes, plugin host-name refusal in `verity load`, the
+      shared `secret --json` error shape, and a schema/model drift test.
 - [ ] Desktop consent for files outside the project directory (`include`,
       `${secret:file:...}`, mTLS files, schema files, feeds, uploads): a
       per-project approval in the user-config trust store, prompted with the
