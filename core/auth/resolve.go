@@ -142,10 +142,10 @@ type ScopeRefs struct {
 // scopes, applying inheritance and override rules, then builds the provider
 // chain.
 //
-// Inheritance rules (per scope, from outer to inner):
-//   - If a scope declares no AuthRef, it inherits the parent's effective list.
-//   - If a scope declares an AuthRef with Inherit=false (default when Use is
-//     non-empty and Inherit unset is true), it replaces... see effectiveNames.
+// Inheritance rules (per scope, from outer to inner): a scope without an
+// AuthRef inherits the parent's list; an AuthRef stacks its Use onto the
+// inherited list (Inherit unset or true) or replaces it (Inherit false). See
+// effectiveNames.
 func (r *Resolver) Resolve(ctx context.Context, scopes ScopeRefs) (*Chain, error) {
 	names := effectiveNames(scopes)
 	return r.build(ctx, names)

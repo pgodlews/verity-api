@@ -138,7 +138,7 @@ The [bundled GitHub Action](.github/actions/verity/action.yml) builds the CLI
 and propagates its exit code. In a job after checkout:
 
 ```yaml
-- uses: pgodlews/verity-api/.github/actions/verity@main
+- uses: pgodlews/verity-api/.github/actions/verity@v0.6.0-alpha.1 # pin a release tag or commit
   with:
     project: project.yaml
     parallel: '4'

@@ -188,7 +188,7 @@ const (
 // message providers (e.g. OAuth bearer). Providers manage their own token
 // lifecycle in memory and must never persist secrets.
 type AuthProvider interface {
-	// Type returns the stable provider identifier (e.g. "basic", "oauth2_cc").
+	// Type returns the stable provider identifier (e.g. "basic", "oauth2").
 	Type() string
 	// Layer reports whether this provider mutates the request (message) or
 	// contributes transport TLS configuration.
