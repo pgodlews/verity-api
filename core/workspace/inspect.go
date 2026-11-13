@@ -72,6 +72,28 @@ type ProjectInfo struct {
 	FileHashes []FileHash `json:"fileHashes,omitempty"`
 }
 
+// EnvFallback is a plain ${NAME} that the project leaves undefined in some
+// environments while the process environment sets NAME, so it resolves from
+// the process environment there (redacted as a secret). The author usually
+// meant ${env:NAME}. The value itself is never read into the result.
+type EnvFallback struct {
+	Name      string   `json:"name"`
+	MissingIn []string `json:"missingIn"`
+	UsedIn    []string `json:"usedIn"`
+}
+
+// EnvFallbacks lists the undefined variables that resolve from the process
+// environment on this machine.
+func (info *ProjectInfo) EnvFallbacks() []EnvFallback {
+	out := []EnvFallback{}
+	for _, u := range info.UndefinedVars {
+		if _, set := os.LookupEnv(u.Name); set {
+			out = append(out, EnvFallback{Name: u.Name, MissingIn: u.MissingIn, UsedIn: u.UsedIn})
+		}
+	}
+	return out
+}
+
 var refPattern = regexp.MustCompile(`\$\{([^}]+)\}`)
 
 // Inspect loads a project (with includes merged) and reports its secret

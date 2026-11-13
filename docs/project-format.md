@@ -93,7 +93,10 @@ recently known values.
 ## Variables, interpolation, and secrets
 
 - `${NAME}` — a plain variable (from environment/suite/case/step vars, feed
-  columns, or property transfers). Falls back to an OS env var if unset.
+  columns, or property transfers). Falls back to an OS env var if unset; a
+  value taken from the environment this way is treated as **secret** and
+  redacted, and `verity validate` warns (`env_fallback`) so you can write
+  `${env:NAME}` explicitly.
 - `${env:NAME}` — an OS environment variable, treated as **secret** (registered
   for redaction). Supply it through the process environment or
   `verity run --env-file FILE` (repeatable; later files win; a variable

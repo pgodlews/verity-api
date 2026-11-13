@@ -176,9 +176,11 @@ func (r *Resolver) resolveRef(inner string) (val string, secret, ok bool, err er
 		if v, present := r.Vars[inner]; present {
 			return v, false, true, nil
 		}
-		// Fall back to environment for convenience, treated as non-secret.
+		// Fall back to the process environment for convenience. The value is
+		// treated as secret, like ${env:NAME}: a ${API_TOKEN} written without
+		// "env:" must still be redacted. `verity validate` warns about it.
 		if v, present := os.LookupEnv(inner); present {
-			return v, false, true, nil
+			return v, true, true, nil
 		}
 		return "", false, false, nil
 	}
