@@ -1,5 +1,10 @@
 # Desktop release testing
 
+Two kinds of testing live here. The [functional regression suite](regression-suite.md)
+is a short check of core features to run after any major change. The release
+plans below are the fuller checklists for a release candidate, including
+packaging and platform integration.
+
 These plans describe native desktop coverage. Automated Go/frontend checks and
 browser bridge smoke tests supplement the plans; they do not establish native
 Windows, Linux, or macOS results. Use the exact release candidate, record its
@@ -8,6 +13,9 @@ commit and artifact checksum, and mark each scenario **pass**, **fail**,
 
 | Document | Purpose | Evidence status |
 | --- | --- | --- |
+| [Functional regression suite](regression-suite.md) | Short agent-executable check of core features on macOS, Windows 11, and Linux; run after major changes | Authored 13 November 2026; smoke set executed once on macOS, not on Windows or Linux |
+| [macOS regression run, 13 November 2026](regression-results-2026-11-13-macos.md) | First smoke-set run, against PR #9 | Smoke set passed; three product observations |
+| [Regression results template](regression-results-template.md) | Record for one regression run on one OS | Template |
 | [Shared release plan](desktop-release-test-plan.md) | P0/P1/P2 scenarios across desktop features | Living checklist; includes historical macOS observations |
 | [Windows 11 plan](windows-11-test-plan.md) | Shared scenarios plus Windows packaging, paths, WebView2, credentials, and accessibility | Authored 6 November 2026; native scenarios not executed in this work |
 | [Windows 11 findings](windows-findings-2026-11-06.md) | Supplied native observations, fix scope, and required retests | Targeted published-alpha/main testing; patched native retest outstanding |
