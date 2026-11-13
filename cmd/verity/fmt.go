@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pgodlews/verity-api/core/fsutil"
 	"github.com/pgodlews/verity-api/core/model"
 	"github.com/pgodlews/verity-api/core/workspace"
 )
@@ -64,11 +65,7 @@ func cmdFmt(args []string) int {
 			if *check {
 				continue
 			}
-			st, err := os.Stat(path)
-			if err != nil {
-				return failJSON(*jsonOut, exitInternal, "fmt", err)
-			}
-			if err := os.WriteFile(path, formatted, st.Mode().Perm()); err != nil {
+			if err := fsutil.WriteKeepingMode(path, formatted); err != nil {
 				return failJSON(*jsonOut, exitInternal, "fmt", err)
 			}
 		}

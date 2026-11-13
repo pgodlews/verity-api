@@ -129,6 +129,10 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- `verity fmt`, imports (`--out`), `graphql schema --out`, report files
+  (`--junit`, `--json`, `--html`), and desktop load-report saves write
+  atomically (temporary file + rename), keep an existing file's permissions,
+  and write through a symlink instead of replacing it.
 - An `xsd` assertion with `expr`, `config.schemaFile`, or `config.schema` is
   a validation error: the assertion only checks well-formedness (and
   `config.rootElement`) and would silently ignore the schema.

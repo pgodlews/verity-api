@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/pgodlews/verity-api/core/bootstrap"
+	"github.com/pgodlews/verity-api/core/fsutil"
 	"github.com/pgodlews/verity-api/core/graphql"
 	"github.com/pgodlews/verity-api/core/model"
 	"github.com/pgodlews/verity-api/core/runner"
@@ -85,7 +86,7 @@ func cmdGraphQLSchema(args []string) int {
 	red := secrets.NewRedactor()
 	sdl = red.Redact(sdl)
 	if *outPath != "" {
-		if err := os.WriteFile(*outPath, []byte(sdl), 0o644); err != nil {
+		if err := fsutil.WriteKeepingMode(*outPath, []byte(sdl)); err != nil {
 			return failJSON(*jsonOut, exitConfig, "write", err)
 		}
 	}

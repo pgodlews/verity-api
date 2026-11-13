@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/pgodlews/verity-api/core/bootstrap"
+	"github.com/pgodlews/verity-api/core/fsutil"
 	"github.com/pgodlews/verity-api/core/load"
 	"github.com/pgodlews/verity-api/core/model"
 	"github.com/pgodlews/verity-api/core/plugin"
@@ -141,7 +142,7 @@ func SaveLoadReport(req SaveLoadReportRequest) (string, error) {
 	if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
 		return "", verr.Wrap(verr.CodeInternal, err, "create report directory")
 	}
-	if err := os.WriteFile(out, buf.Bytes(), 0o644); err != nil {
+	if err := fsutil.WriteKeepingMode(out, buf.Bytes()); err != nil {
 		return "", verr.Wrap(verr.CodeInternal, err, "write load report")
 	}
 	return out, nil
