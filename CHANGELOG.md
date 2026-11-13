@@ -129,6 +129,10 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- `verity version` reports the module version, commit, and commit date that
+  the Go toolchain records when the binary was built without release
+  `-ldflags` (for example `go install github.com/pgodlews/verity-api/cmd/verity@v0.6.0`),
+  instead of `dev`, `none`, and `unknown`.
 - Release archives are reproducible: zip archives use fixed timestamps,
   modes, and sorted entries, tar.gz archives sorted entries and no gzip time
   stamp. `scripts/release.sh` stops with a clear message when GNU tar,
