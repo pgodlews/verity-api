@@ -103,6 +103,9 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- `verity` usage lists the `run` flags `--json-stdout`, `--quiet`,
+  `--timeout`, and `--follow-redirects`, and `fmt --staged`/`--json`; the
+  package comment no longer claims every command supports `--json`.
 - `verity run` rejects `--parallel` below 1 and a negative `--until-step`
   with a usage error (exit 2) instead of accepting them.
 - `verity import --out FILE` no longer overwrites an existing file unless
