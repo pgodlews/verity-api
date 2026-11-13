@@ -78,6 +78,10 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- `verity run` reuses one keep-alive HTTP transport for steps without a TLS
+  config instead of building a new transport for every attempt, so
+  `response_time` no longer includes a fresh TCP/TLS handshake per step and
+  idle connections are closed when the run ends.
 - An auth config that still contains a `${...}` reference after resolution
   (for example a bearer `token: ${accessToken}` captured by a login step)
   now fails the step with `auth_error` naming the auth definition and the

@@ -33,13 +33,20 @@ func NewHTTPClient(tlsCfg *spi.TLSConfig, timeout time.Duration, followRedirects
 // so many steps can reuse connections. The caller owns its lifetime. A
 // non-nil tlsCfg always builds a private transport. dial, when set, is
 // installed on that private transport (the load command's address guard).
-// cache, when set, reuses one private transport per TLS config for the run.
+// cache, when set, reuses one transport per TLS config for the run, and one
+// default transport for every step without TLS config, so sequential steps
+// keep their connections alive instead of paying a new TCP/TLS handshake
+// (inside response_time) on every attempt. The run closes them at the end.
 func buildHTTPClient(tlsCfg *spi.TLSConfig, timeout time.Duration, followRedirects bool, shared http.RoundTripper, dial func(context.Context, string, string) (net.Conn, error), cache *transportCache, serverName string) (*http.Client, error) {
 	var transport http.RoundTripper
 	if shared != nil && tlsCfg == nil {
 		transport = shared
-	} else if cache != nil && tlsCfg != nil {
-		built, err := cache.transport(tlsTransportKey(tlsCfg, serverName), func() (*http.Transport, error) {
+	} else if cache != nil {
+		key := defaultTransportKey
+		if tlsCfg != nil {
+			key = tlsTransportKey(tlsCfg, serverName)
+		}
+		built, err := cache.transport(key, func() (*http.Transport, error) {
 			return defaultTransport(tlsCfg, dial)
 		})
 		if err != nil {
@@ -123,6 +130,10 @@ func requestServerName(raw string) string {
 
 // transportCache keeps one private HTTP transport per TLS config for a run.
 // Building one per attempt leaks idle connections until IdleConnTimeout.
+// defaultTransportKey caches the transport for steps without a TLS config.
+// TLS keys are hex digests, so it cannot collide with one.
+const defaultTransportKey = "default"
+
 type transportCache struct {
 	mu    sync.Mutex
 	items map[string]*http.Transport
