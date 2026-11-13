@@ -32,6 +32,10 @@ and distribution names below use the final public names.
 
 ### Changed
 
+- **BREAKING:** loading a project or fragment rejects keys the format does
+  not define with a `validation_error` naming the key and its path. A typo
+  such as `asertions:` or `retrys:` was silently ignored, so the step ran
+  without its checks and passed. Projects with stray keys must remove them.
 - **BREAKING:** every file a project names at run time is confined to the
   project directory (after resolving symlinks) unless the run uses
   `--allow-external-files`: `${secret:file:PATH}`, mTLS `certFile`/`keyFile`/

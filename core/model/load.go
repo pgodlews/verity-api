@@ -98,6 +98,16 @@ func Decode(data []byte, ext string) (*Project, error) {
 			}
 			return nil, fmt.Errorf("parse JSON: %w", err)
 		}
+		// Reject keys the model does not define (a typo such as
+		// "asertions" would otherwise be dropped silently).
+		var generic any
+		gdec := json.NewDecoder(bytes.NewReader(data))
+		gdec.UseNumber()
+		if err := gdec.Decode(&generic); err == nil {
+			if err := checkKnownFields(generic, "json"); err != nil {
+				return nil, err
+			}
+		}
 	} else {
 		if err := decodeYAMLProject(data, &p); err != nil {
 			return nil, fmt.Errorf("parse YAML: %w", err)
