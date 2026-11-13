@@ -25,12 +25,10 @@ func (r *reporterProxy) Report(result *spi.RunResult, out string) error {
 	if err != nil {
 		return verr.Wrap(verr.CodePlugin, err, "marshal result for reporter plugin")
 	}
-	var resultMap map[string]any
-	if err := json.Unmarshal(data, &resultMap); err != nil {
-		return verr.Wrap(verr.CodePlugin, err, "remarshal result")
-	}
+	// RawMessage is written as is when the request is encoded, so the
+	// result is marshaled once instead of marshal, unmarshal, marshal.
 	_, err = r.client.call(MethodReport, map[string]any{
-		"result": resultMap,
+		"result": json.RawMessage(data),
 		"out":    out,
 	})
 	return err

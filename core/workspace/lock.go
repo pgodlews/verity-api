@@ -11,8 +11,15 @@ import (
 // outside this process.
 var (
 	repoMu    sync.Mutex
-	repoLocks = map[string]*sync.Mutex{}
+	repoLocks = map[string]*repoLock{}
 )
+
+// repoLock is one repository's mutex plus how many callers hold or wait for
+// it, so the entry can be removed when nobody uses it.
+type repoLock struct {
+	mu    sync.Mutex
+	users int
+}
 
 func lockProject(projectPath string) func() {
 	key := projectPath
@@ -23,12 +30,21 @@ func lockProject(projectPath string) func() {
 		key = root
 	}
 	repoMu.Lock()
-	m := repoLocks[key]
-	if m == nil {
-		m = &sync.Mutex{}
-		repoLocks[key] = m
+	l := repoLocks[key]
+	if l == nil {
+		l = &repoLock{}
+		repoLocks[key] = l
 	}
+	l.users++
 	repoMu.Unlock()
-	m.Lock()
-	return m.Unlock
+	l.mu.Lock()
+	return func() {
+		l.mu.Unlock()
+		repoMu.Lock()
+		l.users--
+		if l.users == 0 {
+			delete(repoLocks, key)
+		}
+		repoMu.Unlock()
+	}
 }

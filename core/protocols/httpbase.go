@@ -5,11 +5,11 @@
 package protocols
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/pgodlews/verity-api/core/internal/scalar"
@@ -33,7 +33,7 @@ func doHTTP(ctx context.Context, pctx *spi.ProtocolContext, req *spi.Request) (*
 
 	var bodyReader io.Reader
 	if len(req.Body) > 0 {
-		bodyReader = strings.NewReader(string(req.Body))
+		bodyReader = bytes.NewReader(req.Body) // no copy of the body
 	}
 
 	httpReq, err := http.NewRequestWithContext(ctx, method, target, bodyReader)
