@@ -129,6 +129,10 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- `verity hooks install` for a second project in the same repository adds it
+  to the pre-commit hook instead of replacing the first project, and
+  `hooks uninstall` removes only that project. Hook paths are resolved
+  through Verity's Git layer (`core/vcs`).
 - `verity fmt`, imports (`--out`), `graphql schema --out`, report files
   (`--junit`, `--json`, `--html`), and desktop load-report saves write
   atomically (temporary file + rename), keep an existing file's permissions,
