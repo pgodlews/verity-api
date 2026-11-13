@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/pgodlews/verity-api/core/fsutil"
 	"github.com/pgodlews/verity-api/core/model"
 	"github.com/pgodlews/verity-api/core/registry"
 	"github.com/pgodlews/verity-api/core/secrets"
@@ -66,6 +67,8 @@ type Resolver struct {
 	red     *secrets.Redactor
 	interp  *secrets.Resolver
 	dir     string
+	// allowExternal lets file-based credentials read outside dir.
+	allowExternal bool
 
 	mu       sync.Mutex
 	cache    map[string]spi.AuthProvider
@@ -102,6 +105,9 @@ func (r *Resolver) attachTransport(prov spi.AuthProvider) {
 // ResolverOptions supplies optional process-only workspace sessions.
 type ResolverOptions struct {
 	Sessions map[string]*OAuthSession
+	// AllowExternalFiles lets file-based credentials (mTLS certFile/keyFile/
+	// caFile) read outside the project directory.
+	AllowExternalFiles bool
 }
 
 // NewResolver creates an auth resolver. interp interpolates ${...} in config
@@ -109,12 +115,14 @@ type ResolverOptions struct {
 // directory used to resolve file-based credentials (mTLS certs).
 func NewResolver(reg *registry.Registry, project *model.Project, red *secrets.Redactor, interp *secrets.Resolver, dir string, opts ...ResolverOptions) *Resolver {
 	var sessions map[string]*OAuthSession
+	allowExternal := false
 	if len(opts) > 0 {
 		sessions = opts[0].Sessions
+		allowExternal = opts[0].AllowExternalFiles
 	}
 	return &Resolver{
 		reg: reg, project: project, red: red, interp: interp, dir: dir,
-		cache: map[string]spi.AuthProvider{}, sessions: sessions,
+		cache: map[string]spi.AuthProvider{}, sessions: sessions, allowExternal: allowExternal,
 	}
 }
 
@@ -235,6 +243,7 @@ func (r *Resolver) provider(name string) (spi.AuthProvider, error) {
 		return nil, fmt.Errorf("interpolate auth %q config: %w", name, err)
 	}
 	cfg["__dir"] = r.dir
+	cfg[fsutil.AllowExternalKey] = r.allowExternal
 	prov, err := factory(cfg, r.red)
 	if err != nil {
 		return nil, fmt.Errorf("build auth %q (%s): %w", name, def.Type, err)

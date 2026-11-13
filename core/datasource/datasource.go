@@ -9,8 +9,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 
+	"github.com/pgodlews/verity-api/core/fsutil"
 	"github.com/pgodlews/verity-api/core/internal/scalar"
 	"github.com/pgodlews/verity-api/core/registry"
 )
@@ -31,7 +31,10 @@ func (csvSource) Rows(dir string, config map[string]any, inline []map[string]str
 	if len(inline) > 0 {
 		return inline, nil
 	}
-	full := resolve(dir, path)
+	full, err := fsutil.ResolveInside(dir, path, fsutil.AllowExternal(config), "CSV feed")
+	if err != nil {
+		return nil, err
+	}
 	f, err := os.Open(full)
 	if err != nil {
 		return nil, fmt.Errorf("open CSV feed %q: %w", path, err)
@@ -83,11 +86,14 @@ func (csvSource) Rows(dir string, config map[string]any, inline []map[string]str
 type jsonSource struct{}
 
 func (jsonSource) Type() string { return "json" }
-func (jsonSource) Rows(dir string, _ map[string]any, inline []map[string]string, path string) ([]map[string]string, error) {
+func (jsonSource) Rows(dir string, config map[string]any, inline []map[string]string, path string) ([]map[string]string, error) {
 	if len(inline) > 0 {
 		return inline, nil
 	}
-	full := resolve(dir, path)
+	full, err := fsutil.ResolveInside(dir, path, fsutil.AllowExternal(config), "JSON feed")
+	if err != nil {
+		return nil, err
+	}
 	data, err := os.ReadFile(full)
 	if err != nil {
 		return nil, fmt.Errorf("read JSON feed %q: %w", path, err)
@@ -108,11 +114,4 @@ func (jsonSource) Rows(dir string, _ map[string]any, inline []map[string]string,
 		out = append(out, row)
 	}
 	return out, nil
-}
-
-func resolve(dir, path string) string {
-	if filepath.IsAbs(path) || dir == "" {
-		return path
-	}
-	return filepath.Join(dir, path)
 }

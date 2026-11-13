@@ -32,6 +32,17 @@ and distribution names below use the final public names.
 
 ### Changed
 
+- **BREAKING:** every file a project names at run time is confined to the
+  project directory (after resolving symlinks) unless the run uses
+  `--allow-external-files`: `${secret:file:PATH}`, mTLS `certFile`/`keyFile`/
+  `caFile`, `json_schema` schema files, and data-feed paths, joining uploads.
+  `${secret:file:...}` relative paths now resolve against the project
+  directory instead of the working directory. CI jobs that read mounted
+  secrets such as `${secret:file:/run/secrets/token}` must add
+  `--allow-external-files` (or switch to `${env:NAME}`). Uploads from a
+  project without a known directory are refused instead of unchecked.
+  Previously `${secret:file:/home/user/.ssh/id_rsa}` in a header sent that
+  file to the project's server.
 - **BREAKING:** a property transfer whose `jsonpath`, `xpath`, `header`, or
   `regex` source matches nothing now fails the step unless it has a non-empty
   `default`. Previously it captured an empty string and later steps silently

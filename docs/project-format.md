@@ -104,7 +104,9 @@ recently known values.
   not a project file and its values are never printed. See `docs/ci.md`.
 - `${secret:provider:key}` — an external secret. Built-in providers: `env`
   (default), `file` (reads a file's contents, e.g. a Docker/K8s secret
-  mount), and `keychain` (OS credential store, service `verity`).
+  mount; a relative path resolves against the project directory, and a path
+  outside it, such as `/run/secrets/token`, needs `--allow-external-files`),
+  and `keychain` (OS credential store, service `verity`).
   `${secret:keychain:project/NAME}` uses an explicit account-name scope; it
   is not derived from the project path. Keychain values are opaque, and a
   missing/locked/unavailable item is a `config_error`. See the CLI storage
@@ -254,7 +256,11 @@ Relative `file` and `bodyFile` paths resolve against the project directory.
 Upload files must stay inside the project directory (checked after resolving
 symlinks), so opening and running a downloaded project cannot send your local
 files elsewhere; run with `--allow-external-files` to lift this for a project
-you trust. A missing file fails the step with `config_error`. Text part values
+you trust. The same rule covers every file a project names at run time:
+`${secret:file:PATH}`, mTLS `certFile`/`keyFile`/`caFile`, `json_schema`
+schema files, and data-feed `path`. A project without a known directory
+(built in memory) can read none of them without the flag. `include` fragments
+are not confined yet. A missing file fails the step with `config_error`. Text part values
 never appear in reports — only part names and sizes. When `Content-Type` is absent, multipart requests get
 `multipart/form-data` plus a boundary, and `bodyFile` gets
 `application/octet-stream`. An explicit boundary is the one written into the

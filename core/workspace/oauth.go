@@ -61,7 +61,7 @@ func oauthConfig(p *model.Project, environment, name string, extra map[string]st
 		}
 	}
 	// A CI refresh-token reference may deliberately be unset on the desktop.
-	cfg, err := secrets.NewResolver(vars).InterpolateMap(config, true)
+	cfg, err := secrets.NewResolver(vars).WithFiles(p.SourceDir, false).InterpolateMap(config, true)
 	if err != nil {
 		return nil, "", [32]byte{}, verr.New(verr.CodeConfig, "cannot resolve OAuth configuration for this environment")
 	}

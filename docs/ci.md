@@ -200,6 +200,11 @@ iterations at the deadline; in-flight requests finish.
   rewriting the checkout. It checks included fragments too; see `docs/git.md`.
 - Use `verity list --json` in a setup step to assert required plugins are
   present.
+- Files a project names (`${secret:file:...}`, mTLS cert/key/CA files,
+  `json_schema` files, feeds, and uploads) must be inside the project
+  directory. A secret mounted outside it, such as `/run/secrets/token`, needs
+  `verity run --allow-external-files`; otherwise the step fails with a
+  `config_error`. Prefer `${env:NAME}` for CI secrets.
 - A project's own `.verity/plugins.json` runs only when trusted: pass
   `--plugins .verity/plugins.json` or `--trust-plugins`, or set
   `VERITY_TRUST_PLUGINS=1` in the job. Without one of these, `run` and `load`

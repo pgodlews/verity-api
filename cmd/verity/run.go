@@ -103,7 +103,7 @@ func cmdRun(args []string) int {
 		untilStep     = fs.Int("until-step", 0, "run only the first N steps of each case (0 = all)")
 		bail          = fs.Bool("bail", false, "stop scheduling new cases after the first failed or errored case")
 		watch         = fs.Bool("watch", false, "re-run when the project, fragments, feeds, or upload files change")
-		allowExternal = fs.Bool("allow-external-files", false, "let upload bodies read files outside the project directory (trusted projects only)")
+		allowExternal = fs.Bool("allow-external-files", false, "let uploads, secret files, mTLS files, schema files, and feeds be read from outside the project directory (trusted projects only)")
 	)
 	fs.SetOutput(os.Stderr)
 	pos, err := parsePermuted(fs, args)

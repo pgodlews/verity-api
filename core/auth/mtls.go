@@ -4,9 +4,8 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"os"
-	"path/filepath"
 
+	"github.com/pgodlews/verity-api/core/fsutil"
 	"github.com/pgodlews/verity-api/core/secrets"
 	"github.com/pgodlews/verity-api/core/spi"
 )
@@ -81,10 +80,8 @@ func pemFromConfig(config map[string]any, inlineKey, fileKey, dir string) ([]byt
 		return []byte(inline), nil
 	}
 	if path := strConfig(config, fileKey); path != "" {
-		if dir != "" && !filepath.IsAbs(path) {
-			path = filepath.Join(dir, path)
-		}
-		return os.ReadFile(path)
+		// Confined to the project directory unless --allow-external-files.
+		return fsutil.ReadInside(dir, path, fsutil.AllowExternal(config), "mtls "+fileKey)
 	}
 	return nil, nil
 }

@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/antchfx/xmlquery"
 	jsonschema "github.com/santhosh-tekuri/jsonschema/v5"
 
+	"github.com/pgodlews/verity-api/core/fsutil"
 	"github.com/pgodlews/verity-api/core/internal/jsonnum"
 	"github.com/pgodlews/verity-api/core/spi"
 )
@@ -54,9 +54,12 @@ func (a jsonSchemaAssertion) Evaluate(_ context.Context, actx *spi.AssertionCont
 			return result(a.Type(), spec.Description, false,
 				"json_schema requires 'schema' config or a schema file path in 'expr'", nil, nil), nil
 		}
-		if dir, ok := spec.Config["__dir"].(string); ok && !filepath.IsAbs(path) {
-			path = filepath.Join(dir, path)
+		dir, _ := spec.Config["__dir"].(string)
+		resolved, err := fsutil.ResolveInside(dir, path, fsutil.AllowExternal(spec.Config), "schema file")
+		if err != nil {
+			return result(a.Type(), spec.Description, false, err.Error(), nil, nil), nil
 		}
+		path = resolved
 		raw, err := os.ReadFile(path)
 		if err != nil {
 			return result(a.Type(), spec.Description, false, "read schema file: "+err.Error(), nil, nil), nil

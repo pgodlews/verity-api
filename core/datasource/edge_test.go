@@ -40,7 +40,7 @@ func TestCSVSourceEdgeCases(t *testing.T) {
 			if err := os.WriteFile(path, []byte(tt.content), 0o644); err != nil {
 				t.Fatal(err)
 			}
-			rows, err := (csvSource{}).Rows("", tt.config, nil, path)
+			rows, err := (csvSource{}).Rows(dir, tt.config, nil, path)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -57,7 +57,7 @@ func TestCSVSourceEdgeCases(t *testing.T) {
 	if err := os.WriteFile(bad, []byte("id,name\n\"unterminated,value\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := (csvSource{}).Rows("", nil, nil, bad); err == nil || !strings.Contains(err.Error(), "read CSV feed") {
+	if _, err := (csvSource{}).Rows(dir, nil, nil, bad); err == nil || !strings.Contains(err.Error(), "read CSV feed") {
 		t.Fatalf("malformed CSV error = %v", err)
 	}
 }
@@ -89,20 +89,7 @@ func TestJSONSourceValuesAndErrors(t *testing.T) {
 	if err := os.WriteFile(bad, []byte(`{"id":1}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := (jsonSource{}).Rows("", nil, nil, bad); err == nil || !strings.Contains(err.Error(), "expected array of objects") {
+	if _, err := (jsonSource{}).Rows(dir, nil, nil, bad); err == nil || !strings.Contains(err.Error(), "expected array of objects") {
 		t.Fatalf("malformed JSON error = %v", err)
-	}
-}
-
-func TestResolve(t *testing.T) {
-	if got := resolve("project", "feed.csv"); got != filepath.Join("project", "feed.csv") {
-		t.Fatalf("relative resolve = %q", got)
-	}
-	absolute := filepath.Join(string(filepath.Separator), "project", "feed.csv")
-	if got := resolve("ignored", absolute); got != absolute {
-		t.Fatalf("absolute resolve = %q", got)
-	}
-	if got := resolve("", "feed.csv"); got != "feed.csv" {
-		t.Fatalf("empty dir resolve = %q", got)
 	}
 }

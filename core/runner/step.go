@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/pgodlews/verity-api/core/auth"
+	"github.com/pgodlews/verity-api/core/fsutil"
 	"github.com/pgodlews/verity-api/core/graphql"
 	"github.com/pgodlews/verity-api/core/model"
 	"github.com/pgodlews/verity-api/core/protocols"
@@ -580,6 +581,7 @@ func (e *execContext) runAssertion(ctx context.Context, a model.Assertion, resp 
 	}
 	// Provide the project dir so schema assertions can resolve file paths.
 	cfg["__dir"] = e.project.SourceDir
+	cfg[fsutil.AllowExternalKey] = e.opts.AllowExternalFiles
 	for k, v := range extra {
 		cfg[k] = v
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/pgodlews/verity-api/core/fsutil"
 	"github.com/pgodlews/verity-api/core/model"
 	"github.com/pgodlews/verity-api/core/secrets"
 	"github.com/pgodlews/verity-api/core/spi"
@@ -148,7 +149,7 @@ func (x *CaseExec) requestResolver(suite *model.Suite, c *model.TestCase, step *
 	if c != nil {
 		caseVars = c.Vars
 	}
-	r := secrets.NewResolver(mergeVars(x.e.baseVars, x.e.runVarsSnapshot(), suiteVars, caseVars, row, x.e.opts.ExtraVars))
+	r := x.e.newResolver(mergeVars(x.e.baseVars, x.e.runVarsSnapshot(), suiteVars, caseVars, row, x.e.opts.ExtraVars))
 	defer func() { x.e.red.AddAll(r.SecretValues()) }()
 	if step == nil {
 		return r, nil
@@ -177,7 +178,7 @@ func (x *CaseExec) InterpolateStep(suite *model.Suite, c *model.TestCase, step *
 	if step != nil {
 		stepVars = step.Vars
 	}
-	r := secrets.NewResolver(mergeVars(x.e.baseVars, x.e.runVarsSnapshot(), suiteVars, caseVars, stepVars, x.e.opts.ExtraVars))
+	r := x.e.newResolver(mergeVars(x.e.baseVars, x.e.runVarsSnapshot(), suiteVars, caseVars, stepVars, x.e.opts.ExtraVars))
 	defer func() { x.e.red.AddAll(r.SecretValues()) }()
 	return r.Interpolate(s, false)
 }
@@ -187,7 +188,7 @@ func (x *CaseExec) InterpolateStep(suite *model.Suite, c *model.TestCase, step *
 // runVars is the caller's copy of the run-scoped baseline (and any captures
 // that virtual user has made since). The map is copied.
 func (x *CaseExec) NewResolver(suite *model.Suite, c *model.TestCase, runVars map[string]string) *secrets.Resolver {
-	return secrets.NewResolver(mergeVars(x.e.baseVars, runVars, suite.Vars, c.Vars, x.e.opts.ExtraVars))
+	return x.e.newResolver(mergeVars(x.e.baseVars, runVars, suite.Vars, c.Vars, x.e.opts.ExtraVars))
 }
 
 // SetupResult is one setup-hook step. Suite is the suite that owns the hook.
@@ -262,7 +263,7 @@ func (x *CaseExec) RunCase(ctx context.Context, req CaseRequest) ([]spi.CaseResu
 			out = append(out, x.e.abortedCase(req.Suite.Name, req.Case, ri))
 			continue
 		}
-		resolver := secrets.NewResolver(mergeVars(base, overlay, row))
+		resolver := x.e.newResolver(mergeVars(base, overlay, row))
 		out = append(out, x.e.runCaseIteration(ctx, req.Suite, req.Case, nil, ri, opts, resolver))
 	}
 	return out, nil
@@ -288,7 +289,12 @@ func (e *execContext) feedRows(c *model.TestCase) (rows []map[string]string, fed
 			}},
 		}
 	}
-	fetched, ferr := ds.Rows(e.project.SourceDir, c.Feed.Config, c.Feed.Inline, c.Feed.Path)
+	feedConfig := make(map[string]any, len(c.Feed.Config)+1)
+	for k, v := range c.Feed.Config {
+		feedConfig[k] = v
+	}
+	feedConfig[fsutil.AllowExternalKey] = e.opts.AllowExternalFiles
+	fetched, ferr := ds.Rows(e.project.SourceDir, feedConfig, c.Feed.Inline, c.Feed.Path)
 	if ferr != nil {
 		return nil, false, &spi.CaseResult{
 			Name:      c.Name,
@@ -305,4 +311,11 @@ func (e *execContext) feedRows(c *model.TestCase) (rows []map[string]string, fed
 		return rows, false, nil
 	}
 	return fetched, true, nil
+}
+
+// newResolver builds a variable resolver with the run's file policy:
+// ${secret:file:...} is confined to the project directory unless
+// --allow-external-files is set.
+func (e *execContext) newResolver(vars map[string]string) *secrets.Resolver {
+	return secrets.NewResolver(vars).WithFiles(e.project.SourceDir, e.opts.AllowExternalFiles)
 }

@@ -149,8 +149,10 @@ Run:
                         continues. Ctrl-C exits with the last run's code.
                         --junit/--json/--html are rewritten every run.
                         May be combined with --bail.
-  --allow-external-files  let multipart/bodyFile uploads read files outside
-                        the project directory (trusted projects only)
+  --allow-external-files  let uploads, ${secret:file:...}, mTLS cert/key/CA
+                        files, json_schema files, and feed files be read
+                        from outside the project directory (trusted
+                        projects only)
   Ctrl-C / SIGTERM      cancel the run. The in-flight step finishes or
                         fails; work that never started is reported as
                         aborted; requested reporters are still written;

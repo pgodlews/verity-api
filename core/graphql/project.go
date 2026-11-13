@@ -155,7 +155,7 @@ func ValidateProject(ctx context.Context, p *model.Project, opt Options) []*verr
 			errs = append(errs, asVerr(err).WithPath(schemaPath(p, loc, src)))
 			return
 		}
-		interp := stepResolver(env, loc)
+		interp := stepResolver(p, env, loc)
 		q, opName, rawVars, ierr := interpolatedOperation(interp, loc.Step.Request)
 		if ierr != nil {
 			errs = append(errs, verr.Wrap(verr.CodeValidation, ierr, "interpolate request").WithPath(loc.Path+".request"))
@@ -214,8 +214,9 @@ func interpolatedOperation(interp *secrets.Resolver, raw map[string]any) (string
 	return resolved, opName, vars, nil
 }
 
-func stepResolver(env model.Environment, loc StepLoc) *secrets.Resolver {
-	return secrets.NewResolver(scopeVars(env, loc))
+// stepResolver confines ${secret:file:...} to the project directory.
+func stepResolver(p *model.Project, env model.Environment, loc StepLoc) *secrets.Resolver {
+	return secrets.NewResolver(scopeVars(env, loc)).WithFiles(p.SourceDir, false)
 }
 
 // scopeVars is the runner's variable order for a step that has not run:
@@ -340,7 +341,7 @@ func prepareCall(ctx context.Context, p *model.Project, loc StepLoc, opt Options
 	if red == nil {
 		red = secrets.NewRedactor()
 	}
-	interp := stepResolver(env, loc)
+	interp := stepResolver(p, env, loc)
 	raw := loc.Step.Request
 	if raw == nil {
 		raw = map[string]any{}
