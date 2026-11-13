@@ -36,6 +36,10 @@ and distribution names below use the final public names.
 
 ### Changed
 
+- **BREAKING:** duplicate case names within a suite are a validation error.
+  The name is the case's identity, so a desktop save could overwrite the
+  wrong case and `--case`, watch deltas, and run events were ambiguous.
+  OpenAPI, WSDL, and Postman imports rename duplicates to `name (2)`.
 - **BREAKING:** a failed or errored setup step now skips the suite's cases;
   each is reported `skipped` with a `setup` step carrying the new
   `setup_failed` error code. Before, cases ran anyway (unless `--bail`)

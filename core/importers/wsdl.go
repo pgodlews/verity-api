@@ -152,6 +152,7 @@ func ImportWSDL(path string) (*Result, error) {
 			Steps: []model.Step{step},
 		})
 	}
+	suite.Cases = uniqueCaseNames(suite.Cases)
 	project.Suites = []model.Suite{suite}
 	res.Project = project
 	return res, nil

@@ -132,6 +132,7 @@ func ImportOpenAPI(path string) (*Result, error) {
 	if len(suite.Cases) == 0 {
 		return nil, verr.New(verr.CodeImport, "OpenAPI spec contained no operations")
 	}
+	suite.Cases = uniqueCaseNames(suite.Cases)
 	project.Suites = []model.Suite{suite}
 	res.Project = project
 	return res, nil
