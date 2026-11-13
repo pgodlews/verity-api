@@ -74,6 +74,10 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- Header, query, and cookie values added by an auth plugin are now
+  registered for redaction, and plugin stderr (previously discarded) is
+  shown on the host's stderr as `[plugin NAME] ...` lines, redacted with the
+  run's redactor.
 - `verity load` without `--allow-remote` ignores `HTTP_PROXY`/`HTTPS_PROXY`,
   so a loopback or private proxy can no longer carry a redirect or captured
   host to a public address past the private-address guard. Embedding code

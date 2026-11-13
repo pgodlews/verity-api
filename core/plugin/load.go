@@ -3,6 +3,7 @@ package plugin
 import (
 	"context"
 	"os"
+	"path/filepath"
 
 	"github.com/pgodlews/verity-api/core/registry"
 	"github.com/pgodlews/verity-api/core/secrets"
@@ -33,6 +34,19 @@ type PluginsFile struct {
 // shut them down cleanly at the end of a run.
 type Manager struct {
 	clients []*Client
+	red     *redactorRef
+}
+
+// SetRedactor makes the plugins' stderr output pass through red (the run's
+// redactor), so secrets the run resolves are masked in plugin logs too.
+func (m *Manager) SetRedactor(red *secrets.Redactor) {
+	if m == nil || red == nil {
+		return
+	}
+	if m.red == nil {
+		m.red = newRedactorRef()
+	}
+	m.red.set(red)
 }
 
 // LoadFile reads a plugins config file and loads every enabled plugin into the
@@ -57,12 +71,16 @@ func LoadFile(ctx context.Context, reg *registry.Registry, path string) (*Manage
 // Load launches the given plugin manifests and registers them. Disabled
 // manifests are skipped. On any failure, already-launched plugins are closed.
 func Load(ctx context.Context, reg *registry.Registry, manifests []Manifest) (*Manager, error) {
-	m := &Manager{}
+	m := &Manager{red: newRedactorRef()}
 	for _, man := range manifests {
 		if man.Enabled != nil && !*man.Enabled {
 			continue
 		}
-		client, err := Launch(ctx, man.Path, man.Args...)
+		name := man.Name
+		if name == "" {
+			name = filepath.Base(man.Path)
+		}
+		client, err := launch(ctx, man.Path, man.Args, newStderrWriter(hostStderr, name, m.red))
 		if err != nil {
 			m.Close()
 			return nil, err
