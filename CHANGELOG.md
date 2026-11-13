@@ -111,6 +111,12 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- Closing the desktop window cancels an in-flight run, load test, or Git
+  operation instead of only stopping the file watcher.
+- Desktop release builds carry their version, commit, and date (a new
+  `Version` binding, the Windows file version, and the macOS bundle
+  version), and the Wails project is named `Verity`, so the macOS bundle no
+  longer has to be renamed after the build.
 - `verity load` treats IPv6 unique-local addresses (`fc00::/7`) as private
   targets, like RFC 1918 IPv4, instead of requiring `--allow-remote` for them.
 - Project loading, auth configuration, data feeds, and secret files return

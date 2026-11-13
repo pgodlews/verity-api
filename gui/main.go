@@ -1,4 +1,4 @@
-// Command verity-gui is the Verity desktop application, built with Wails v2.
+// Command verity-desktop is the Verity desktop application, built with Wails v2.
 //
 // It is a thin shell over the same core library the CLI uses: the App struct
 // (app.go) binds core/workspace operations to a React + TypeScript frontend:

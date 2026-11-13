@@ -64,8 +64,13 @@ func (a *App) startup(ctx context.Context) {
 }
 
 // shutdown stops the project watcher when the window closes.
+// shutdown stops the project watcher and cancels any in-flight run, load
+// test, or Git operation when the window closes, so none of them keeps
+// working (or holding a Git index lock) after the app is gone.
 func (a *App) shutdown(context.Context) {
 	a.UnwatchProject()
+	a.runs.Cancel()
+	a.git.Cancel()
 }
 
 func (a *App) context() context.Context {

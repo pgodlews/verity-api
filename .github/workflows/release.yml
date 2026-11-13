@@ -78,8 +78,9 @@ jobs:
       - name: Build desktop app
         run: |
           go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+          scripts/desktop-version.sh "${GITHUB_REF_NAME}"
           cd gui
-          "$(go env GOPATH)/bin/wails" build -tags webkit2_41 -clean
+          "$(go env GOPATH)/bin/wails" build -tags webkit2_41 -clean -ldflags "$(../scripts/desktop-version.sh --ldflags "${GITHUB_REF_NAME}")"
           d="verity-desktop_${GITHUB_REF_NAME}_linux_amd64"
           mkdir -p "../dist/desktop/$d"
           cp build/bin/verity-desktop ../LICENSE ../README.md "../dist/desktop/$d/"
@@ -107,12 +108,12 @@ jobs:
       - name: Build desktop app
         run: |
           go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+          scripts/desktop-version.sh "${GITHUB_REF_NAME}"
           cd gui
-          "$(go env GOPATH)/bin/wails" build -platform darwin/universal -clean
+          "$(go env GOPATH)/bin/wails" build -platform darwin/universal -clean -ldflags "$(../scripts/desktop-version.sh --ldflags "${GITHUB_REF_NAME}")"
           mkdir -p ../dist/desktop
-          # Wails names the bundle after the project (wails.json "name"); ship it as Verity.app.
-          app=$(ls -d build/bin/*.app)
-          [ "$app" = build/bin/Verity.app ] || mv "$app" build/bin/Verity.app
+          # wails.json "name" is Verity, so Wails names the bundle Verity.app.
+          [ -d build/bin/Verity.app ] || { echo "expected build/bin/Verity.app"; ls build/bin; exit 1; }
           ditto -c -k --keepParent build/bin/Verity.app "../dist/desktop/verity-desktop_${GITHUB_REF_NAME}_darwin_universal.zip"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -134,8 +135,9 @@ jobs:
       - name: Build desktop app
         run: |
           go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+          scripts/desktop-version.sh "${GITHUB_REF_NAME}"
           cd gui
-          "$(go env GOPATH)/bin/wails" build -platform windows/amd64 -clean -o verity-desktop.exe
+          "$(go env GOPATH)/bin/wails" build -platform windows/amd64 -clean -o verity-desktop.exe -ldflags "$(../scripts/desktop-version.sh --ldflags "${GITHUB_REF_NAME}")"
           d="verity-desktop_${GITHUB_REF_NAME}_windows_amd64"
           mkdir -p "../dist/desktop/$d"
           cp build/bin/verity-desktop.exe ../LICENSE ../README.md "../dist/desktop/$d/"
