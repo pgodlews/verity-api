@@ -29,7 +29,9 @@ The public release pipeline is:
    `.tar.gz`, Windows archives `.zip`. Builds disable CGO and use `-trimpath`;
    CLI metadata includes the version, commit, and commit date.
 2. **Desktop apps:** Linux amd64 with WebKitGTK 4.1, universal macOS
-   (Intel and Apple silicon), and Windows amd64. Asset names are
+   (Intel and Apple silicon), and Windows amd64. `scripts/desktop-version.sh`
+   sets `info.productVersion` in `gui/wails.json` from the tag and supplies
+   the `-X main.version/commit/date` ldflags. Asset names are
    `verity-desktop_<tag>_linux_amd64.tar.gz`,
    `verity-desktop_<tag>_darwin_universal.zip`, and
    `verity-desktop_<tag>_windows_amd64.zip`.

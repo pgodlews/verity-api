@@ -1,5 +1,5 @@
 {
-  "name": "verity-gui",
+  "name": "Verity",
   "outputfilename": "verity-desktop",
   "frontend:install": "npm ci",
   "frontend:build": "npm run build",
@@ -10,6 +10,7 @@
   },
   "info": {
     "productName": "Verity",
+    "productVersion": "0.0.0-dev",
     "comments": "Lean, cross-platform API contract testing — a clean-room SoapUI alternative.",
     "copyright": "Copyright (c) 2026 Piotr Godlewski"
   }
