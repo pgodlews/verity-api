@@ -2,7 +2,6 @@ package workspace
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -51,10 +50,10 @@ type SaveStepResult struct {
 }
 
 // SaveStep writes one step back to the file that defines it — the project
-// file or one of its includes. YAML files are edited as a node tree, so
-// comments and the rest of the file survive; JSON files are re-encoded. Saves
-// normalize files to two-space indentation, exactly like verity fmt. The
-// project is reloaded and validated afterwards, and the file is restored if
+// file or one of its includes. YAML: the step is merged field by field into
+// its node and only that step's text is written again (model.SpliceYAMLItems);
+// the rest of the file keeps its bytes. JSON: the ordered document is edited
+// and formatted like verity fmt. The project is reloaded and validated afterwards, and the file is restored if
 // the edit made it invalid.
 func SaveStep(req SaveStepRequest) (*SaveStepResult, error) {
 	step, err := normalizedStepJSONText(req.Step)
@@ -237,15 +236,21 @@ func replaceStep(data []byte, file string, req SaveStepRequest) ([]byte, bool, e
 		return nil, false, err
 	}
 	old := steps.Content[req.Index]
-	n.HeadComment, n.LineComment, n.FootComment = old.HeadComment, old.LineComment, old.FootComment
-	steps.Content[req.Index] = &n
+	// known is the old step as the model sees it: keys it lacks are ones
+	// the model does not know, and the merge keeps them.
+	var known *yaml.Node
+	var oldStep model.Step
+	if old.Decode(&oldStep) == nil {
+		var k yaml.Node
+		if k.Encode(oldStep) == nil {
+			known = &k
+		}
+	}
+	merged := model.MergeYAMLNode(old, &n, known)
+	steps.Content[req.Index] = merged
 
-	out, err := formatEditedYAML(data, &doc)
+	out, _, err := model.SpliceYAMLItems(data, &doc, []*yaml.Node{merged})
 	return out, true, err
-}
-
-func formatEditedYAML(original []byte, doc *yaml.Node) ([]byte, error) {
-	return model.FormatYAMLNode(original, doc)
 }
 
 // findSteps returns the steps sequence of suite/case in a project mapping.
@@ -291,35 +296,8 @@ func scalar(n *yaml.Node) string {
 	return n.Value
 }
 
+// replaceStepJSON merges the step into the ordered JSON tree: key order,
+// keys the model does not know, and number text survive.
 func replaceStepJSON(data []byte, req SaveStepRequest) ([]byte, bool, error) {
-	// UseNumber keeps number text (9007199254740993) through the round
-	// trip; float64 would round it in steps the user did not edit.
-	var p model.Project
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-	if err := dec.Decode(&p); err != nil {
-		return nil, false, err
-	}
-	for si := range p.Suites {
-		if p.Suites[si].Name != req.Suite {
-			continue
-		}
-		for ci := range p.Suites[si].Cases {
-			c := &p.Suites[si].Cases[ci]
-			if c.Name != req.Case {
-				continue
-			}
-			if req.Index < 0 || req.Index >= len(c.Steps) {
-				return nil, false, fmt.Errorf("step index %d out of range (case has %d steps)", req.Index, len(c.Steps))
-			}
-			c.Steps[req.Index] = req.Step
-			encoded, err := model.MarshalJSONIndent(&p)
-			if err != nil {
-				return nil, false, err
-			}
-			out, err := model.FormatJSON(encoded)
-			return out, true, err
-		}
-	}
-	return nil, false, nil
+	return model.ReplaceJSONStep(data, req.Suite, req.Case, req.Index, req.Step)
 }

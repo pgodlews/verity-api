@@ -72,8 +72,18 @@ With no path, `fmt` uses `project.yaml` in the current directory. YAML and JSON
 use two-space indentation, retain authored key order, and end with a newline.
 YAML comments and existing document markers are preserved. Feeds and upload
 files are not formatted. Formatting is idempotent and does not change loaded
-project values. Saving steps or environments from the GUI uses the same
-formatter, so those saves also normalize files to two spaces.
+project values.
+
+YAML saves from the desktop app change only the step or environment
+they edit: the edit is merged field by field into the existing entry
+(untouched keys keep their order, comments, and quoting), and only that
+entry is written again, with two-space indentation. The rest of the file
+keeps its exact bytes, including blank lines, quotes, and folded text. A
+file the splice cannot handle safely (for example CRLF line endings) is
+written whole, formatted like `verity fmt`. JSON saves edit the ordered
+document (key order and number text survive, `<`, `>`, and `&` are not
+escaped) and format it like `verity fmt`. A symlinked project file is
+written through, not replaced.
 
 ## Pre-commit hooks
 

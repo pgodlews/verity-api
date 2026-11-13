@@ -41,6 +41,11 @@ func TestSavesMatchFormatterOutput(t *testing.T) {
 			if tc.format == "yaml" {
 				data = append([]byte("---\n"), data...)
 				data = append(data, []byte("...\n")...)
+				// YAML saves keep the bytes they do not edit, so a file
+				// that is already formatted stays formatted.
+				if data, err = model.FormatYAML(data); err != nil {
+					t.Fatal(err)
+				}
 			}
 			if err := os.WriteFile(path, data, 0o644); err != nil {
 				t.Fatal(err)

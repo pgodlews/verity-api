@@ -127,6 +127,13 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- Desktop saves no longer reformat unrelated parts of a YAML project file
+  (dropped quotes, removed blank lines, folded text turned literal): the
+  edited step or environment is merged field by field into its entry, which
+  keeps its key order, comments, and quoting, and only that entry is
+  written again. Environment variables keep their order and comments. JSON
+  saves edit the ordered document, so key order and number text survive.
+  (B-14)
 - Request and response bodies in run results, reports, and the desktop app
   are capped at 1 MiB with a truncation note and a new `bodyTruncated` flag
   (additive); assertions and transfers still use the full body. Before, every

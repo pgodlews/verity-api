@@ -13,8 +13,9 @@ environment `variables`, feed rows) accept any key. JSON keys match
 case-insensitively, as in Go's JSON decoder.
 
 Use `verity fmt project.yaml` to normalize the root and all included fragments
-to two-space indentation without sorting keys or changing values. GUI saves use
-the same formatting. See [git.md](git.md) for check mode and Git automation.
+to two-space indentation without sorting keys or changing values. GUI saves
+change only the step or environment they edit (see [git.md](git.md), which
+also covers check mode and Git automation).
 
 ## Top level
 
