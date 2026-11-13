@@ -134,6 +134,10 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- OAuth2 token requests use the run's transport settings: proxy handling,
+  the `--timeout` value (instead of a fixed 30 seconds), the load
+  private-address guard, and the client certificate and CA bundle of an
+  `mtls` provider in the same chain. (B-18)
 - After a plugin is stopped (a timed-out or cancelled call, a crash, an
   out-of-order answer), later steps fail with `plugin_error` naming the
   plugin and why it stopped, instead of "plugin is dead or terminated".

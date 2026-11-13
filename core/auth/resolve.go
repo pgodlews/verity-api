@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/pgodlews/verity-api/core/fsutil"
 	"github.com/pgodlews/verity-api/core/model"
@@ -83,32 +84,57 @@ type Resolver struct {
 	// a case knows (a token a login step captured). Their providers are
 	// cached by name plus a hash of the resolved config, never by name.
 	perCase map[string]bool
-	// httpTransport, when set, is installed on providers that dial their own
+	// tokenClient, when set, is installed on providers that open their own
 	// HTTP connections (OAuth2 token requests).
-	httpTransport http.RoundTripper
+	tokenClient TokenClient
 }
 
-// httpTransportSetter is implemented by providers that open their own HTTP
+// TokenClient is how providers that open their own HTTP connections (OAuth2
+// token requests) reach the network: the run's transport settings.
+type TokenClient struct {
+	// Transport returns the round tripper for a request. tlsCfg is the TLS
+	// contribution of the step's transport-layer auth (mTLS), or nil. The
+	// runner returns its shared transport for that config, so token requests
+	// get the same proxy handling, CA bundle, client certificate, and
+	// dial guard (the load private-address check) as the step itself.
+	Transport func(tlsCfg *spi.TLSConfig) (http.RoundTripper, error)
+	// Timeout bounds one token request (the run's --timeout). Zero keeps
+	// the provider default (30s).
+	Timeout time.Duration
+}
+
+// tokenClientSetter is implemented by providers that open their own HTTP
 // connections. The method is unexported; only this package installs it.
-type httpTransportSetter interface {
-	useHTTPTransport(rt http.RoundTripper)
+type tokenClientSetter interface {
+	useTokenClient(tc TokenClient)
 }
 
-// SetHTTPTransport installs the transport used by providers that dial on
-// their own. Call it before Resolve. A nil transport leaves each provider's
-// default client in place.
-func (r *Resolver) SetHTTPTransport(rt http.RoundTripper) {
+// SetTokenClient installs the network settings for providers that dial on
+// their own. Call it before Resolve.
+func (r *Resolver) SetTokenClient(tc TokenClient) {
 	r.mu.Lock()
-	r.httpTransport = rt
+	r.tokenClient = tc
+	r.mu.Unlock()
+}
+
+// SetHTTPTransport makes providers that dial on their own use rt for every
+// token request, whatever the step's TLS config. A nil transport keeps the
+// current settings.
+func (r *Resolver) SetHTTPTransport(rt http.RoundTripper) {
+	if rt == nil {
+		return
+	}
+	r.mu.Lock()
+	r.tokenClient.Transport = func(*spi.TLSConfig) (http.RoundTripper, error) { return rt, nil }
 	r.mu.Unlock()
 }
 
 func (r *Resolver) attachTransport(prov spi.AuthProvider) {
-	if r.httpTransport == nil || prov == nil {
+	if r.tokenClient.Transport == nil || prov == nil {
 		return
 	}
-	if s, ok := prov.(httpTransportSetter); ok {
-		s.useHTTPTransport(r.httpTransport)
+	if s, ok := prov.(tokenClientSetter); ok {
+		s.useTokenClient(r.tokenClient)
 	}
 }
 

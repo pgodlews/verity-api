@@ -191,6 +191,13 @@ and refresh-token grants also require `clientSecret`. Authorization Code
 supports public clients (no secret) and confidential clients. Put secrets in
 `${env:VAR}`.
 
+Token requests use the run's network settings, like the step they serve:
+`HTTP(S)_PROXY`, the run's `--timeout` per request, the load test's
+private-address guard (`verity load` without `--allow-remote`), and the
+TLS settings of a transport-layer auth in the same chain (an `mtls`
+provider's client certificate and CA bundle). Token request errors are
+redacted before they are reported.
+
 Client credentials (default):
 
 ```yaml

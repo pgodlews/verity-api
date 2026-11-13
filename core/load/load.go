@@ -163,12 +163,8 @@ func Run(ctx context.Context, reg *registry.Registry, project *model.Project, op
 	if owned != nil {
 		defer owned.CloseIdleConnections()
 	}
-	var tokenRT *http.Transport
-	if dial != nil {
-		tokenRT = newTokenTransport(dial)
-		exec.SetHTTPTransport(tokenRT)
-		defer tokenRT.CloseIdleConnections()
-	}
+	// OAuth token requests use the runner's transports, which carry the same
+	// dial guard (runner.Options.DialContext) and a step's mTLS config.
 
 	rep := &Report{
 		SchemaVersion:   "1",
@@ -542,10 +538,6 @@ func newSharedTransport(vus int, dial func(context.Context, string, string) (net
 		vus = 2
 	}
 	return newPooledTransport(vus*2, vus, dial)
-}
-
-func newTokenTransport(dial func(context.Context, string, string) (net.Conn, error)) *http.Transport {
-	return newPooledTransport(10, 10, dial)
 }
 
 func newPooledTransport(maxIdle, perHost int, dial func(context.Context, string, string) (net.Conn, error)) *http.Transport {

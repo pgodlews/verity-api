@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pgodlews/verity-api/core/auth"
 	"github.com/pgodlews/verity-api/core/spi"
 )
 
@@ -116,6 +117,27 @@ func defaultTransport(tlsCfg *spi.TLSConfig, dial func(context.Context, string, 
 		transport.TLSClientConfig = t
 	}
 	return transport, nil
+}
+
+// tokenClient gives auth providers that open their own connections (OAuth2
+// token requests) the run's transports: the shared default transport, or the
+// cached private transport for a step's mTLS config, built with the run's
+// dialer (the load private-address guard) and proxy handling, plus the
+// run's per-attempt timeout.
+func (e *execContext) tokenClient() auth.TokenClient {
+	dial := e.opts.DialContext
+	return auth.TokenClient{
+		Timeout: e.timeout,
+		Transport: func(tlsCfg *spi.TLSConfig) (http.RoundTripper, error) {
+			key := defaultTransportKey
+			if tlsCfg != nil {
+				key = "token\x00" + tlsTransportKey(tlsCfg, "")
+			}
+			return e.tlsCache.transport(key, func() (*http.Transport, error) {
+				return defaultTransport(tlsCfg, dial)
+			})
+		},
+	}
 }
 
 // requestServerName is the TLS server name for a request URL. It is part of
