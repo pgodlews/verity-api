@@ -149,24 +149,27 @@ Expected:
 - All three suites finish as passed; no step is failed or errored.
 - The status bar reads `Last run (local)` with 8 checks passed, 0 failed,
   0 errors.
-- Open the `secure` step detail. The request's `Authorization` header shows
-  `Bearer ***REDACTED***`. The fixture token does not appear anywhere in the
-  Runs view (search the visible text for its first eight characters).
+- Open the `secure` step detail. The fixture token does not appear anywhere in
+  the Runs view (search the visible text for its first eight characters). The
+  step detail does not list request headers, so there is no header value to
+  inspect here.
 
 ### RG-05 Edit, save, and verify the file on disk
 
 1. Open `REST` → `get json` → `fetch`.
 2. Change the **Request URL** from `${BASE_URL}/json` to
    `${BASE_URL}/json?probe=1`.
-3. Confirm the header shows **Unsaved changes**.
-4. Press `Mod`+S (or click **Save**). Confirm the header returns to **Saved**.
+3. Confirm the editor footer shows **Unsaved changes**.
+4. Press `Mod`+S (or click **Save**). Confirm the footer returns to **Saved**.
 5. Click **Send**.
 
 Expected:
 - The request still returns 200 with four passed assertions.
-- *Shell check:* `git -C "$WORK/demo" diff --stat` lists only `project.yaml`,
-  and `git -C "$WORK/demo" diff` shows exactly one changed line pair (the URL).
-  The `description` block, comments, and every other request are unchanged.
+- *Shell check:* `git -C "$WORK/demo" diff --stat` lists only `project.yaml`.
+  A save may also normalize formatting (quoting, blank lines, block style),
+  so compare decoded values, not lines: load `git show HEAD:project.yaml` and
+  the working file with a YAML parser and diff the two structures. The only
+  difference must be the `url` of `fetch`.
 
 ### RG-06 Source control shows the change and commits it
 
@@ -201,7 +204,8 @@ Expected:
 - *Shell check:* `git -C "$WORK/demo" status --porcelain` prints nothing, and
   searching `project.yaml` for the fake value finds nothing.
 
-4. Remove the header again (or discard the draft) so the request is clean.
+4. Remove the header again and save, so no draft is left unsaved. (An unsaved
+   draft blocks closing the project in RG-08.)
 
 ### RG-08 Environments: add a variable and persist it
 
@@ -213,13 +217,14 @@ Expected:
 Expected:
 - `PROBE` = `one` is still listed under `local`, and `BASE_URL` is unchanged.
 - *Shell check:* `git -C "$WORK/demo" diff` shows `PROBE: one` added under the
-  `local` environment and no other value changed.
+  `local` environment and no other value changed (quoting may differ).
 
 ### RG-09 Load test: run, reject bad input, keep the report
 
 1. Open **Load test** from the left rail.
-2. Set **Virtual users** to 1, run mode **Duration**, **Duration (s)** to 2,
-   select only the `REST` suite, and click **Start load test**.
+2. Select only the `REST` suite first (the layout shifts when a suite is
+   selected), then set **Virtual users** to 1, run mode **Duration**, and
+   **Duration (s)** to 2. Take a fresh screenshot and click **Start load test**.
 
 Expected:
 - The target host list shows `127.0.0.1` and no refusal message.
@@ -244,7 +249,8 @@ Expected:
   shows the generated YAML.
 - *Shell check:* no new file has been created in `$WORK/specs` yet.
 
-3. Set the project file name to `petstore.yaml` and click **Import**.
+3. Set **Save as** to `petstore.yaml` (it may be pre-filled) and click the
+   import button (**Import 3 requests** after a preview).
 
 Expected:
 - The app opens the imported project and lists its requests.
@@ -379,8 +385,12 @@ When in doubt, run everything; the full suite is about 40 minutes per OS.
 ## Platform notes
 
 - **macOS:** the app must be started from the shell for `API_TOKEN` to reach
-  it. Native confirmation dialogs have been hard to observe through
-  automation; rely on screenshots.
+  it. Controls inside the window cannot be clicked in the background, so the
+  run needs full-screen control of a Mac nobody is using (about 15 minutes for
+  the smoke set); any keyboard or mouse input interrupts it. Drive it from
+  the session that holds screen control, not from a delegated sub-agent.
+  Confirmation dialogs have not been observable; see the
+  [13 November run](regression-results-2026-11-13-macos.md).
 - **Windows 11:** paths use backslashes and a drive letter. Confirm that no
   console window flashes during RG-05, RG-06, and RG-15 (Git operations); a
   visible console window is a failure.
