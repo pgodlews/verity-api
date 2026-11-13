@@ -82,6 +82,12 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- JSONPath "not found" no longer depends on the library's error wording: a
+  path that compiles but cannot be followed through the response (missing
+  key, out-of-range index such as `$.items[5]`) is absent, so `op:
+  not_exists` passes and a transfer falls back to its default, while a
+  JSONPath syntax error is still an error. Assertions and transfers share
+  one implementation.
 - REST/GraphQL request checks: setting more than one of `json`, `form`,
   `body`, `multipart`, `bodyFile` is a `config_error` (before, `json`
   silently won); a non-map `form`, `query`, or `headers` and an empty `url`
