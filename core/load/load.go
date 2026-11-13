@@ -186,6 +186,9 @@ func Run(ctx context.Context, reg *registry.Registry, project *model.Project, op
 	for _, s := range setups {
 		step := SetupStep{Suite: s.Suite, Name: s.Result.Name, Status: string(s.Result.Status)}
 		if s.Result.Status == spi.StatusFailed || s.Result.Status == spi.StatusError {
+			if !rep.SetupFailed {
+				rep.SetupErrorCode = setupErrorCode(s.Result)
+			}
 			rep.SetupFailed = true
 			step.Error = setupError(exec, s.Result)
 		}
@@ -194,7 +197,20 @@ func Run(ctx context.Context, reg *registry.Registry, project *model.Project, op
 		}
 		rep.Setup = append(rep.Setup, step)
 	}
+	// Teardown runs once after the load, and also after a failed setup
+	// (cleanup of what setup did); no virtual user starts after a failure.
+	teardown := func() {
+		for _, s := range exec.RunTeardowns(ctx) {
+			step := SetupStep{Suite: s.Suite, Name: s.Result.Name, Status: string(s.Result.Status)}
+			if s.Result.Status == spi.StatusFailed || s.Result.Status == spi.StatusError {
+				rep.TeardownFailed = true
+				step.Error = setupError(exec, s.Result)
+			}
+			rep.Teardown = append(rep.Teardown, step)
+		}
+	}
 	if rep.SetupFailed || rep.Interrupted {
+		teardown()
 		return finish(rep, nil, nil, thresholds, opts, time.Now()), nil
 	}
 
@@ -267,12 +283,14 @@ func Run(ctx context.Context, reg *registry.Registry, project *model.Project, op
 		fmt.Fprintln(opts.Live)
 	}
 	if refused != nil && ctx.Err() == nil {
+		teardown()
 		return nil, refused
 	}
 
 	if ctx.Err() != nil {
 		rep.Interrupted = true
 	}
+	teardown()
 	rep.Iterations = iterations.Load()
 	return finish(rep, rec, &vuWindow{vuStart, vuEnd}, thresholds, opts, vuEnd), nil
 }
@@ -406,7 +424,7 @@ func finish(rep *Report, rec *recorder, window *vuWindow, thresholds []Threshold
 		}
 		rep.ErrorRate = er
 	}
-	rep.Passed = !rep.Interrupted && !rep.SetupFailed
+	rep.Passed = !rep.Interrupted && !rep.SetupFailed && !rep.TeardownFailed
 	for _, th := range rep.Thresholds {
 		if !th.Passed {
 			rep.Passed = false
@@ -429,10 +447,12 @@ func redactReport(rep *Report) {
 	for i := range rep.Targets {
 		rep.Targets[i] = red.Redact(rep.Targets[i])
 	}
-	for i := range rep.Setup {
-		rep.Setup[i].Suite = red.Redact(rep.Setup[i].Suite)
-		rep.Setup[i].Name = red.Redact(rep.Setup[i].Name)
-		rep.Setup[i].Error = red.Redact(rep.Setup[i].Error)
+	for _, hooks := range [][]SetupStep{rep.Setup, rep.Teardown} {
+		for i := range hooks {
+			hooks[i].Suite = red.Redact(hooks[i].Suite)
+			hooks[i].Name = red.Redact(hooks[i].Name)
+			hooks[i].Error = red.Redact(hooks[i].Error)
+		}
 	}
 	for i := range rep.Steps {
 		rep.Steps[i].Name = red.Redact(rep.Steps[i].Name)
@@ -480,6 +500,17 @@ func evaluate(ths []Threshold, summary Metrics, steps []Metrics) []ThresholdResu
 		out = append(out, res)
 	}
 	return out
+}
+
+// setupErrorCode is the verr code of a failed hook step: the step's error
+// code, or assertion_failed when an assertion failed.
+func setupErrorCode(cr spi.CaseResult) string {
+	for _, st := range cr.Steps {
+		if st.Error != nil && st.Error.Code != "" {
+			return st.Error.Code
+		}
+	}
+	return string(verr.CodeAssertion)
 }
 
 func setupError(exec *runner.CaseExec, cr spi.CaseResult) string {

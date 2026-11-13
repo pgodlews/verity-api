@@ -51,7 +51,11 @@ during the load is visible to later iterations of that user only.
 Suite `setup` hooks of the selected suites run **once**, before any virtual
 user starts. `scope: run` captures from those hooks are the baseline every
 user starts from (a login, for example). They are not repeated and they are
-not part of the latency or RPS numbers. Teardown hooks are not run.
+not part of the latency or RPS numbers. If a setup step fails, no virtual
+user starts and the report says `setupFailed`. Suite `teardown` hooks run
+once after the load ends, and also after a failed setup, so cleanup of what
+setup did still happens; after Ctrl-C they get a 10-second grace period.
+A failed teardown step marks the report failed (`teardownFailed`).
 
 Put a one-shot login in the suite setup hook. A case in the load loop runs
 once per iteration, which is what you want for the traffic itself.
@@ -173,9 +177,9 @@ when the step is named). A skipped step is not a request.
 | Code | When |
 |------|------|
 | 0 | every threshold passed, and the error rate is within the maximum if one was set |
-| 1 | a threshold or the error rate failed, or a setup hook failed (the load does not start) |
+| 1 | a threshold or the error rate failed, a setup hook check failed (the load does not start), or a teardown step failed |
 | 2 | usage: bad flags, VU cap, both or neither of `--duration` and `--iterations` |
-| 3 | the project did not load or validate, or a target was refused |
+| 3 | the project did not load or validate, a target was refused, or a setup step failed with a `config_error`, `validation_error`, or `not_found` (for example a missing upload file) |
 | 4 | the report could not be written |
 | 5 | interrupted (SIGINT/SIGTERM). The report is still written |
 
@@ -262,7 +266,9 @@ present on a threshold. `errorRate` and `errorRateThreshold.max` /
 `configuredIterations` is present in iteration mode instead of
 `configuredDurationMs`. `setup` lists setup-hook steps when the suite has
 them. `setupFailed` is true when a hook failed and virtual users did not
-start.
+start; `setupErrorCode` is the first failed setup step's error code
+(`assertion_failed` when a check failed). `teardown` lists teardown-hook
+steps, and `teardownFailed` is true when one failed.
 
 Every string is passed through the run's redactor before it is written.
 The console summary is redacted the same way.

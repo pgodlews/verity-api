@@ -15,6 +15,7 @@ import (
 	"github.com/pgodlews/verity-api/core/plugin"
 	"github.com/pgodlews/verity-api/core/registry"
 	"github.com/pgodlews/verity-api/core/secrets"
+	"github.com/pgodlews/verity-api/core/verr"
 )
 
 func cmdLoad(args []string) int {
@@ -178,9 +179,21 @@ func executeLoad(ctx context.Context, reg *registry.Registry, project *model.Pro
 		for _, f := range rep.Failures() {
 			fmt.Fprintf(stderr, "load: %s\n", f)
 		}
-		return exitTestFailed
+		return loadFailureCode(rep)
 	}
 	return exitOK
+}
+
+// loadFailureCode is 3 when setup failed for a config or validation reason
+// (the load could not be attempted as written), else 1.
+func loadFailureCode(rep *load.Report) int {
+	if rep.SetupFailed {
+		switch rep.SetupErrorCode {
+		case string(verr.CodeConfig), string(verr.CodeValidation), string(verr.CodeNotFound):
+			return exitConfig
+		}
+	}
+	return exitTestFailed
 }
 
 func writeLoadJSON(path string, rep *load.Report) error {

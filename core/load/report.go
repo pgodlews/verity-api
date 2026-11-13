@@ -61,8 +61,13 @@ type Report struct {
 	ErrorRate       *ErrorRateResult  `json:"errorRateThreshold,omitempty"`
 	Setup           []SetupStep       `json:"setup,omitempty"`
 	SetupFailed     bool              `json:"setupFailed,omitempty"`
-	Passed          bool              `json:"passed"`
-	red             *secrets.Redactor `json:"-"`
+	// SetupErrorCode is the verr code of the first failed setup step, so a
+	// config or validation problem can be told from a failed check.
+	SetupErrorCode string            `json:"setupErrorCode,omitempty"`
+	Teardown       []SetupStep       `json:"teardown,omitempty"`
+	TeardownFailed bool              `json:"teardownFailed,omitempty"`
+	Passed         bool              `json:"passed"`
+	red            *secrets.Redactor `json:"-"`
 }
 
 // Failures lists the threshold, error-rate, and setup checks that did not pass.
@@ -73,6 +78,9 @@ func (r *Report) Failures() []string {
 	var out []string
 	if r.SetupFailed {
 		out = append(out, "setup failed; load did not start")
+	}
+	if r.TeardownFailed {
+		out = append(out, "teardown failed")
 	}
 	for _, th := range r.Thresholds {
 		if !th.Passed {

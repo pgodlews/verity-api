@@ -230,6 +230,42 @@ func (x *CaseExec) RunSetups(ctx context.Context) []SetupResult {
 	return out
 }
 
+// RunTeardowns executes each selected suite's teardown hook once, in
+// project order, after the load (or after a failed setup). While ctx is
+// live the steps run under it; once it is cancelled the remaining steps get
+// one detached teardownTimeout grace context, as in a functional run, so
+// cancellation does not skip cleanup.
+func (x *CaseExec) RunTeardowns(ctx context.Context) []SetupResult {
+	var grace context.Context
+	cancelGrace := func() {}
+	defer func() { cancelGrace() }()
+	stepCtx := func() context.Context {
+		if ctx.Err() == nil {
+			return ctx
+		}
+		if grace == nil {
+			grace, cancelGrace = context.WithTimeout(context.WithoutCancel(ctx), teardownTimeout)
+		}
+		return grace
+	}
+	var out []SetupResult
+	seen := map[*model.Suite]bool{}
+	for _, b := range x.cases {
+		if seen[b.Suite] || b.Suite.Teardown == nil {
+			seen[b.Suite] = true
+			continue
+		}
+		seen[b.Suite] = true
+		hookVars := x.e.hookResolver(b.Suite)
+		for i := range b.Suite.Teardown.Steps {
+			name := "teardown:" + b.Suite.Teardown.Name
+			cr := x.e.runHookCase(stepCtx(), b.Suite, name, b.Suite.Teardown.Steps[i], hookVars)
+			out = append(out, SetupResult{Suite: b.Suite.Name, Result: cr})
+		}
+	}
+	return out
+}
+
 // RunCase executes one case. A data feed expands to one result per row, each
 // starting from the resolver's variables plus that row; run-scoped transfers
 // from an earlier row are visible to the next row and to OnRunVar. Without a
