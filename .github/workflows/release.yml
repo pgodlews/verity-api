@@ -54,7 +54,7 @@ jobs:
         run: scripts/release.sh "${GITHUB_REF_NAME}" dist/release
       - name: Verify
         run: (cd dist/release && sha256sum -c SHA256SUMS)
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: cli
           path: dist/release/
@@ -86,7 +86,7 @@ jobs:
           cp build/bin/verity-desktop ../LICENSE ../README.md "../dist/desktop/$d/"
           tar -C ../dist/desktop -czf "../dist/desktop/$d.tar.gz" "$d"
           rm -rf "../dist/desktop/$d"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: desktop-linux
           path: dist/desktop/
@@ -115,7 +115,7 @@ jobs:
           # wails.json "name" is Verity, so Wails names the bundle Verity.app.
           [ -d build/bin/Verity.app ] || { echo "expected build/bin/Verity.app"; ls build/bin; exit 1; }
           ditto -c -k --keepParent build/bin/Verity.app "../dist/desktop/verity-desktop_${GITHUB_REF_NAME}_darwin_universal.zip"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: desktop-macos
           path: dist/desktop/
@@ -142,7 +142,7 @@ jobs:
           mkdir -p "../dist/desktop/$d"
           cp build/bin/verity-desktop.exe ../LICENSE ../README.md "../dist/desktop/$d/"
           (cd ../dist/desktop && zip -qr "$d.zip" "$d" && rm -rf "$d")
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: desktop-windows
           path: dist/desktop/
