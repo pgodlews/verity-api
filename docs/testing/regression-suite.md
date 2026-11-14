@@ -245,8 +245,8 @@ Expected:
    click **Preview**.
 
 Expected:
-- The preview lists the converted requests (three at the time of writing) and
-  shows the generated YAML.
+- The preview lists the converted requests (three at the time of writing).
+  **Preview YAML** shows the generated YAML.
 - *Shell check:* no new file has been created in `$WORK/specs` yet.
 
 3. Set **Save as** to `petstore.yaml` (it may be pre-filled) and click the
