@@ -7,7 +7,7 @@ toolchain go1.26.11
 require (
 	github.com/PaesslerAG/jsonpath v0.1.1
 	github.com/antchfx/xmlquery v1.5.1
-	github.com/fsnotify/fsnotify v1.9.0
+	github.com/fsnotify/fsnotify v1.10.1
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/vektah/gqlparser/v2 v2.5.31
 	github.com/zalando/go-keyring v0.2.8
