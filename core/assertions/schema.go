@@ -5,7 +5,9 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -64,7 +66,10 @@ func (a jsonSchemaAssertion) Evaluate(_ context.Context, actx *spi.AssertionCont
 		if err != nil {
 			return result(a.Type(), spec.Description, false, "read schema file: "+err.Error(), nil, nil), nil
 		}
-		schemaURL = "file://" + path
+		schemaURL, err = fileURL(path)
+		if err != nil {
+			return result(a.Type(), spec.Description, false, "schema file path: "+err.Error(), nil, nil), nil
+		}
 		schemaRaw = raw
 	}
 
@@ -81,6 +86,23 @@ func (a jsonSchemaAssertion) Evaluate(_ context.Context, actx *spi.AssertionCont
 			actx.Redactor.Redact("schema validation failed: "+err.Error()), "valid against schema", "invalid"), nil
 	}
 	return result(a.Type(), spec.Description, true, "response is valid against JSON Schema", "valid", "valid"), nil
+}
+
+// fileURL turns a schema file path into the absolute file URL the schema
+// compiler uses as the schema's location and as the base for relative $refs:
+// file:///C:/dir/schema.json on Windows, file:///dir/schema.json elsewhere,
+// with spaces and other reserved characters escaped. Prefixing "file://" to a
+// Windows path makes net/url read the drive letter as host and port.
+func fileURL(path string) (string, error) {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
+	}
+	p := filepath.ToSlash(abs)
+	if !strings.HasPrefix(p, "/") {
+		p = "/" + p
+	}
+	return (&url.URL{Scheme: "file", Path: p}).String(), nil
 }
 
 // schemaCache holds compiled JSON Schemas keyed by URL and content hash, so a

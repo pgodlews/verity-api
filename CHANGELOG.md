@@ -149,6 +149,11 @@ and distribution names below use the final public names.
 
 ### Fixed
 
+- `json_schema` assertions that read a schema file work on Windows. The
+  schema's location was built as `file://C:\...`, which failed to parse
+  (`invalid port`); it is now a proper file URL (`file:///C:/...`), with
+  spaces and other reserved characters escaped on every platform, so
+  relative `$ref`s resolve.
 - The published project schema (`verity schema`) matches the Go model: a
   project needs `schemaVersion` and `name`, and `suites` may be empty or
   absent (a mocks-only project for `verity mock`). Both schemas use an
