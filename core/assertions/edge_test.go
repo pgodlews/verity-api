@@ -134,6 +134,29 @@ func TestJSONSchemaAssertionInputsAndFailures(t *testing.T) {
 			t.Fatal(got.Message)
 		}
 	})
+	// Regression: on Windows the schema location was "file://C:\..." and
+	// failed to parse. A $ref to a sibling file also needs the location to be a
+	// real file URL; the directory name needs escaping.
+	t.Run("schema file with relative ref in a directory needing escapes", func(t *testing.T) {
+		dir := filepath.Join(t.TempDir(), "my schemas 100%")
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		main := `{"type":"object","required":["id"],"properties":{"id":{"$ref":"id.json"}}}`
+		if err := os.WriteFile(filepath.Join(dir, "main.json"), []byte(main), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "id.json"), []byte(`{"type":"number"}`), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		spec := spi.AssertionSpec{Expr: "main.json", Config: map[string]any{"__dir": dir}}
+		if got := eval(t, a, jsonResp(`{"id":1}`), spec); !got.Passed {
+			t.Fatalf("valid body: %s", got.Message)
+		}
+		if got := eval(t, a, jsonResp(`{"id":"x"}`), spec); got.Passed || !strings.Contains(got.Message, "schema validation failed") {
+			t.Fatalf("invalid body = %#v", got)
+		}
+	})
 	tests := []struct {
 		name    string
 		body    string
