@@ -288,8 +288,10 @@ Area: auth, secrets, runner.
 2. Click **Run collection**.
 
 Expected:
-- `REST` and `SOAP` pass. The `secure` step returns HTTP 401 and its
-  assertions fail. The run is reported as failed overall.
+- `REST` and `SOAP` pass. The `secure` step is reported as an error with
+  `auth_error` (the bearer token references `${env:API_TOKEN}`, which is not
+  defined) and is not sent, so no request reaches the server. The run is
+  reported as errored (**ERROR**), not passed.
 
 3. Quit and restart the app with `API_TOKEN` set before continuing.
 
