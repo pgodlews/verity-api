@@ -13,9 +13,10 @@ commit and artifact checksum, and mark each scenario **pass**, **fail**,
 
 | Document | Purpose | Evidence status |
 | --- | --- | --- |
-| [Functional regression suite](regression-suite.md) | Short agent-executable check of core features on macOS, Windows 11, and Linux; run after major changes | Authored 13 November 2026; smoke set executed once on macOS, not on Windows or Linux |
+| [Functional regression suite](regression-suite.md) | Short agent-executable check of core features on macOS, Windows 11, and Linux; run after major changes | Authored 13 November 2026; smoke set executed on macOS and Windows 11, not on Linux |
 | [macOS regression run, 13 November 2026](regression-results-2026-11-13-macos.md) | First smoke-set run, against PR #9 | Smoke set passed; three product observations |
 | [macOS regression run, 14 November 2026](regression-results-2026-11-14-macos.md) | Smoke set and RG-13, against PR #11 after merge | Passed; two earlier observations fixed, two new ones |
+| [Windows 11 regression run, 17 November 2026](regression-results-2026-11-17-windows.md) | First Windows run: smoke set plus RG-12 to RG-15, against `6472bf1` | Failed only RG-12, from expectation drift (suite updated); no console windows; seven product observations |
 | [Regression results template](regression-results-template.md) | Record for one regression run on one OS | Template |
 | [Shared release plan](desktop-release-test-plan.md) | P0/P1/P2 scenarios across desktop features | Living checklist; includes historical macOS observations |
 | [Windows 11 plan](windows-11-test-plan.md) | Shared scenarios plus Windows packaging, paths, WebView2, credentials, and accessibility | Authored 6 November 2026; native scenarios not executed in this work |
